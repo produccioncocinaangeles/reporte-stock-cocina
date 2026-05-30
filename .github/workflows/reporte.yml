@@ -28,4 +28,4 @@ jobs:
           echo "RUTA_EXCEL = cocina_STOCK_NUEVA.xlsx" >> config.txt
 
       - name: Ejecutar script
-        run: python bsale_stock_final.py
+        run: python bsale_github.py
