@@ -26,6 +26,10 @@ jobs:
           echo "GMAIL_PASSWORD = ${{ secrets.GMAIL_PASSWORD }}" >> config.txt
           echo "CORREOS_DESTINO = ${{ secrets.CORREOS_DESTINO }}" >> config.txt
           echo "RUTA_EXCEL = cocina_STOCK_NUEVA.xlsx" >> config.txt
-
       - name: Ejecutar script
+        env:
+          BSALE_TOKEN: ${{ secrets.BSALE_TOKEN }}
+          GMAIL_REMITENTE: ${{ secrets.GMAIL_REMITENTE }}
+          GMAIL_PASSWORD: ${{ secrets.GMAIL_PASSWORD }}
+          CORREOS_DESTINO: ${{ secrets.CORREOS_DESTINO }}
         run: python bsale_github.py
