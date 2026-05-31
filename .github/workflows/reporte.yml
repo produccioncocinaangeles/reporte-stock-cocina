@@ -2,7 +2,7 @@ name: Reporte Stock Cocina
 
 on:
   schedule:
-    - cron: '0 12 * * *'  # 8am Chile (UTC-3)
+    - cron: '0 12 * * *'  # 8am Chile (UTC-4)
   workflow_dispatch:
 
 jobs:
