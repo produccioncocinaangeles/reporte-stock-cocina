@@ -121,7 +121,7 @@ def obtener_stock():
     stock = {}
     for item in items:
         try:
-            sku = norm(item["variant"]["barCode"])
+            sku = norm(item["variant"]["code"])
         except (KeyError, TypeError):
             continue
         if sku not in PRODUCTOS:
