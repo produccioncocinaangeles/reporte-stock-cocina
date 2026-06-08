@@ -3,7 +3,7 @@ name: Dashboard Stock
 on:
   schedule:
     - cron: '0 0 * * *'   # 00:00 UTC = 21:00 hora Chile
-  workflow_dispatch:        # permite correr manualmente
+  workflow_dispatch:
 
 permissions:
   contents: write
@@ -23,11 +23,12 @@ jobs:
           python-version: '3.11'
 
       - name: Instalar dependencias
-        run: pip install requests
+        run: pip install requests gspread google-auth
 
       - name: Generar dashboard
         env:
           BSALE_TOKEN: ${{ secrets.BSALE_TOKEN }}
+          GOOGLE_CREDENTIALS: ${{ secrets.GOOGLE_CREDENTIALS }}
         run: python generar_dashboard.py
 
       - name: Publicar en GitHub Pages
@@ -36,4 +37,4 @@ jobs:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           publish_dir: .
           publish_branch: gh-pages
-          include_files: index.html
+          exclude_assets: '**.py,**.yml,**.md'
