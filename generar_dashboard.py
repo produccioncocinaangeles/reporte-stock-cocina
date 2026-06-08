@@ -276,10 +276,10 @@ def procesar():
         dias_p = round(sp_hoy/vel_p,1) if vel_p>0 and sp_hoy>0 else (0 if sp_hoy==0 else None)
         dias_t = round(total_hoy/vel_t,1) if vel_t>0 else None
 
-        # Estado
-        if   total_hoy == 0:                                   estado = 'sin_stock'
-        elif dias_t is not None and dias_t <= 3:               estado = 'critico'
-        elif dias_t is not None and dias_t <= 14:              estado = 'bajo'
+        # Estado basado en Vitacura (centro de producción)
+        if   sv_hoy == 0:                                      estado = 'sin_stock'
+        elif dias_v is not None and dias_v <= 3:               estado = 'critico'
+        elif dias_v is not None and dias_v <= 14:              estado = 'bajo'
         else:                                                  estado = 'ok'
 
         alerta = (sv_hoy==0 and sp_hoy>0 and vel_v>0) or (sp_hoy==0 and sv_hoy>0 and vel_p>0)
@@ -312,7 +312,7 @@ def procesar():
         print(f"  ✓ {sku} — {NOMBRES[sku][:30]}")
 
     orden = {'sin_stock':0,'critico':1,'bajo':2,'ok':3}
-    resultados.sort(key=lambda x: (orden[x['estado']], x['dias_total'] if x['dias_total'] is not None else 9999))
+    resultados.sort(key=lambda x: (orden[x['estado']], x['dias_vit'] if x['dias_vit'] is not None else 9999))
     return resultados
 
 # ─── HTML (sin f-string para evitar conflictos con JS) ───────
@@ -420,9 +420,9 @@ const MESES_L = {'2026-01':'Enero','2026-02':'Febrero','2026-03':'Marzo',
 // ── Helpers ────────────────────────────────────────────────
 function diasStr(p){
   if(p.estado==='sin_stock') return 'SIN STOCK';
-  if(p.dias_total===null||p.dias_total===undefined) return '—';
-  if(p.dias_total>365) return '+1 año';
-  return Math.round(p.dias_total)+'d';
+  if(p.dias_vit===null||p.dias_vit===undefined) return '—';
+  if(p.dias_vit>365) return '+1 año';
+  return Math.round(p.dias_vit)+'d';
 }
 function badgeCls(e){
   if(e==='sin_stock'||e==='critico') return 'badge-rojo';
@@ -432,7 +432,7 @@ function badgeCls(e){
 
 // ── Barra estilo escala con marcador ───────────────────────
 function buildBarra(p){
-  const dias = p.dias_total !== null && p.dias_total !== undefined ? Math.round(p.dias_total) : -1;
+  const dias = p.dias_vit !== null && p.dias_vit !== undefined ? Math.round(p.dias_vit) : -1;
   let pct;
   if(dias <= 0) pct = 0;
   else if(dias <= 3)  pct = (dias/3)*10;
