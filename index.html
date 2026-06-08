@@ -553,9 +553,9 @@ function setDiasDesp(d, btn){
 function abrirRollo(contenido){
   var win = window.open('','_blank','width=400,height=700');
   var html = '<!DOCTYPE html><html><head><title>La Cocina</title>'
-    + '<style>body{font-family:Courier New,monospace;font-size:13px;margin:4mm;width:72mm;line-height:1.4}'
+    + '<style>body{font-family:Courier New,monospace;font-size:13px;padding:3mm 4mm;width:72mm;line-height:1.4}'
     + 'pre{white-space:pre-wrap;word-break:break-word}'
-    + '@media print{@page{size:80mm 297mm;margin:2mm 3mm}body{margin:0}}'
+    + '@media print{@page{size:80mm 297mm;margin:0}body{padding:2mm 3mm}}'
     + '</style></head><body><pre>' + contenido + '</pre>'
     + '<script>window.onload=function(){window.print();window.close();}<\/script>'
     + '</body></html>';
