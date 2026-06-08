@@ -315,7 +315,7 @@ def procesar():
 # ─── HTML (sin f-string para evitar conflictos con JS) ───────
 CSS = """
 *{box-sizing:border-box;margin:0;padding:0}
-body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:#F5F4F0;color:#1A1A1A;font-size:14px}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:#F5F4F0;color:#1A1A1A;font-size:14px;max-width:900px;margin:0 auto}
 .header{background:#fff;border-bottom:1px solid #ddd;padding:14px 20px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:100}
 .logo{font-size:17px;font-weight:700;letter-spacing:-0.02em}.logo span{color:#E24B4A}
 .header-right{display:flex;gap:10px;align-items:center}
@@ -680,18 +680,19 @@ function renderGuiaProduccion(){
   });
 
   var filas = prods.map(function(p){
-    var und = p.vel_total>0 ? Math.ceil(p.vel_total*dias) : 0;
-    var dt  = p.dias_total!==null ? Math.round(p.dias_total)+'d' : '—';
-    var clr = p.estado==='sin_stock'||p.estado==='critico' ? '#E74C3C' : p.estado==='bajo' ? '#E67E22' : '#27AE60';
-    var urg = p.estado==='sin_stock'||p.estado==='critico';
+    var und   = p.vel_total>0 ? Math.ceil(p.vel_total*dias) : 0;
+    var total = p.vit + p.pat;
+    var dt    = p.dias_total!==null ? Math.round(p.dias_total)+'d' : '—';
+    var clr   = p.estado==='sin_stock'||p.estado==='critico' ? '#E74C3C' : p.estado==='bajo' ? '#E67E22' : '#27AE60';
+    var urg   = p.estado==='sin_stock'||p.estado==='critico';
     return '<tr'+(urg?' class="urgente"':'')+'>'
-      +'<td style="color:'+clr+';font-weight:700;width:55px">'+dt+'</td>'
       +'<td style="font-weight:'+(urg?700:400)+'">'+p.nombre+'</td>'
+      +'<td style="color:'+clr+';font-weight:700;width:55px">'+dt+'</td>'
       +'<td style="color:#888;font-size:11px">'+p.cocinero+'</td>'
       +'<td style="text-align:right;color:#888">'+p.vit+'</td>'
       +'<td style="text-align:right;color:#185FA5">'+p.pat+'</td>'
+      +'<td style="text-align:right;font-weight:600">'+total+'</td>'
       +'<td style="text-align:right;font-weight:700;font-size:13px">'+und+'</td>'
-      +'<td style="text-align:right;color:#888;font-size:11px">'+p.tiempo_repo+'d</td>'
       +'</tr>';
   }).join('');
 
@@ -893,9 +894,9 @@ HTML_TEMPLATE = """<!DOCTYPE html>
   <div style="padding:12px 20px">
     <table class="guia-table">
       <thead><tr>
-        <th style="width:55px">Días</th><th>Producto</th><th>Cocinero</th>
-        <th style="text-align:right">VIT</th><th style="text-align:right">PAT</th>
-        <th style="text-align:right">Producir</th><th style="text-align:right">Repo</th>
+        <th>Producto</th><th style="width:55px">Días</th><th>Cocinero</th>
+        <th style="text-align:right">Vitacura</th><th style="text-align:right">Pataguas</th>
+        <th style="text-align:right">Total</th><th style="text-align:right">Producir</th>
       </tr></thead>
       <tbody id="tabla-produccion"></tbody>
     </table>
