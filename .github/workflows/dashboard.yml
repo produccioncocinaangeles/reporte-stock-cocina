@@ -1,40 +1,42 @@
-name: Dashboard Stock
+name: Generar y publicar dashboard
 
 on:
   schedule:
-    - cron: '0 0 * * *'   # 00:00 UTC = 21:00 hora Chile
-  workflow_dispatch:
+    - cron: '0 11 * * *'   # 8:00 AM Chile (UTC-3)
+  workflow_dispatch:         # permite ejecutar manualmente desde GitHub
 
 permissions:
   contents: write
-  pages: write
-  id-token: write
 
 jobs:
-  generar:
+  build:
     runs-on: ubuntu-latest
+
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Python setup
+      - name: Setup Python 3.11
         uses: actions/setup-python@v5
         with:
           python-version: '3.11'
 
       - name: Instalar dependencias
-        run: pip install requests gspread google-auth
+        run: pip install pandas openpyxl requests numpy
 
       - name: Generar dashboard
         env:
           BSALE_TOKEN: ${{ secrets.BSALE_TOKEN }}
-          GOOGLE_CREDENTIALS: ${{ secrets.GOOGLE_CREDENTIALS }}
         run: python generar_dashboard.py
 
-      - name: Publicar en GitHub Pages
-        uses: peaceiris/actions-gh-pages@v3
+      - name: Preparar carpeta de deploy
+        run: |
+          mkdir -p /tmp/deploy
+          cp dashboard.html /tmp/deploy/index.html
+
+      - name: Publicar en gh-pages
+        uses: peaceiris/actions-gh-pages@v4
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
-          publish_dir: .
-          publish_branch: gh-pages
-          exclude_assets: '**.py,**.yml,**.md'
+          publish_dir: /tmp/deploy
+          commit_message: "Dashboard actualizado ${{ github.run_number }}"

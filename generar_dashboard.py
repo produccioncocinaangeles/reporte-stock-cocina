@@ -1,582 +1,964 @@
+#!/usr/bin/env python3
 """
-Cocina Ángeles Álamos — Dashboard de producción
-Lee datos históricos de Google Sheets + stock actual de Bsale
-Calcula velocidades reales excluyendo días sin stock
+La Cocina — Generador de Dashboard v2
+Lee consolidados Vitacura/Pataguas + stock Bsale API
+Genera dashboard.html con datos embebidos
 """
+import os, json, requests, math
+import pandas as pd
+import numpy as np
+from collections import Counter
 
-import os
-import json
-import math
-import requests
-import time
-from datetime import datetime, date, timedelta
-from collections import Counter, defaultdict
+# ─── CONFIGURACIÓN ───────────────────────────────────────────
+CARPETA      = os.path.dirname(os.path.abspath(__file__))
+ARCHIVO_VIT  = os.path.join(CARPETA, 'consolidado_productos_vitacura.xlsx')
+ARCHIVO_PAT  = os.path.join(CARPETA, 'consolidado_productos_pataguas.xlsx')
+ARCHIVO_HTML = os.path.join(CARPETA, 'dashboard.html')
+BSALE_TOKEN  = os.environ.get('BSALE_TOKEN', '')
+_HOY         = pd.Timestamp.today().normalize()
+FECHA_HOY    = _HOY
+FECHA_STR    = _HOY.strftime('%d/%m/%Y')
 
-import gspread
-from google.oauth2.service_account import Credentials
-
-# ─────────────────────────────────────────────────────────────
-# CONFIGURACIÓN
-# ─────────────────────────────────────────────────────────────
-BSALE_TOKEN = os.environ["BSALE_TOKEN"]
-BSALE_BASE  = "https://api.bsale.cl/v1"
-HEADERS     = {"access_token": BSALE_TOKEN}
-OFFICE_VIT  = 1
-OFFICE_PAT  = 3
-SHEET_URL   = "https://docs.google.com/spreadsheets/d/1bB0ze4WAHFSl5hWmPTIsXgnKjhFiy6zfMtPCIyn503Y/edit"
-FECHA_INI   = date(2026, 1, 2)
-FECHA_FIN   = date(2026, 6, 5)
-
-# ─────────────────────────────────────────────────────────────
-# PRODUCTOS
-# ─────────────────────────────────────────────────────────────
-PRODUCTOS = {
-    'OP':{'nombre':'Ostión a la parmesana','cocinero':'Carolina'},
-    'RPP':{'nombre':'Rollo pollo pimentón','cocinero':'César'},
-    'MCL':{'nombre':'Mini chupe loco','cocinero':'Jesús'},
-    'CJ':{'nombre':'Chupe jaiba grande','cocinero':'Jesús'},
-    'CLC':{'nombre':'Chupe loco camarón grande','cocinero':'Jesús'},
-    'MCJ':{'nombre':'Mini chupe jaiba','cocinero':'Jesús'},
-    'RC':{'nombre':'Rollo camarón','cocinero':'César'},
-    'LA':{'nombre':'Lomito acaramelado','cocinero':'César'},
-    'RM':{'nombre':'Rollo mechada','cocinero':'César'},
-    'LCM':{'nombre':'Lasaña carne mechada','cocinero':'Adriana'},
-    'TLS':{'nombre':'Tequeños lomo saltado','cocinero':'Adriana'},
-    'CL':{'nombre':'Carpaccio de locos','cocinero':'Jesús'},
-    'LS':{'nombre':'Lomo saltado','cocinero':'César'},
-    'LJC':{'nombre':'Lasaña jaiba camarón','cocinero':'Adriana'},
-    'PC':{'nombre':'Puré de camote','cocinero':'Carolina'},
-    'MMR':{'nombre':'Mix masitas rellenas','cocinero':'Adriana'},
-    'TS':{'nombre':'Tártaro salmón','cocinero':'César'},
-    'ÑJ':{'nombre':'Ñoquis con jamón serrano','cocinero':'Carolina'},
-    'TSA':{'nombre':'Tallarín salmón ahumado','cocinero':'Adriana'},
-    'RB':{'nombre':'Roast beef','cocinero':'Jesús'},
-    'CF':{'nombre':'Carpaccio de filete','cocinero':'Jesús'},
-    'RS':{'nombre':'Rollo salmón','cocinero':'César'},
-    'FCT':{'nombre':'Filete champiñón tocino','cocinero':'Jesús'},
-    'PCM':{'nombre':'Pastel de choclo','cocinero':'Carolina'},
-    'ÑP':{'nombre':'Ñoquis pesto tomate cherry','cocinero':'Carolina'},
-    'TF':{'nombre':'Tártaro filete','cocinero':'César'},
-    'MCC':{'nombre':'Mini chupe camarón','cocinero':'Jesús'},
-    'CAMA':{'nombre':'Camarones apanados','cocinero':'Adriana'},
-    'TPP':{'nombre':'Tallarines pollo pimentón','cocinero':'Adriana'},
-    'RA':{'nombre':'Rollo alcachofa','cocinero':'César'},
-    'AS':{'nombre':'Arroz salvaje','cocinero':'Jesús'},
-    'PAC':{'nombre':'Milhojas de papas','cocinero':'César'},
-    'EM':{'nombre':'Empanaditas mechada','cocinero':'Carolina'},
-    'ÑC':{'nombre':'Ñoquis de camarón','cocinero':'Carolina'},
-    'EJ':{'nombre':'Empanaditas jamón serrano','cocinero':'Carolina'},
-    'BAP':{'nombre':'Berenjenas a la parmesana','cocinero':'Adriana'},
-    'MIGNON':{'nombre':'Mignon de pollo','cocinero':'César'},
-    'PV':{'nombre':'Caja de postres en vasito','cocinero':'Carolina'},
-    'TA':{'nombre':'Tártaro atún','cocinero':'César'},
-    'MMRM':{'nombre':'Mix masitas rellenas del mar','cocinero':'Adriana'},
-    'LR':{'nombre':'Lomo relleno','cocinero':'Jesús'},
-    'CP':{'nombre':'Carpaccio pulpo con salsa al olivo','cocinero':'Jesús'},
-    'LSA':{'nombre':'Lasaña salmón','cocinero':'Adriana'},
-    'RJ':{'nombre':'Rollo jamón serrano','cocinero':'César'},
-    'CM':{'nombre':'Carne mechada','cocinero':'César'},
-    'TCM':{'nombre':'Tallarín carne mechada','cocinero':'Adriana'},
-    'PCP':{'nombre':'Paté con peras','cocinero':'Jesús'},
-    'EC':{'nombre':'Empanaditas camarón','cocinero':'Carolina'},
-    'CC':{'nombre':'Chupe centolla grande','cocinero':'Jesús'},
-    'SSA':{'nombre':'Salmón con salsa de alcaparras','cocinero':'Jesús'},
-    'BAR':{'nombre':'Barquillos','cocinero':'Carolina'},
-    'LM':{'nombre':'Lasaña mediterránea','cocinero':'Adriana'},
-    'CAC':{'nombre':'Choclo a la crema','cocinero':'Jesús'},
-    'TPU':{'nombre':'Tequeños de pulpo con salsa','cocinero':'Adriana'},
-    'SA':{'nombre':'Salsa en frasco','cocinero':'Adriana'},
-    'CAMAC':{'nombre':'Camarones cocidos con salsa','cocinero':'César'},
+# ─── CATÁLOGO ────────────────────────────────────────────────
+NOMBRES = {
+    'OP':'OSTIÓN A LA PARMESANA','RPP':'ROLLO POLLO PIMENTÓN','MCL':'MINI CHUPE LOCO',
+    'CJ':'CHUPE JAIBA GRANDE','CLC':'CHUPE LOCO CAMARÓN GRANDE','MCJ':'MINI CHUPE JAIBA',
+    'RC':'ROLLO CAMARÓN','LA':'LOMITO ACARAMELADO','RM':'ROLLO MECHADA',
+    'LCM':'LASAÑA CARNE MECHADA','TLS':'TEQUEÑOS LOMO SALTADO','CL':'CARPACCIO DE LOCOS',
+    'LS':'LOMO SALTADO','LJC':'LASAÑA JAIBA CAMARÓN','PC':'PURÉ DE CAMOTE',
+    'MMR':'MIX MASITAS RELLENAS','TS':'TÁRTARO SALMÓN','ÑJ':'ÑOQUIS CON JAMÓN SERRANO',
+    'TSA':'TALLARÍN SALMÓN AHUMADO','RB':'ROAST BEEF','CF':'CARPACCIO DE FILETE',
+    'RS':'ROLLO SALMÓN','FCT':'FILETE CHAMPIÑÓN TOCINO','PCM':'PASTEL DE CHOCLO',
+    'ÑP':'ÑOQUIS PESTO TOMATE CHERRY','TF':'TÁRTARO FILETE','MCC':'MINI CHUPE CAMARÓN',
+    'CAMA':'CAMARONES APANADOS','TPP':'TALLARINES POLLO PIMENTÓN','RA':'ROLLO ALCACHOFA',
+    'AS':'ARROZ SALVAJE','PAC':'MILHOJAS DE PAPAS','EM':'EMPANADITAS MECHADA',
+    'ÑC':'ÑOQUIS DE CAMARÓN','EJ':'EMPANADITAS JAMÓN SERRANO','BAP':'BERENJENAS A LA PARMESANA',
+    'MIGNON':'MIGNON DE POLLO','PV':'CAJA DE POSTRES EN VASITO','TA':'TÁRTARO ATÚN',
+    'MMRM':'MIX MASITAS RELLENAS DEL MAR','LR':'LOMO RELLENO',
+    'CP':'CARPACCIO PULPO CON SALSA AL OLIVO','LSA':'LASAÑA SALMÓN','RJ':'ROLLO JAMÓN SERRANO',
+    'CM':'CARNE MECHADA','TCM':'TALLARÍN CARNE MECHADA','PCP':'PATÉ CON PERAS',
+    'EC':'EMPANADITAS CAMARÓN','CC':'CHUPE CENTOLLA GRANDE',
+    'SSA':'SALMÓN CON SALSA DE ALCAPARRAS','BAR':'BARQUILLOS','LM':'LASAÑA MEDITERRÁNEA',
+    'CAC':'CHOCLO A LA CREMA','TPU':'TEQUEÑOS DE PULPO CON SALSA','SA':'SALSA EN FRASCO',
+    'CAMAC':'CAMARONES COCIDOS CON SALSA',
+}
+COCINEROS = {
+    'OP':'CAROLINA','RPP':'CÉSAR','MCL':'JESÚS','CJ':'JESÚS','CLC':'JESÚS',
+    'MCJ':'JESÚS','RC':'CÉSAR','LA':'CÉSAR','RM':'CÉSAR','LCM':'ADRIANA',
+    'TLS':'ADRIANA','CL':'JESÚS','LS':'CÉSAR','LJC':'ADRIANA','PC':'CAROLINA',
+    'MMR':'ADRIANA','TS':'CÉSAR','ÑJ':'CAROLINA','TSA':'ADRIANA','RB':'JESÚS',
+    'CF':'JESÚS','RS':'CÉSAR','FCT':'JESÚS','PCM':'CAROLINA','ÑP':'CAROLINA',
+    'TF':'CÉSAR','MCC':'JESÚS','CAMA':'ADRIANA','TPP':'ADRIANA','RA':'CÉSAR',
+    'AS':'JESÚS','PAC':'CÉSAR','EM':'CAROLINA','ÑC':'CAROLINA','EJ':'CAROLINA',
+    'BAP':'ADRIANA','MIGNON':'CÉSAR','PV':'CAROLINA','TA':'CÉSAR','MMRM':'ADRIANA',
+    'LR':'JESÚS','CP':'JESÚS','LSA':'ADRIANA','RJ':'CÉSAR','CM':'CÉSAR',
+    'TCM':'ADRIANA','PCP':'JESÚS','EC':'CAROLINA','CC':'JESÚS','SSA':'JESÚS',
+    'BAR':'CAROLINA','LM':'ADRIANA','CAC':'JESÚS','TPU':'ADRIANA','SA':'ADRIANA',
+    'CAMAC':'CÉSAR',
+}
+MAPA = {
+    'OSTION A LA PARMESANA':'OP','OSTIÓN A LA PARMESANA':'OP','OSTIONES A LA PARMESANA':'OP',
+    'ROLLO POLLO PIMENTON':'RPP','ROLLO POLLO PIMENTÓN':'RPP','MINI CHUPE LOCO':'MCL',
+    'CHUPE JAIBA GRANDE':'CJ','CHUPE LOCO CAMARON GRANDE':'CLC','CHUPE LOCO CAMARÓN GRANDE':'CLC',
+    'MINI CHUPE JAIBA':'MCJ','ROLLO CAMARON':'RC','ROLLO CAMARÓN':'RC',
+    'LOMITO ACARAMELADO':'LA','ROLLO MECHADA':'RM','LASAÑA CARNE MECHADA':'LCM',
+    'TEQUEÑOS LOMO SALTADO':'TLS','CARPACCIO DE LOCOS':'CL','LOMO SALTADO':'LS',
+    'LASAÑA JAIBA CAMARON':'LJC','LASAÑA JAIBA CAMARÓN':'LJC',
+    'PURE DE CAMOTE':'PC','PURÉ DE CAMOTE':'PC','MIX MASITAS RELLENAS':'MMR',
+    'TARTARO SALMON':'TS','TÁRTARO SALMÓN':'TS',
+    'ÑOQUIS CON JAMON SERRANO':'ÑJ','ÑOQUIS CON JAMÓN SERRANO':'ÑJ',
+    'TALLARIN SALMON AHUMADO':'TSA','TALLARÍN SALMÓN AHUMADO':'TSA','TALLARINES SALMON AHUMADO':'TSA',
+    'ROAST BEEF':'RB','CARPACCIO DE FILETE':'CF','ROLLO SALMON':'RS','ROLLO SALMÓN':'RS',
+    'FILETE CHAMPIÑON TOCINO':'FCT','FILETE CHAMPIÑÓN TOCINO':'FCT',
+    'PASTEL DE CHOCLO':'PCM','ÑOQUIS PESTO TOMATE CHERRY':'ÑP',
+    'TARTARO FILETE':'TF','TÁRTARO FILETE':'TF',
+    'MINI CHUPE CAMARON':'MCC','MINI CHUPE CAMARÓN':'MCC','CAMARONES APANADOS':'CAMA',
+    'TALLARINES POLLO PIMENTÓN':'TPP','TALLARINES POLLO PIMENTON':'TPP',
+    'ROLLO ALCACHOFA':'RA','ARROZ SALVAJE':'AS','MILHOJAS DE PAPAS':'PAC',
+    'EMPANADITAS MECHADA':'EM','ÑOQUIS DE CAMARON':'ÑC','ÑOQUIS DE CAMARÓN':'ÑC',
+    'EMPANADITAS JAMON SERRANO':'EJ','EMPANADITAS JAMÓN SERRANO':'EJ',
+    'BERENJENAS A LA PARMESANA':'BAP','MIGNON DE POLLO':'MIGNON',
+    'CAJA DE POSTRES EN VASITO':'PV','CAJA POSTRES EN VASITOS':'PV',
+    'TARTARO ATUN':'TA','TÁRTARO ATÚN':'TA','MIX MASITAS RELLENAS DEL MAR':'MMRM',
+    'LOMO RELLENO':'LR','CARPACCIO PULPO CON SALSA AL OLIVO':'CP',
+    'LASAÑA SALMON':'LSA','LASAÑA SALMÓN':'LSA',
+    'ROLLO JAMON SERRANO':'RJ','ROLLO JAMÓN SERRANO':'RJ','CARNE MECHADA':'CM',
+    'TALLARIN CARNE MECHADA':'TCM','TALLARÍN CARNE MECHADA':'TCM','TALLARINES CARNE MECHADA':'TCM',
+    'PATE CON PERAS':'PCP','PATÉ CON PERAS':'PCP',
+    'EMPANADITAS CAMARON':'EC','EMPANADITAS CAMARÓN':'EC','CHUPE CENTOLLA GRANDE':'CC',
+    'SALMON CON SALSA DE ALCAPARRAS':'SSA','SALMÓN CON SALSA DE ALCAPARRAS':'SSA',
+    'BARQUILLOS':'BAR','LASAÑA MEDITERRANEA':'LM','LASAÑA MEDITERRÁNEA':'LM',
+    'CHOCLO A LA CREMA':'CAC','TEQUEÑOS DE PULPO CON SALSA':'TPU',
+    'SALSA EN FRASCO':'SA','CAMARONES COCIDOS CON SALSA':'CAMAC',
 }
 
-def norm(s):
-    return ' '.join(str(s).split()).upper()
+# ─── LECTURA ─────────────────────────────────────────────────
+def leer(archivo):
+    df = pd.read_excel(archivo)
+    df['Fecha']   = pd.to_datetime(df['Fecha'], dayfirst=True, errors='coerce')
+    df['Entrada'] = pd.to_numeric(df['Entrada'], errors='coerce').fillna(0)
+    df['Salida']  = pd.to_numeric(df['Salida'],  errors='coerce').fillna(0)
+    df['Stock']   = pd.to_numeric(df['Stock'],   errors='coerce').fillna(0)
+    df['SKU']     = df['Producto'].str.strip().map(MAPA)
+    return df[df['SKU'].notna()].copy()
 
-def all_dates(fi, ff):
-    d = fi
-    while d <= ff:
-        yield d
-        d += timedelta(days=1)
-
-# ─────────────────────────────────────────────────────────────
-# GOOGLE SHEETS
-# ─────────────────────────────────────────────────────────────
-def conectar_sheets():
-    creds_dict = json.loads(os.environ["GOOGLE_CREDENTIALS"])
-    scopes = ["https://www.googleapis.com/auth/spreadsheets","https://www.googleapis.com/auth/drive"]
-    creds = Credentials.from_service_account_info(creds_dict, scopes=scopes)
-    gc = gspread.authorize(creds)
-    return gc.open_by_url(SHEET_URL)
-
-def leer_hoja(sh, nombre):
-    ws = sh.worksheet(nombre)
-    rows = ws.get_all_values()
-    if len(rows) < 2:
-        return []
-    h = rows[0]
-    return [dict(zip(h, r)) for r in rows[1:]]
-
-# ─────────────────────────────────────────────────────────────
-# BSALE
-# ─────────────────────────────────────────────────────────────
-def bsale_get(path, params=None):
-    url = f"{BSALE_BASE}{path}"
-    p = {"limit": 50, "offset": 0}
-    if params:
-        p.update(params)
-    items = []
+def bsale_stock():
+    headers = {'access_token': BSALE_TOKEN}
+    result  = {}
+    offset  = 0
     while True:
-        for i in range(3):
+        r = requests.get('https://api.bsale.cl/v1/stocks.json', headers=headers,
+                         params={'limit':50,'offset':offset,'expand':'[variant,office]'}, timeout=30)
+        if r.status_code != 200:
+            break
+        data  = r.json()
+        items = data.get('items', [])
+        for item in items:
             try:
-                r = requests.get(url, headers=HEADERS, params=p, timeout=30)
-                r.raise_for_status()
-                data = r.json()
-                break
-            except Exception as e:
-                print(f"  ⚠ {e} (intento {i+1})")
-                time.sleep(2)
+                sku = ' '.join(str(item['variant']['barCode']).split()).upper()
+                oid = int(item['office']['id'])
+                qty = int(item.get('quantityAvailable', 0) or 0)
+                if sku not in result:
+                    result[sku] = {'vit':0,'pat':0}
+                if   oid == 1: result[sku]['vit'] += qty
+                elif oid == 3: result[sku]['pat'] += qty
+            except: pass
+        if offset + 50 >= data.get('count', 0): break
+        offset += 50
+    return result
+
+# ─── CÁLCULOS ────────────────────────────────────────────────
+def stock_diario(df_sku):
+    if len(df_sku) == 0: return {}
+    dias = pd.date_range(df_sku['Fecha'].min(), FECHA_HOY)
+    serie = df_sku.groupby('Fecha')['Stock'].last().reindex(dias, method='ffill').fillna(0)
+    return serie.to_dict()
+
+def periodos_sin_stock(stock_d):
+    if not stock_d: return []
+    resultado, inicio = [], None
+    for d in sorted(stock_d):
+        if stock_d[d] <= 0:
+            if inicio is None: inicio = d
         else:
-            break
-        items.extend(data.get("items", []))
-        if p["offset"] + p["limit"] >= data.get("count", 0):
-            break
-        p["offset"] += p["limit"]
-        time.sleep(0.15)
-    return items
+            if inicio is not None:
+                dur = (d - inicio).days
+                if dur > 0:
+                    resultado.append({'inicio': inicio.strftime('%d/%m/%Y'),
+                                      'fin': d.strftime('%d/%m/%Y'), 'dias': dur})
+                inicio = None
+    return resultado
 
-def obtener_stock():
-    print("⏳ Descargando stock desde Bsale...")
-    items = bsale_get("/stocks.json", {"expand": "[variant,office]"})
-    stock = {}
-    for item in items:
-        try:
-            sku = norm(item["variant"]["code"])
-        except:
-            continue
-        if sku not in PRODUCTOS:
-            continue
-        try:
-            office_id = int(item["office"]["id"])
-        except:
-            continue
-        qty = int(item.get("quantityAvailable", 0) or 0)
-        if sku not in stock:
-            stock[sku] = {"vit": 0, "pat": 0}
-        if office_id == OFFICE_VIT:
-            stock[sku]["vit"] += qty
-        elif office_id == OFFICE_PAT:
-            stock[sku]["pat"] += qty
-    print(f"   → {len(stock)} SKUs con stock")
-    return stock
+def moda(lst):
+    return Counter(lst).most_common(1)[0][0] if lst else 0
 
-# ─────────────────────────────────────────────────────────────
-# CÁLCULOS
-# ─────────────────────────────────────────────────────────────
-def calcular_analisis(ventas, mov_vit, mov_pat, stock_actual):
-    print("🧮 Calculando velocidades reales...")
+def velocidad(df_sku, stock_d):
+    mask = (df_sku['Salida'] > 0) & (~df_sku['Movimiento de salida'].str.contains(
+        'GUÍA DE DESPACHO|Guía de Despacho|Consumo', na=False))
+    total    = int(df_sku[mask]['Salida'].sum())
+    con_stk  = sum(1 for v in stock_d.values() if v > 0)
+    vel      = round(total / con_stk, 4) if con_stk > 0 else 0.0
+    return vel, total, con_stk
 
-    # Ventas por SKU/sucursal/fecha
-    v_vit = defaultdict(lambda: defaultdict(float))
-    v_pat = defaultdict(lambda: defaultdict(float))
-    for r in ventas:
-        try:
-            d = date.fromisoformat(r['Fecha'])
-            sku = r['SKU']
-            c = float(r['Cantidad'] or 0)
-            if r['Sucursal'] == 'VITACURA':
-                v_vit[sku][d] += c
-            else:
-                v_pat[sku][d] += c
-        except:
-            continue
+def lotes(df_sku):
+    ent = df_sku[df_sku['Entrada'] > 0].sort_values('Fecha')
+    if len(ent) == 0: return [], 0, 0
+    result = []
+    for _, row in ent.iterrows():
+        sig  = ent[ent['Fecha'] > row['Fecha']]['Fecha'].min()
+        if pd.isna(sig): sig = FECHA_HOY
+        mask = (df_sku['Fecha'] >= row['Fecha']) & (df_sku['Fecha'] < sig)
+        ventas = int(df_sku[mask & (df_sku['Salida'] > 0) &
+            (~df_sku['Movimiento de salida'].str.contains(
+                'GUÍA DE DESPACHO|Guía de Despacho|Consumo', na=False))]['Salida'].sum())
+        doc = str(row.get('Movimiento de entrada', ''))
+        num = doc.split('Nº')[-1].strip() if 'Nº' in doc else doc[:20]
+        result.append({'fecha': row['Fecha'].strftime('%d/%m/%Y'),
+                       'cantidad': int(row['Entrada']), 'documento': num,
+                       'ventas_posteriores': ventas,
+                       'dias_hasta_siguiente': (sig - row['Fecha']).days})
+    tamaños = [l['cantidad'] for l in result]
+    return result, round(float(np.mean(tamaños)), 1), len(result)
 
-    # Stock Vitacura por SKU/fecha
-    stock_vit_h = defaultdict(dict)
-    for r in mov_vit:
-        try:
-            d = date.fromisoformat(r['Fecha'])
-            sku = r['SKU']
-            s = float(r['Stock'] or 0)
-            stock_vit_h[sku][d] = s
-        except:
-            continue
+def ventas_mes(df_sku):
+    mask = (df_sku['Salida'] > 0) & (~df_sku['Movimiento de salida'].str.contains(
+        'GUÍA DE DESPACHO|Guía de Despacho|Consumo', na=False))
+    v = df_sku[mask].copy()
+    if len(v) == 0: return {}
+    v['mes'] = v['Fecha'].dt.to_period('M')
+    return {str(k): int(val) for k, val in v.groupby('mes')['Salida'].sum().items()}
 
-    # Entradas Pataguas por SKU/fecha
-    ent_pat = defaultdict(lambda: defaultdict(float))
-    for r in mov_pat:
-        try:
-            d = date.fromisoformat(r['Fecha'])
-            sku = r['SKU']
-            c = float(r['Cantidad'] or 0)
-            ent_pat[sku][d] += c
-        except:
-            continue
+def movimientos(df_vit, df_pat):
+    MESES = {'01':'Ene','02':'Feb','03':'Mar','04':'Abr','05':'May','06':'Jun',
+             '07':'Jul','08':'Ago','09':'Sep','10':'Oct','11':'Nov','12':'Dic'}
+    def fmt(ts):
+        d = ts.strftime('%d/%m/%Y').split('/')
+        return f"{int(d[0])} {MESES[d[1]]}"
 
-    dias = list(all_dates(FECHA_INI, FECHA_FIN))
-    analisis = {}
+    movs = []
+    for _, row in df_vit.sort_values('Fecha').iterrows():
+        de = str(row['Movimiento de entrada']) if pd.notna(row['Movimiento de entrada']) else ''
+        ds = str(row['Movimiento de salida'])  if pd.notna(row['Movimiento de salida'])  else ''
+        if row['Entrada'] > 0:
+            t = 'Producción' if ('Recepción' in de or 'Sin Documento' in de) else 'Entrada'
+            n = de.split('Nº')[-1].strip() if 'Nº' in de else de[:20]
+            movs.append({'fecha':fmt(row['Fecha']),'fecha_ord':row['Fecha'].isoformat(),
+                         'tipo':t,'documento':n,'tienda':'Vitacura',
+                         'cantidad':int(row['Entrada']),'signo':'+','stock':int(row['Stock'])})
+        if row['Salida'] > 0:
+            if   'GUÍA DE DESPACHO' in ds.upper(): t,n = 'Despacho', ds.split('Nº')[-1].strip() if 'Nº' in ds else ds[:20]
+            elif 'Consumo' in ds:                  t,n = 'Consumo',  ds.split('Nº')[-1].strip() if 'Nº' in ds else ds[:20]
+            else:                                  t,n = 'Venta',    ds.replace('BOLETA ELECTRÓNICA T Nº','').replace('BOLETA ELECTRÓNICA','').strip()
+            movs.append({'fecha':fmt(row['Fecha']),'fecha_ord':row['Fecha'].isoformat(),
+                         'tipo':t,'documento':n,'tienda':'Vitacura',
+                         'cantidad':int(row['Salida']),'signo':'-','stock':int(row['Stock'])})
 
-    for sku in PRODUCTOS:
-        # VITACURA: usar stock del consolidado
-        dias_con_vit = 0
-        dias_sin_vit = 0
-        periodos_sin = []
-        en_zero = False
-        inicio_zero = None
+    for _, row in df_pat.sort_values('Fecha').iterrows():
+        de = str(row['Movimiento de entrada']) if pd.notna(row['Movimiento de entrada']) else ''
+        ds = str(row['Movimiento de salida'])  if pd.notna(row['Movimiento de salida'])  else ''
+        if row['Entrada'] > 0:
+            n = de.split('Nº')[-1].strip() if 'Nº' in de else de[:20]
+            movs.append({'fecha':fmt(row['Fecha']),'fecha_ord':row['Fecha'].isoformat(),
+                         'tipo':'Despacho recibido','documento':n,'tienda':'Pataguas',
+                         'cantidad':int(row['Entrada']),'signo':'+','stock':int(row['Stock'])})
+        if row['Salida'] > 0:
+            t = 'Consumo' if 'Consumo' in ds else 'Venta'
+            n = ds.replace('BOLETA ELECTRÓNICA T Nº','').replace('BOLETA ELECTRÓNICA','').strip()
+            movs.append({'fecha':fmt(row['Fecha']),'fecha_ord':row['Fecha'].isoformat(),
+                         'tipo':t,'documento':n,'tienda':'Pataguas',
+                         'cantidad':int(row['Salida']),'signo':'-','stock':int(row['Stock'])})
 
-        for d in dias:
-            s = stock_vit_h[sku].get(d, None)
-            if s is not None:
-                if s > 0:
-                    dias_con_vit += 1
-                    if en_zero:
-                        dur = (d - inicio_zero).days
-                        if dur > 0:
-                            periodos_sin.append(dur)
-                        en_zero = False
-                else:
-                    dias_sin_vit += 1
-                    if not en_zero:
-                        en_zero = True
-                        inicio_zero = d
+    movs.sort(key=lambda x: x['fecha_ord'])
+    return movs
 
-        total_vend_vit = sum(v_vit[sku].values())
-        vel_vit = total_vend_vit / dias_con_vit if dias_con_vit > 0 else 0
+# ─── PIPELINE ────────────────────────────────────────────────
+def procesar():
+    print("Leyendo consolidados...")
+    vit = leer(ARCHIVO_VIT)
+    pat = leer(ARCHIVO_PAT)
 
-        # PATAGUAS: reconstruir desde stock actual
-        s_act_pat = stock_actual.get(sku, {}).get('pat', 0)
-        stock_pat_d = {}
-        s = s_act_pat
-        for d in reversed(dias):
-            stock_pat_d[d] = s
-            s = max(0, s + v_pat[sku].get(d, 0) - ent_pat[sku].get(d, 0))
+    print("Obteniendo stock desde Bsale...")
+    sb = bsale_stock()
+    if not sb: print("  Warning: sin datos Bsale")
 
-        dias_con_pat = sum(1 for d in dias if stock_pat_d[d] > 0)
-        total_vend_pat = sum(v_pat[sku].values())
-        vel_pat = total_vend_pat / dias_con_pat if dias_con_pat > 0 else 0
+    resultados = []
+    for sku in NOMBRES:
+        dv = vit[vit['SKU']==sku].copy()
+        dp = pat[pat['SKU']==sku].copy()
 
-        # Tiempo reposición (moda)
-        moda = Counter(periodos_sin).most_common(1)[0][0] if periodos_sin else 7
+        # Stock actual
+        s = sb.get(sku, {'vit':0,'pat':0})
+        if s['vit']==0 and s['pat']==0:
+            s = sb.get(sku.replace('Ñ','N'), {'vit':0,'pat':0})
+        sv_hoy, sp_hoy = s['vit'], s['pat']
 
-        # Stock actual y días restantes
-        s_act_vit = stock_actual.get(sku, {}).get('vit', 0)
-        vel_total = vel_vit + vel_pat
+        # Stock diario
+        sd_v = stock_diario(dv)
+        sd_p = stock_diario(dp)
 
-        dr_vit = round(s_act_vit / vel_vit, 1) if vel_vit > 0 and s_act_vit > 0 else None
-        dr_pat = round(s_act_pat / vel_pat, 1) if vel_pat > 0 and s_act_pat > 0 else None
-        candidatos = [d for d in [dr_vit, dr_pat] if d is not None]
-        dias_rest = min(candidatos) if candidatos else None
+        # Períodos sin stock — SOLO VITACURA para tiempo de reposición
+        per_v = periodos_sin_stock(sd_v)
+        per_p = periodos_sin_stock(sd_p)
+        durs  = [p['dias'] for p in per_v if p['dias'] <= 30]
+        trepo = moda(durs) if durs else (moda([p['dias'] for p in per_v]) if per_v else 7)
 
-        despacho = max(0, math.ceil(vel_pat * 7) - s_act_pat) if vel_pat > 0 else 0
-        lote = math.ceil(vel_total * (moda + 7)) if vel_total > 0 else None
+        # Velocidades
+        vel_v, tot_v, dsc_v = velocidad(dv, sd_v)
+        vel_p, tot_p, dsc_p = velocidad(dp, sd_p)
+        vel_t = vel_v + vel_p
 
-        if s_act_vit == 0 and s_act_pat == 0:
-            estado = 'sin_stock'
-        elif dias_rest is not None and dias_rest <= 3:
-            estado = 'critico'
-        elif dias_rest is not None and dias_rest <= 14:
-            estado = 'bajo'
-        else:
-            estado = 'ok'
+        # Días restantes
+        total_hoy = sv_hoy + sp_hoy
+        dias_v = round(sv_hoy/vel_v,1) if vel_v>0 and sv_hoy>0 else (0 if sv_hoy==0 else None)
+        dias_p = round(sp_hoy/vel_p,1) if vel_p>0 and sp_hoy>0 else (0 if sp_hoy==0 else None)
+        dias_t = round(total_hoy/vel_t,1) if vel_t>0 else None
 
-        analisis[sku] = {
-            'vel_vit': round(vel_vit, 4), 'vel_pat': round(vel_pat, 4),
-            'vel_total': round(vel_total, 4),
-            'dias_con_vit': dias_con_vit, 'dias_sin_vit': dias_sin_vit,
-            'dias_con_pat': dias_con_pat,
-            'total_vend_vit': int(total_vend_vit), 'total_vend_pat': int(total_vend_pat),
-            'tiempo_repo': moda, 'periodos_sin': periodos_sin,
-            'dias_rest': dias_rest, 'dias_rest_vit': dr_vit, 'dias_rest_pat': dr_pat,
-            'despacho': despacho, 'lote': lote, 'estado': estado,
-        }
+        # Estado
+        if   total_hoy == 0:                                   estado = 'sin_stock'
+        elif dias_t is not None and dias_t <= 3:               estado = 'critico'
+        elif dias_t is not None and dias_t <= 14:              estado = 'bajo'
+        else:                                                  estado = 'ok'
 
-    print(f"   → {len(analisis)} productos calculados")
-    return analisis
+        alerta = (sv_hoy==0 and sp_hoy>0 and vel_v>0) or (sp_hoy==0 and sv_hoy>0 and vel_p>0)
+        pto_reorden   = math.ceil(vel_t * trepo)              if vel_t > 0 else 0
+        lote_sugerido = math.ceil(vel_t * max(trepo+7, 14))   if vel_t > 0 else 0
+        despacho      = max(0, math.ceil(vel_p * max(trepo,7)) - sp_hoy) if vel_p > 0 else 0
 
-# ─────────────────────────────────────────────────────────────
-# HTML
-# ─────────────────────────────────────────────────────────────
-def generar_html(filas, fecha_str):
-    data_js = json.dumps(filas, ensure_ascii=False)
-    return f"""<!DOCTYPE html>
-<html lang="es"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Producción — Cocina Ángeles Álamos</title>
-<style>
-*{{box-sizing:border-box;margin:0;padding:0}}
-body{{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:#f5f5f3;color:#1a1a1a}}
-.header{{background:#fff;border-bottom:1px solid #e5e5e5;padding:16px 24px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:100;box-shadow:0 1px 3px rgba(0,0,0,.04)}}
-.hl{{display:flex;align-items:center;gap:10px}}
-.dot{{width:8px;height:8px;border-radius:50%;background:#639922;flex-shrink:0}}
-.hs{{display:flex;flex-direction:column;gap:1px}}
-.hsub{{font-size:10px;color:#888;letter-spacing:.06em;text-transform:uppercase}}
-.htit{{font-size:17px;font-weight:500;color:#1a1a1a}}
-.hf{{font-size:12px;color:#888}}
-.wrap{{max-width:900px;margin:0 auto;padding:0 24px}}
-.resumen{{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;padding:16px 0}}
-.stat{{background:#fff;border:1px solid #e5e5e5;border-radius:10px;padding:12px 16px;text-align:center}}
-.sn{{font-size:22px;font-weight:500}}.sl{{font-size:11px;color:#888;margin-top:2px}}
-.sr{{color:#A32D2D}}.sa{{color:#854F0B}}.sb{{color:#185FA5}}.sv{{color:#3B6D11}}
-.filtros{{display:flex;gap:8px;flex-wrap:wrap;padding-bottom:12px}}
-.filtros select,.filtros input{{font-size:12px;padding:6px 10px;border-radius:8px;border:1px solid #e0e0e0;background:#fff;color:#1a1a1a;outline:none}}
-.filtros input{{flex:1;min-width:160px}}
-.cards{{display:flex;flex-direction:column;gap:8px;padding-bottom:24px}}
-.card{{background:#fff;border:1px solid #e5e5e5;border-radius:12px;overflow:hidden;transition:box-shadow .15s}}
-.card:hover{{box-shadow:0 2px 8px rgba(0,0,0,.06)}}
-.ch{{display:flex;align-items:center;gap:10px;padding:12px 14px;cursor:pointer;user-select:none}}
-.badge{{font-size:10px;font-weight:500;padding:3px 8px;border-radius:999px;white-space:nowrap;flex-shrink:0}}
-.br{{background:#FCEBEB;color:#A32D2D}}.ba{{background:#FAEEDA;color:#854F0B}}
-.bb{{background:#E6F1FB;color:#185FA5}}.bv{{background:#EAF3DE;color:#3B6D11}}
-.cn{{font-size:13px;font-weight:500;flex:1}}
-.cc{{font-size:11px;color:#888}}
-.cd{{font-size:12px;font-weight:500;white-space:nowrap;margin-left:8px}}
-.chev{{font-size:12px;color:#ccc;transition:transform .2s;flex-shrink:0}}
-.chev.open{{transform:rotate(180deg)}}
-.tw{{padding:4px 14px 10px;display:flex;align-items:center;gap:8px}}
-.tl{{display:flex;justify-content:space-between;font-size:9px;margin-bottom:3px}}
-.tt{{position:relative;height:7px;border-radius:4px;flex:1}}
-.tbg{{position:absolute;inset:0;border-radius:4px;background:linear-gradient(to right,#E24B4A 0%,#E24B4A 10%,#EF9F27 10%,#EF9F27 30%,#378ADD 30%,#378ADD 70%,#639922 70%,#639922 100%)}}
-.tm{{position:absolute;top:50%;width:11px;height:11px;border-radius:50%;background:#fff;border:2px solid #333;transform:translate(-50%,-50%);z-index:2}}
-.tn{{display:flex;justify-content:space-between;font-size:9px;color:#aaa;margin-top:3px}}
-.sr2{{display:grid;grid-template-columns:repeat(4,1fr);border-top:1px solid #f0f0f0}}
-.sc{{padding:8px 12px;text-align:center;border-right:1px solid #f0f0f0}}
-.sc:last-child{{border-right:none}}
-.sc .v{{font-size:13px;font-weight:500}}.sc .l{{font-size:10px;color:#aaa;margin-top:1px}}
-.det{{display:none;border-top:1px solid #f0f0f0}}
-.det.open{{display:block}}
-.tc{{padding:12px 14px}}
-.ib{{background:#f9f9f9;border-radius:8px;padding:10px 12px;font-size:11px;color:#666;line-height:1.8;margin-bottom:8px}}
-.ib b{{color:#1a1a1a;font-weight:500}}
-.al{{font-size:11px;color:#854F0B;background:#FAEEDA;padding:6px 10px;border-radius:6px;margin-bottom:8px}}
-.gbtn{{padding-bottom:24px}}
-.btn{{padding:9px 20px;border-radius:8px;border:1px solid #3B6D11;background:#3B6D11;color:#fff;font-size:12px;cursor:pointer;font-weight:500}}
-.btn:hover{{background:#2d5a0d}}
-</style></head><body>
+        lts, prom_lote, n_lotes = lotes(dv)
+
+        # Ventas por mes combinadas
+        vm_v = ventas_mes(dv)
+        vm_p = ventas_mes(dp)
+        meses = sorted(set(list(vm_v)+list(vm_p)))
+        vm = [{'mes':m,'vit':vm_v.get(m,0),'pat':vm_p.get(m,0),'total':vm_v.get(m,0)+vm_p.get(m,0)} for m in meses]
+
+        resultados.append({
+            'sku': sku, 'nombre': NOMBRES[sku], 'cocinero': COCINEROS.get(sku,''),
+            'vit': sv_hoy, 'pat': sp_hoy, 'total': total_hoy,
+            'vel_vit': vel_v, 'vel_pat': vel_p, 'vel_total': round(vel_t,4),
+            'dias_vit': dias_v, 'dias_pat': dias_p, 'dias_total': dias_t,
+            'estado': estado, 'alerta_dist': alerta,
+            'tiempo_repo': trepo, 'pto_reorden': pto_reorden,
+            'lote_sugerido': lote_sugerido, 'despacho_sug': despacho,
+            'total_vit': tot_v, 'total_pat': tot_p,
+            'dias_stock_vit': dsc_v, 'dias_stock_pat': dsc_p,
+            'n_lotes': n_lotes, 'prom_lote': prom_lote,
+            'periodos_sin_stock_vit': per_v,
+            'lotes': lts, 'movs': movimientos(dv, dp), 'ventas_mes': vm,
+        })
+        print(f"  ✓ {sku} — {NOMBRES[sku][:30]}")
+
+    orden = {'sin_stock':0,'critico':1,'bajo':2,'ok':3}
+    resultados.sort(key=lambda x: (orden[x['estado']], x['dias_total'] if x['dias_total'] is not None else 9999))
+    return resultados
+
+# ─── HTML (sin f-string para evitar conflictos con JS) ───────
+CSS = """
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:#F5F4F0;color:#1A1A1A;font-size:14px}
+.header{background:#fff;border-bottom:1px solid #ddd;padding:14px 20px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:100}
+.logo{font-size:17px;font-weight:700;letter-spacing:-0.02em}.logo span{color:#E24B4A}
+.header-right{display:flex;gap:10px;align-items:center}
+.btn{font-size:12px;padding:7px 16px;border-radius:6px;border:1px solid #ddd;cursor:pointer;background:#fff;color:#444;font-family:inherit}
+.btn:hover{background:#f0f0f0}
+.btn-primary{background:#1A1A1A;color:#fff;border-color:#1A1A1A}.btn-primary:hover{background:#333}
+.nav-active{background:#1A1A1A!important;color:#fff!important;border-color:#1A1A1A!important}
+.fecha{font-size:11px;color:#888}
+.metricas{display:grid;grid-template-columns:repeat(4,1fr);background:#fff;border-bottom:1px solid #ddd}
+.metrica{padding:16px 20px;border-right:1px solid #ddd}.metrica:last-child{border-right:none}
+.metrica-label{font-size:11px;color:#888;text-transform:uppercase;letter-spacing:0.06em;margin-bottom:6px}
+.metrica-valor{font-size:30px;font-weight:700;line-height:1}
+.metrica-sub{font-size:11px;color:#999;margin-top:4px}
+.val-rojo{color:#E24B4A}.val-amarillo{color:#EF9F27}.val-verde{color:#27AE60}
+.toolbar{background:#fff;border-bottom:1px solid #ddd;padding:10px 16px;display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.toolbar-label{font-size:11px;color:#888;text-transform:uppercase;letter-spacing:0.06em}
+select,input[type=text],input[type=number]{font-size:12px;padding:6px 10px;border:1px solid #ddd;border-radius:5px;background:#fff;color:#333;font-family:inherit}
+input[type=text]{width:200px}
+.toolbar-sep{width:1px;height:20px;background:#ddd;margin:0 4px}
+.leyenda{padding:8px 16px;display:flex;gap:16px;align-items:center;background:#F5F4F0;border-bottom:1px solid #ddd;flex-wrap:wrap}
+.leg{display:flex;align-items:center;gap:5px;font-size:11px;color:#666}
+.leg-dot{width:10px;height:10px;border-radius:2px}
+.container{padding:12px 16px}
+.card{background:#fff;border:1px solid #ddd;border-radius:10px;margin-bottom:8px;overflow:hidden;transition:box-shadow 0.15s}
+.card:hover{box-shadow:0 2px 10px rgba(0,0,0,0.08)}
+.card.sin_stock{border-left:4px solid #E74C3C}
+.card.critico{border-left:4px solid #E74C3C}
+.card.bajo{border-left:4px solid #E67E22}
+.card.ok{border-left:4px solid #27AE60}
+.card-top{padding:12px 14px;display:flex;align-items:center;justify-content:space-between;cursor:pointer;user-select:none}
+.card-info{flex:1;min-width:0}
+.card-nombre{font-size:13px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.card-meta{font-size:11px;color:#888;margin-top:2px}
+.card-badges{display:flex;align-items:center;gap:8px;flex-shrink:0;margin-left:10px}
+.badge{font-size:11px;font-weight:600;padding:3px 10px;border-radius:20px}
+.badge-rojo{background:#FCEBEB;color:#A32D2D}
+.badge-amarillo{background:#FAEEDA;color:#854F0B}
+.badge-verde{background:#EAF3DE;color:#3B6D11}
+.badge-dist{background:#FEF3C7;color:#92400E;font-size:10px}
+.chevron{font-size:12px;color:#bbb;margin-left:6px;transition:transform 0.2s}
+.chevron.open{transform:rotate(180deg)}
+.tl-wrap{padding:6px 14px 10px}
+
+.btn-det{font-size:11px;background:none;border:none;color:#2563EB;padding:6px 14px;cursor:pointer;width:100%;text-align:left;border-top:1px solid #f0f0f0}
+.btn-det:hover{background:#f8f8f8}
+.detalle{display:none;border-top:1px solid #eee}
+.detalle.open{display:block}
+.tabs{display:flex;border-bottom:1px solid #eee;background:#fafafa}
+.tab{font-size:11px;padding:9px 16px;border:none;background:none;color:#888;cursor:pointer;font-family:inherit;border-bottom:2px solid transparent}
+.tab.active{color:#1A1A1A;border-bottom-color:#1A1A1A;font-weight:600}
+.tab-body{display:none;padding:14px}
+.tab-body.active{display:block}
+.movs-table{width:100%;border-collapse:collapse;font-size:12px}
+.movs-table th{text-align:left;color:#888;padding:6px 10px;border-bottom:1px solid #eee;font-size:10px;text-transform:uppercase;letter-spacing:0.05em;font-weight:600}
+.movs-table td{padding:7px 10px;border-bottom:1px solid #f5f5f5;vertical-align:middle}
+.movs-table tr:last-child td{border-bottom:none}
+.movs-table tr:hover td{background:#fafafa}
+.tipo-badge{display:inline-block;font-size:10px;font-weight:600;padding:2px 8px;border-radius:4px}
+.tipo-prod{background:#EAF3DE;color:#3B6D11}
+.tipo-venta{background:#FEE2E2;color:#991B1B}
+.tipo-despacho{background:#EFF6FF;color:#1D4ED8}
+.tipo-consumo{background:#FEF3C7;color:#92400E}
+.tipo-desp-rec{background:#F0FDF4;color:#166534}
+.tienda-vit{font-size:10px;padding:1px 6px;border-radius:3px;background:#EAF3DE;color:#3B6D11;font-weight:500}
+.tienda-pat{font-size:10px;padding:1px 6px;border-radius:3px;background:#E6F1FB;color:#185FA5;font-weight:500}
+.cant-pos{color:#059669;font-weight:700}
+.cant-neg{color:#DC2626;font-weight:700}
+.insight{background:#F8F7F4;border-radius:8px;padding:12px 14px;font-size:12px;color:#555;line-height:1.8;margin-bottom:10px}
+.insight b{color:#1A1A1A;font-weight:600}
+.insight-warn{background:#FFFBEB;border:1px solid #FDE68A;border-radius:8px;padding:12px 14px;font-size:12px;color:#92400E;line-height:1.8;margin-bottom:10px}
+.insight-ok{background:#EAF3DE;border-radius:8px;padding:12px 14px;font-size:12px;color:#3B6D11;line-height:1.8;margin-bottom:10px}
+.insight-peligro{background:#FEE2E2;border-radius:8px;padding:12px 14px;font-size:12px;color:#991B1B;line-height:1.8;margin-bottom:10px}
+.periodo-chip{display:inline-block;font-size:10px;padding:2px 8px;border-radius:4px;background:#FEE2E2;color:#991B1B;margin:2px}
+.lote-card{background:#fff;border:1px solid #eee;border-radius:6px;padding:10px 12px;font-size:11px;margin-bottom:6px}
+.mes-table{width:100%;border-collapse:collapse;font-size:12px;margin-top:8px}
+.mes-table th{text-align:left;color:#888;padding:5px 10px;border-bottom:1px solid #eee;font-size:10px;text-transform:uppercase}
+.mes-table td{padding:6px 10px;border-bottom:1px solid #f5f5f5}
+.mes-bar{display:inline-block;height:8px;background:#5DCAA5;border-radius:2px;margin-left:6px;vertical-align:middle}
+.no-res{text-align:center;color:#aaa;font-size:13px;padding:40px}
+.dias-btn{font-size:11px;padding:5px 10px;border:none;background:none;border-radius:6px;cursor:pointer;color:#666;font-family:inherit}
+.dias-btn:hover{background:#e5e5e5}
+.dias-btn-active{background:#fff;color:#1A1A1A;font-weight:600;box-shadow:0 1px 3px rgba(0,0,0,0.15)}
+.guia-section{background:#fff;border-bottom:1px solid #ddd;padding:14px 20px}
+.guia-header{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px}
+.guia-title{font-size:15px;font-weight:700;margin-bottom:2px}
+.guia-sub{font-size:11px;color:#888}
+.guia-controls{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.dias-group{display:flex;align-items:center;gap:6px;background:#F5F4F0;border-radius:8px;padding:4px}
+.guia-table{width:100%;border-collapse:collapse;font-size:12px}
+.guia-table th{text-align:left;color:#888;padding:8px 10px;border-bottom:2px solid #eee;font-size:10px;text-transform:uppercase}
+.guia-table td{padding:7px 10px;border-bottom:1px solid #f5f5f5}
+.guia-table tr.urgente{background:#FFF5F5}
+"""
+
+JS = """
+const MESES_L = {'2026-01':'Enero','2026-02':'Febrero','2026-03':'Marzo',
+  '2026-04':'Abril','2026-05':'Mayo','2026-06':'Junio'};
+
+// ── Helpers ────────────────────────────────────────────────
+function diasStr(p){
+  if(p.estado==='sin_stock') return 'SIN STOCK';
+  if(p.dias_total===null||p.dias_total===undefined) return '—';
+  if(p.dias_total>365) return '+1 año';
+  return Math.round(p.dias_total)+'d';
+}
+function badgeCls(e){
+  if(e==='sin_stock'||e==='critico') return 'badge-rojo';
+  if(e==='bajo') return 'badge-amarillo';
+  return 'badge-verde';
+}
+
+// ── Barra estilo escala con marcador ───────────────────────
+function buildBarra(p){
+  const dias = p.dias_total !== null && p.dias_total !== undefined ? Math.round(p.dias_total) : -1;
+  let pct;
+  if(dias <= 0) pct = 0;
+  else if(dias <= 3)  pct = (dias/3)*10;
+  else if(dias <= 14) pct = 10 + ((dias-3)/11)*23;
+  else if(dias <= 30) pct = 33 + ((dias-14)/16)*34;
+  else pct = 100;
+  pct = Math.min(98, Math.max(2, pct));
+  const label = dias < 0 ? '0d' : dias === 0 ? '0d' : dias >= 30 ? '30d+' : dias+'d';
+  const colorMark = dias <= 0 ? '#E74C3C' : dias <= 3 ? '#E67E22' : dias <= 14 ? '#E67E22' : '#27AE60';
+  return '<div style="padding:0 2px">'
+    + '<div style="height:22px;border-radius:6px;overflow:hidden;display:flex">'
+    +   '<div style="width:10%;background:#E74C3C;display:flex;align-items:center;justify-content:center;font-size:9px;color:#fff;font-weight:700">0</div>'
+    +   '<div style="width:23%;background:#E67E22;display:flex;align-items:center;justify-content:center;font-size:9px;color:#fff;font-weight:700">3d</div>'
+    +   '<div style="width:34%;background:#F39C12;display:flex;align-items:center;justify-content:center;font-size:9px;color:#fff;font-weight:700">14d</div>'
+    +   '<div style="flex:1;background:#27AE60;display:flex;align-items:center;justify-content:center;font-size:9px;color:#fff;font-weight:700">30d+</div>'
+    + '</div>'
+    + '<div style="position:relative;height:20px;margin-top:1px">'
+    +   '<div style="position:absolute;left:'+pct+'%;top:0;transform:translateX(-50%);text-align:center">'
+    +     '<div style="width:0;height:0;border-left:5px solid transparent;border-right:5px solid transparent;border-bottom:8px solid '+colorMark+';margin:0 auto"></div>'
+    +     '<div style="font-size:10px;font-weight:700;color:'+colorMark+';white-space:nowrap;line-height:1.2">'+label+'</div>'
+    +   '</div>'
+    + '</div>'
+    + '</div>';
+}
+
+// ── Tabla movimientos ──────────────────────────────────────
+function tipoBadge(tipo){
+  const m={'Producción':'tipo-prod','Venta':'tipo-venta','Despacho':'tipo-despacho',
+    'Consumo':'tipo-consumo','Despacho recibido':'tipo-desp-rec','Entrada':'tipo-prod'};
+  return '<span class="tipo-badge '+(m[tipo]||'tipo-prod')+'">'+tipo+'</span>';
+}
+function buildMovs(movs){
+  if(!movs||movs.length===0) return '<p style="color:#bbb;font-size:12px;padding:8px 0">Sin movimientos.</p>';
+  const rows = movs.map(function(m){
+    const tienda = m.tienda==='Vitacura'
+      ? '<span class="tienda-vit">Vitacura</span>'
+      : '<span class="tienda-pat">Pataguas</span>';
+    const cantCls = m.signo==='+' ? 'cant-pos' : 'cant-neg';
+    return '<tr><td style="color:#888">'+m.fecha+'</td><td>'+tipoBadge(m.tipo)+'</td>'
+      +'<td style="color:#666;font-size:11px">'+m.documento+'</td><td>'+tienda+'</td>'
+      +'<td class="'+cantCls+'" style="text-align:right">'+m.signo+m.cantidad+'</td>'
+      +'<td style="text-align:right;font-weight:600">'+m.stock+'</td></tr>';
+  }).join('');
+  return '<table class="movs-table"><thead><tr>'
+    +'<th>Fecha</th><th>Tipo</th><th>Documento</th><th>Tienda</th>'
+    +'<th style="text-align:right">Cant.</th><th style="text-align:right">Stock</th>'
+    +'</tr></thead><tbody>'+rows+'</tbody></table>';
+}
+
+// ── Análisis ───────────────────────────────────────────────
+function buildAnalisis(p){
+  const vt = p.vel_total;
+  const repo = p.tiempo_repo||7;
+  let h = '';
+
+  // Demanda real
+  h += '<div class="insight"><b>📊 Demanda real del período</b><br>'
+    + 'Vitacura: <b>'+p.total_vit+' und</b> en '+p.dias_stock_vit+' días con stock → <b>'+p.vel_vit.toFixed(3)+' und/día</b><br>'
+    + 'Pataguas: <b>'+p.total_pat+' und</b> en '+p.dias_stock_pat+' días con stock → <b>'+p.vel_pat.toFixed(3)+' und/día</b><br>'
+    + 'Total: <b>'+vt.toFixed(3)+' und/día</b> ('+(vt*30).toFixed(1)+' und/mes estimado)</div>';
+
+  // Períodos sin stock Vitacura
+  const per = p.periodos_sin_stock_vit||[];
+  if(per.length>0){
+    const chips = per.map(function(pp){
+      return '<span class="periodo-chip">'+pp.inicio+' → '+pp.fin+' ('+pp.dias+'d)</span>';
+    }).join('');
+    h += '<div class="insight-warn"><b>⚠️ Vitacura sin stock ('+per.length+' veces)</b><br>'
+      + chips+'<br><b>Tiempo de reposición estimado: '+repo+' días</b></div>';
+  }
+
+  // Stock actual
+  const dvt = p.vit===0?'sin stock':(p.dias_vit!==null?Math.round(p.dias_vit)+'d':'—');
+  const dpt = p.pat===0?'sin stock':(p.dias_pat!==null?Math.round(p.dias_pat)+'d':'—');
+  const uc  = p.estado==='sin_stock'||p.estado==='critico'?'insight-peligro':p.estado==='bajo'?'insight-warn':'insight-ok';
+  h += '<div class="'+uc+'"><b>📦 Stock actual</b><br>'
+    + 'Vitacura: <b>'+p.vit+' und</b> → '+dvt+' &nbsp;|&nbsp; Pataguas: <b>'+p.pat+' und</b> → '+dpt+'<br>'
+    + 'Total: <b>'+p.total+' und</b> → <b>'+diasStr(p)+'</b> de cobertura</div>';
+
+  // Recomendaciones
+  if(vt>0){
+    h += '<div class="insight-ok"><b>✅ Recomendaciones</b><br>'
+      + 'Punto de reorden: cuando queden <b>'+p.pto_reorden+' und</b> → producir de inmediato<br>'
+      + 'Lote sugerido: <b>'+p.lote_sugerido+' und</b><br>'
+      + 'Despacho sugerido Pataguas: <b>'+p.despacho_sug+' und</b></div>';
+  }
+
+  // Ventas por mes
+  if(p.ventas_mes&&p.ventas_mes.length>0){
+    const mx = Math.max.apply(null, p.ventas_mes.map(function(m){return m.total;}));
+    const filas = p.ventas_mes.map(function(m){
+      const lbl = MESES_L[m.mes]||m.mes;
+      const bw  = Math.round(m.total/Math.max(mx,1)*80);
+      return '<tr><td style="color:#888;width:80px">'+lbl+'</td>'
+        +'<td style="text-align:right;width:50px"><b>'+m.vit+'</b></td>'
+        +'<td style="text-align:right;width:50px"><b>'+m.pat+'</b></td>'
+        +'<td style="text-align:right;width:50px;font-weight:700">'+m.total+'</td>'
+        +'<td><div class="mes-bar" style="width:'+bw+'px"></div></td></tr>';
+    }).join('');
+    h += '<div class="insight"><b>📅 Ventas por mes</b>'
+      +'<table class="mes-table"><thead><tr><th>Mes</th><th style="text-align:right">VIT</th>'
+      +'<th style="text-align:right">PAT</th><th style="text-align:right">Total</th><th></th>'
+      +'</tr></thead><tbody>'+filas+'</tbody></table></div>';
+  }
+
+  // Lotes
+  if(p.lotes&&p.lotes.length>0){
+    const lh = p.lotes.map(function(l){
+      return '<div class="lote-card"><b>📦 '+l.fecha+'</b> — '+l.cantidad+' und ('+l.documento+')<br>'
+        +'<span style="color:#888">Vendidas luego: '+l.ventas_posteriores+' und en '+l.dias_hasta_siguiente+' días</span></div>';
+    }).join('');
+    h += '<div class="insight"><b>🏭 Lotes ('+p.n_lotes+', promedio '+p.prom_lote+' und)</b><div style="margin-top:8px">'+lh+'</div></div>';
+  }
+
+  return h;
+}
+
+// ── Cards ──────────────────────────────────────────────────
+function colorDias(dias, und){
+  if(und===0) return "#E74C3C";
+  if(dias===null||dias===undefined) return "#27AE60";
+  if(dias<=3) return "#E74C3C";
+  if(dias<=14) return "#E67E22";
+  return "#27AE60";
+}
+function textDias(dias, und){
+  if(und===0) return "Sin stock";
+  if(dias===null||dias===undefined) return "—";
+  return Math.round(dias)+"d restantes";
+}
+function buildBloques(p){
+  var cv = colorDias(p.dias_vit, p.vit);
+  var cp = colorDias(p.dias_pat, p.pat);
+  return '<div style="display:grid;grid-template-columns:1fr 1fr;border-top:0.5px solid #eee">'
+    + '<div style="padding:10px 14px;border-right:0.5px solid #eee">'
+    +   '<div style="font-size:10px;color:#888;text-transform:uppercase;letter-spacing:0.04em;margin-bottom:4px">Vitacura</div>'
+    +   '<div style="font-size:20px;font-weight:500;color:'+cv+'">'+p.vit+' und</div>'
+    +   '<div style="font-size:11px;margin-top:2px;color:'+cv+'">'+textDias(p.dias_vit,p.vit)+'</div>'
+    + '</div>'
+    + '<div style="padding:10px 14px">'
+    +   '<div style="font-size:10px;color:#888;text-transform:uppercase;letter-spacing:0.04em;margin-bottom:4px">Pataguas</div>'
+    +   '<div style="font-size:20px;font-weight:500;color:'+cp+'">'+p.pat+' und</div>'
+    +   '<div style="font-size:11px;margin-top:2px;color:'+cp+'">'+textDias(p.dias_pat,p.pat)+'</div>'
+    + '</div>'
+    + '</div>';
+}
+function renderCards(data){
+  const cont  = document.getElementById('productos');
+  const noRes = document.getElementById('no-res');
+  if(!data.length){cont.innerHTML='';noRes.style.display='block';return;}
+  noRes.style.display='none';
+  cont.innerHTML = data.map(function(p,i){
+    const dStr = diasStr(p);
+    const bCls = badgeCls(p.estado);
+    const alHtml = p.alerta_dist ? '<span class="badge badge-dist">⚠ Distribución</span>' : '';
+
+    return '<div class="card '+p.estado+'">'
+      +'<div class="card-top" onclick="toggleCard('+i+')">'
+      +  '<div class="card-info">'
+      +    '<div class="card-nombre">'+p.nombre+' <span style="font-size:10px;color:#ccc;font-weight:400">'+p.sku+'</span></div>'
+      +    '<div class="card-meta">'+p.cocinero+' · Repo: '+p.tiempo_repo+'d · Reordenar en '+p.pto_reorden+' und</div>'
+      +  '</div>'
+      +  '<div class="card-badges">'+alHtml+'<span class="badge '+bCls+'">'+dStr+'</span>'
+      +    '<span class="chevron" id="chev-'+i+'">▼</span></div>'
+      +'</div>'
+      +'<div class="tl-wrap">'+buildBarra(p)+'</div>'
+      +buildBloques(p)
+      +'<button class="btn-det" onclick="toggleCard('+i+')">▼ Ver movimientos y análisis</button>'
+      +'<div class="detalle" id="det-'+i+'">'
+      +  '<div class="tabs">'
+      +    '<button class="tab active" data-tab="mov" data-idx="'+i+'" onclick="switchTabD(this)">Movimientos</button>'
+      +    '<button class="tab" data-tab="analisis" data-idx="'+i+'" onclick="switchTabD(this)">Análisis</button>'
+      +  '</div>'
+      +  '<div class="tab-body active" id="tab-'+i+'-mov">'+buildMovs(p.movs)+'</div>'
+      +  '<div class="tab-body" id="tab-'+i+'-analisis">'+buildAnalisis(p)+'</div>'
+      +'</div>'
+      +'</div>';
+  }).join('');
+}
+function toggleCard(i){
+  document.getElementById('det-'+i).classList.toggle('open');
+  document.getElementById('chev-'+i).classList.toggle('open');
+}
+function switchTabD(btn){
+  var i   = btn.getAttribute('data-idx');
+  var tab = btn.getAttribute('data-tab');
+  document.querySelectorAll('#det-'+i+' .tab').forEach(function(t){t.classList.remove('active');});
+  document.querySelectorAll('#det-'+i+' .tab-body').forEach(function(t){t.classList.remove('active');});
+  btn.classList.add('active');
+  document.getElementById('tab-'+i+'-'+tab).classList.add('active');
+}
+function switchTab(i,tab,btn){
+  document.querySelectorAll('#det-'+i+' .tab').forEach(function(t){t.classList.remove('active');});
+  document.querySelectorAll('#det-'+i+' .tab-body').forEach(function(t){t.classList.remove('active');});
+  btn.classList.add('active');
+  document.getElementById('tab-'+i+'-'+tab).classList.add('active');
+}
+function filtrar(){
+  const coc = document.getElementById('f-cocinero').value;
+  const est = document.getElementById('f-estado').value;
+  const bus = document.getElementById('f-buscar').value.toLowerCase();
+  const fil = DATA.filter(function(p){
+    if(coc && p.cocinero!==coc) return false;
+    if(est && p.estado!==est)   return false;
+    if(bus && !p.nombre.toLowerCase().includes(bus) && !p.sku.toLowerCase().includes(bus)) return false;
+    return true;
+  });
+  renderCards(fil);
+  updateMetricas(fil);
+}
+function updateMetricas(data){
+  data = data||DATA;
+  document.getElementById('m1').textContent = data.filter(function(p){return p.estado==='sin_stock';}).length;
+  document.getElementById('m2').textContent = data.filter(function(p){return p.estado==='critico';}).length;
+  document.getElementById('m3').textContent = data.filter(function(p){return p.estado==='bajo';}).length;
+  document.getElementById('m4').textContent = data.filter(function(p){return p.estado==='ok';}).length;
+}
+
+// ── Navegación ─────────────────────────────────────────────
+function mostrarProductos(){
+  document.getElementById('vista-guias').style.display='none';
+  document.getElementById('vista-productos').style.display='block';
+  document.getElementById('nav-guias').classList.remove('nav-active');
+  document.getElementById('nav-productos').classList.add('nav-active');
+}
+function mostrarGuias(){
+  document.getElementById('vista-productos').style.display='none';
+  document.getElementById('vista-guias').style.display='block';
+  document.getElementById('nav-productos').classList.remove('nav-active');
+  document.getElementById('nav-guias').classList.add('nav-active');
+  renderGuiaProduccion();
+  renderGuiaDespacho();
+}
+
+// ── Guías ──────────────────────────────────────────────────
+var ORDEN_EST = {'sin_stock':0,'critico':1,'bajo':2,'ok':3};
+
+function renderGuiaProduccion(){
+  const coc  = document.getElementById('g-cocinero').value;
+  const dias = parseInt(document.getElementById('g-dias').value)||7;
+  document.getElementById('g-dias-label').textContent = dias+' días';
+
+  var prods = DATA.filter(function(p){return coc ? p.cocinero===coc : true;});
+  prods.sort(function(a,b){
+    var oa=ORDEN_EST[a.estado], ob=ORDEN_EST[b.estado];
+    if(oa!==ob) return oa-ob;
+    return (a.dias_total!==null?a.dias_total:9999)-(b.dias_total!==null?b.dias_total:9999);
+  });
+
+  var filas = prods.map(function(p){
+    var und = p.vel_total>0 ? Math.ceil(p.vel_total*dias) : 0;
+    var dt  = p.dias_total!==null ? Math.round(p.dias_total)+'d' : '—';
+    var clr = p.estado==='sin_stock'||p.estado==='critico' ? '#E74C3C' : p.estado==='bajo' ? '#E67E22' : '#27AE60';
+    var urg = p.estado==='sin_stock'||p.estado==='critico';
+    return '<tr'+(urg?' class="urgente"':'')+'>'
+      +'<td style="color:'+clr+';font-weight:700;width:55px">'+dt+'</td>'
+      +'<td style="font-weight:'+(urg?700:400)+'">'+p.nombre+'</td>'
+      +'<td style="color:#888;font-size:11px">'+p.cocinero+'</td>'
+      +'<td style="text-align:right;color:#888">'+p.vit+'</td>'
+      +'<td style="text-align:right;color:#185FA5">'+p.pat+'</td>'
+      +'<td style="text-align:right;font-weight:700;font-size:13px">'+und+'</td>'
+      +'<td style="text-align:right;color:#888;font-size:11px">'+p.tiempo_repo+'d</td>'
+      +'</tr>';
+  }).join('');
+
+  document.getElementById('tabla-produccion').innerHTML = filas||'<tr><td colspan="7" style="text-align:center;color:#aaa;padding:20px">Sin productos</td></tr>';
+  document.getElementById('resumen-produccion').textContent = prods.length+' productos · para '+dias+' días';
+}
+
+function renderGuiaDespacho(){
+  const dias = parseInt(document.getElementById('d-dias').value)||7;
+  document.getElementById('d-dias-label').textContent = dias+' días';
+
+  var prods = DATA.filter(function(p){return p.vel_pat>0;});
+  prods.sort(function(a,b){
+    var da = a.pat>0&&a.vel_pat>0 ? a.pat/a.vel_pat : 0;
+    var db = b.pat>0&&b.vel_pat>0 ? b.pat/b.vel_pat : 0;
+    return da-db;
+  });
+
+  var despachar = 0;
+  var filas = prods.map(function(p){
+    var nec  = Math.ceil(p.vel_pat*dias);
+    var desp = Math.max(0, nec-p.pat);
+    var dpt  = p.pat>0&&p.vel_pat>0 ? Math.round(p.pat/p.vel_pat)+'d' : 'sin stock';
+    var urg  = desp>0 && (p.pat===0||(p.pat/p.vel_pat)<3);
+    if(desp>0) despachar++;
+    return '<tr'+(urg?' class="urgente"':'')+'>'
+      +'<td style="font-weight:'+(urg?700:400)+'">'+p.nombre+'</td>'
+      +'<td style="text-align:right;color:#185FA5">'+p.pat+'</td>'
+      +'<td style="text-align:right;color:#888">'+dpt+'</td>'
+      +'<td style="text-align:right;color:#888">'+nec+'</td>'
+      +'<td style="text-align:right;font-weight:700;font-size:13px;color:'+(desp>0?'#E74C3C':'#27AE60')+'">'+( desp>0?'+'+desp:'OK')+'</td>'
+      +'</tr>';
+  }).join('');
+
+  document.getElementById('tabla-despacho').innerHTML = filas||'<tr><td colspan="5" style="text-align:center;color:#aaa;padding:20px">Sin productos</td></tr>';
+  document.getElementById('resumen-despacho').textContent = despachar+' productos a despachar · '+dias+' días de cobertura';
+}
+
+function setDiasProd(d, btn){
+  document.getElementById('g-dias').value = d;
+  btn.parentElement.querySelectorAll('.dias-btn').forEach(function(b){b.classList.remove('dias-btn-active');});
+  btn.classList.add('dias-btn-active');
+  renderGuiaProduccion();
+}
+function setDiasDesp(d, btn){
+  document.getElementById('d-dias').value = d;
+  btn.parentElement.querySelectorAll('.dias-btn').forEach(function(b){b.classList.remove('dias-btn-active');});
+  btn.classList.add('dias-btn-active');
+  renderGuiaDespacho();
+}
+
+// ── Impresión rollo 80mm ───────────────────────────────────
+function abrirRollo(contenido){
+  var win = window.open('','_blank','width=400,height=700');
+  var html = '<!DOCTYPE html><html><head><title>La Cocina</title>'
+    + '<style>body{font-family:Courier New,monospace;font-size:10px;margin:4mm;width:72mm;line-height:1.4}'
+    + 'pre{white-space:pre-wrap;word-break:break-word}'
+    + '@media print{@page{size:80mm auto;margin:2mm 3mm}body{margin:0}}'
+    + '</style></head><body><pre>' + contenido + '</pre>'
+    + '<script>window.onload=function(){window.print();window.close();}<\/script>'
+    + '</body></html>';
+  win.document.write(html);
+  win.document.close();
+}
+
+function imprimirProduccion(){
+  var coc  = document.getElementById('g-cocinero').value;
+  var dias = parseInt(document.getElementById('g-dias').value)||7;
+  var sep  = '================================';
+  var sep2 = '--------------------------------';
+  var tit  = coc ? 'COCINERO: '+coc : 'PRODUCCION GENERAL';
+  var prods = DATA.filter(function(p){return coc ? p.cocinero===coc : true;});
+  prods.sort(function(a,b){
+    var oa=ORDEN_EST[a.estado],ob=ORDEN_EST[b.estado];
+    if(oa!==ob) return oa-ob;
+    return (a.dias_total!==null?a.dias_total:9999)-(b.dias_total!==null?b.dias_total:9999);
+  });
+  var lineas = [sep,'  LA COCINA - '+tit,'  FECHA_HOY_PLACEHOLDER','  Producir para '+dias+' dias',sep2,
+    'DIAS PRODUCTO               PRODUCIR',sep2];
+  prods.forEach(function(p){
+    var dt  = p.dias_total!==null ? ('   '+Math.round(p.dias_total)).slice(-4) : '  --';
+    var nom = (p.nombre+'                      ').substring(0,22);
+    var und = ('       '+( p.vel_total>0?Math.ceil(p.vel_total*dias):0 )+'u').slice(-8);
+    lineas.push(dt+' '+nom+und);
+  });
+  lineas.push(sep2,'TOTAL: '+prods.length+' productos',sep);
+  abrirRollo(lineas.join('\\n'));
+}
+
+function imprimirDespacho(){
+  var dias = parseInt(document.getElementById('d-dias').value)||7;
+  var sep  = '================================';
+  var sep2 = '--------------------------------';
+  var prods = DATA.filter(function(p){
+    return p.vel_pat>0 && Math.max(0,Math.ceil(p.vel_pat*dias)-p.pat)>0;
+  });
+  prods.sort(function(a,b){
+    var da = a.pat>0&&a.vel_pat>0 ? a.pat/a.vel_pat : 0;
+    var db = b.pat>0&&b.vel_pat>0 ? b.pat/b.vel_pat : 0;
+    return da-db;
+  });
+  var lineas = [sep,'  LA COCINA - DESPACHO','  FECHA_HOY_PLACEHOLDER',
+    '  Vitacura -> Pataguas ('+dias+'d)',sep2,'PRODUCTO               PAT  DESP',sep2];
+  prods.forEach(function(p){
+    var nom  = (p.nombre+'                      ').substring(0,22);
+    var pat  = ('    '+p.pat).slice(-4);
+    var desp = ('    +'+Math.max(0,Math.ceil(p.vel_pat*dias)-p.pat)).slice(-5);
+    lineas.push(nom+pat+desp);
+  });
+  lineas.push(sep2,'TOTAL: '+prods.length+' productos',sep);
+  abrirRollo(lineas.join('\\n'));
+}
+
+// ── Init ───────────────────────────────────────────────────
+document.getElementById('f-cocinero').addEventListener('change', filtrar);
+document.getElementById('f-estado').addEventListener('change', filtrar);
+document.getElementById('f-buscar').addEventListener('input', filtrar);
+renderCards(DATA);
+updateMetricas();
+"""
+
+HTML_TEMPLATE = """<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>La Cocina — Dashboard</title>
+<style>CSS_PLACEHOLDER</style>
+</head>
+<body>
+
 <div class="header">
-  <div class="hl"><div class="dot"></div>
-    <div class="hs">
-      <div class="hsub">Sistema de producción · Vitacura &amp; Las Pataguas</div>
-      <div class="htit">Cocina Ángeles Álamos</div>
+  <div class="logo">La <span>Cocina</span> — Producción</div>
+  <div class="header-right">
+    <button class="btn nav-active" id="nav-productos" onclick="mostrarProductos()">📦 Productos</button>
+    <button class="btn" id="nav-guias" onclick="mostrarGuias()">📋 Guías</button>
+    <span class="fecha">FECHA_HOY_PLACEHOLDER · 56 productos</span>
+  </div>
+</div>
+
+<div class="metricas">
+  <div class="metrica"><div class="metrica-label">Sin stock</div><div class="metrica-valor val-rojo" id="m1">—</div></div>
+  <div class="metrica"><div class="metrica-label">Crítico ≤3d</div><div class="metrica-valor val-rojo" id="m2">—</div></div>
+  <div class="metrica"><div class="metrica-label">Bajo ≤14d</div><div class="metrica-valor val-amarillo" id="m3">—</div></div>
+  <div class="metrica"><div class="metrica-label">OK &gt;14d</div><div class="metrica-valor val-verde" id="m4">—</div></div>
+</div>
+
+<!-- VISTA PRODUCTOS -->
+<div id="vista-productos">
+  <div class="toolbar">
+    <span class="toolbar-label">Cocinero:</span>
+    <select id="f-cocinero"><option value="">Todos</option><option>CAROLINA</option><option>ADRIANA</option><option>CÉSAR</option><option>JESÚS</option></select>
+    <div class="toolbar-sep"></div>
+    <span class="toolbar-label">Estado:</span>
+    <select id="f-estado"><option value="">Todos</option><option value="sin_stock">Sin stock</option><option value="critico">Crítico</option><option value="bajo">Bajo stock</option><option value="ok">OK</option></select>
+    <div class="toolbar-sep"></div>
+    <input type="text" id="f-buscar" placeholder="Buscar producto...">
+  </div>
+  <div class="leyenda">
+    <div class="leg"><div class="leg-dot" style="background:#E74C3C"></div>Sin stock</div>
+    <div class="leg"><div class="leg-dot" style="background:#E67E22"></div>Crítico</div>
+    <div class="leg"><div class="leg-dot" style="background:#F39C12"></div>Bajo stock</div>
+    <div class="leg"><div class="leg-dot" style="background:#27AE60"></div>OK</div>
+    <div class="leg" style="margin-left:16px"><div class="leg-dot" style="background:#EAF3DE;border:1px solid #639922"></div>Vitacura</div>
+    <div class="leg"><div class="leg-dot" style="background:#E6F1FB;border:1px solid #185FA5"></div>Pataguas</div>
+  </div>
+  <div class="container">
+    <div id="productos"></div>
+    <div class="no-res" id="no-res" style="display:none">No se encontraron productos.</div>
+  </div>
+</div>
+
+<!-- VISTA GUÍAS -->
+<div id="vista-guias" style="display:none">
+
+  <!-- Guía Producción -->
+  <div class="guia-section">
+    <div class="guia-header">
+      <div>
+        <div class="guia-title">🏭 Guía de Producción</div>
+        <div class="guia-sub" id="resumen-produccion">—</div>
+      </div>
+      <div class="guia-controls">
+        <select id="g-cocinero" onchange="renderGuiaProduccion()">
+          <option value="">Todos los cocineros</option>
+          <option>CAROLINA</option><option>ADRIANA</option><option>CÉSAR</option><option>JESÚS</option>
+        </select>
+        <div class="dias-group">
+          <button class="dias-btn dias-btn-active" onclick="setDiasProd(7,this)">7d</button>
+          <button class="dias-btn" onclick="setDiasProd(15,this)">15d</button>
+          <button class="dias-btn" onclick="setDiasProd(30,this)">30d</button>
+        </div>
+        <input type="number" id="g-dias" value="7" min="1" max="90" onchange="renderGuiaProduccion()" style="width:55px;text-align:center">
+        <span class="guia-sub" id="g-dias-label">7 días</span>
+        <button class="btn btn-primary" onclick="imprimirProduccion()">🖨 Imprimir</button>
+      </div>
     </div>
   </div>
-  <div class="hf">Actualizado: {fecha_str}</div>
+  <div style="padding:12px 20px">
+    <table class="guia-table">
+      <thead><tr>
+        <th style="width:55px">Días</th><th>Producto</th><th>Cocinero</th>
+        <th style="text-align:right">VIT</th><th style="text-align:right">PAT</th>
+        <th style="text-align:right">Producir</th><th style="text-align:right">Repo</th>
+      </tr></thead>
+      <tbody id="tabla-produccion"></tbody>
+    </table>
+  </div>
+
+  <!-- Guía Despacho -->
+  <div class="guia-section" style="margin-top:12px">
+    <div class="guia-header">
+      <div>
+        <div class="guia-title">🚚 Guía de Despacho — Vitacura → Pataguas</div>
+        <div class="guia-sub" id="resumen-despacho">—</div>
+      </div>
+      <div class="guia-controls">
+        <div class="dias-group">
+          <button class="dias-btn dias-btn-active" onclick="setDiasDesp(7,this)">7d</button>
+          <button class="dias-btn" onclick="setDiasDesp(15,this)">15d</button>
+          <button class="dias-btn" onclick="setDiasDesp(30,this)">30d</button>
+        </div>
+        <input type="number" id="d-dias" value="7" min="1" max="90" onchange="renderGuiaDespacho()" style="width:55px;text-align:center">
+        <span class="guia-sub" id="d-dias-label">7 días</span>
+        <button class="btn btn-primary" onclick="imprimirDespacho()">🖨 Imprimir</button>
+      </div>
+    </div>
+  </div>
+  <div style="padding:12px 20px">
+    <table class="guia-table">
+      <thead><tr>
+        <th>Producto</th><th style="text-align:right">Stock PAT</th>
+        <th style="text-align:right">Días PAT</th><th style="text-align:right">Necesita</th>
+        <th style="text-align:right">Despachar</th>
+      </tr></thead>
+      <tbody id="tabla-despacho"></tbody>
+    </table>
+  </div>
+
 </div>
-<div class="wrap">
-<div class="resumen">
-  <div class="stat"><div class="sn sr" id="css">-</div><div class="sl">Sin stock</div></div>
-  <div class="stat"><div class="sn sa" id="ccr">-</div><div class="sl">Crítico ≤3d</div></div>
-  <div class="stat"><div class="sn sb" id="cbj">-</div><div class="sl">Bajo ≤14d</div></div>
-  <div class="stat"><div class="sn sv" id="cok">-</div><div class="sl">OK</div></div>
-</div>
-<div class="filtros">
-  <select id="fe" onchange="render()">
-    <option value="">Todos los estados</option>
-    <option value="sin_stock">Sin stock</option>
-    <option value="critico">Crítico</option>
-    <option value="bajo">Bajo stock</option>
-    <option value="ok">OK</option>
-  </select>
-  <select id="fc" onchange="render()">
-    <option value="">Todos los cocineros</option>
-    <option>Carolina</option><option>Adriana</option><option>César</option><option>Jesús</option>
-  </select>
-  <input id="fb" placeholder="Buscar producto..." oninput="render()">
-</div>
-<div class="cards" id="cards"></div>
-<div class="gbtn"><button class="btn" onclick="imprimirGuias()">Imprimir guías</button></div>
-</div>
+
 <script>
-const DATA={data_js};
-const EC={{
-  sin_stock:{{label:'Sin stock',cls:'br',color:'#A32D2D',orden:0}},
-  critico:{{label:'Crítico',cls:'ba',color:'#854F0B',orden:1}},
-  bajo:{{label:'Bajo',cls:'bb',color:'#185FA5',orden:2}},
-  ok:{{label:'OK',cls:'bv',color:'#3B6D11',orden:3}},
-}};
-function pct(d){{
-  if(!d||d<=0)return 0;if(d>=30)return 100;
-  if(d<=3)return Math.round(d/3*20);
-  if(d<=14)return Math.round(20+(d-3)/11*40);
-  return Math.round(60+(d-14)/16*40);
-}}
-function fd(d,e){{
-  if(e==='sin_stock')return'Sin stock';
-  if(!d&&d!==0)return'—';
-  return Math.round(d)+'d restantes';
-}}
-function buildCard(p){{
-  const ec=EC[p.estado],pt=pct(p.dias_rest),mc=ec.color;
-  const dv=p.vit===0?'sin stock':(p.dias_rest_vit?Math.round(p.dias_rest_vit)+'d':'—');
-  const dp=p.pat===0?'sin stock':(p.dias_rest_pat?Math.round(p.dias_rest_pat)+'d':'—');
-  const al=(p.vit===0&&p.pat>0)||(p.pat===0&&p.vit>0)?`<div class="al">⚠ Revisar distribución — una sucursal sin stock</div>`:'';
-  const ds=p.despacho>0?`<span style="color:#3B6D11;font-weight:500">+${{p.despacho}} und sugeridas</span>`:`<span style="color:#aaa">No necesita</span>`;
-  return`<div class="card" data-estado="${{p.estado}}" data-cocinero="${{p.cocinero.toLowerCase()}}" data-nombre="${{p.nombre.toLowerCase()}}">
-    <div class="ch" onclick="toggle(this)">
-      <span class="badge ${{ec.cls}}">${{ec.label}}</span>
-      <span class="cn">${{p.nombre}}</span>
-      <span class="cc">${{p.cocinero}}</span>
-      <span class="cd" style="color:${{mc}}">${{fd(p.dias_rest,p.estado)}}</span>
-      <span class="chev">▼</span>
-    </div>
-    <div class="tw">
-      <span style="font-size:9px;color:#A32D2D">0d</span>
-      <div style="flex:1">
-        <div class="tl">
-          <span style="color:#A32D2D">Sin stock</span><span style="color:#854F0B">Crítico</span>
-          <span style="color:#185FA5">Bajo stock</span><span style="color:#3B6D11">OK</span>
-        </div>
-        <div class="tt"><div class="tbg"></div><div class="tm" style="left:${{pt}}%;border-color:${{mc}}"></div></div>
-        <div class="tn"><span>0</span><span>3d</span><span>14d</span><span>30d+</span></div>
-      </div>
-      <span style="font-size:9px;color:#3B6D11">30d+</span>
-    </div>
-    <div class="sr2">
-      <div class="sc"><div class="v">${{p.vit}}</div><div class="l">Vitacura (${{dv}})</div></div>
-      <div class="sc"><div class="v">${{p.pat}}</div><div class="l">Pataguas (${{dp}})</div></div>
-      <div class="sc"><div class="v">${{p.vit+p.pat}}</div><div class="l">Total</div></div>
-      <div class="sc"><div class="v">${{p.despacho>0?'+'+p.despacho:'OK'}}</div><div class="l">Despacho Pat.</div></div>
-    </div>
-    <div class="det">
-      <div class="tc">
-        ${{al}}
-        <div class="ib">
-          <b>Velocidad real de venta:</b><br>
-          Vitacura: ${{p.vel_vit.toFixed(3)}} und/día (${{p.total_vend_vit}} und en ${{p.dias_con_vit}} días con stock)<br>
-          Pataguas: ${{p.vel_pat.toFixed(3)}} und/día (${{p.total_vend_pat}} und en ${{p.dias_con_pat}} días con stock)<br>
-          Total: ${{p.vel_total.toFixed(3)}} und/día
-        </div>
-        <div class="ib">
-          <b>Días sin stock en el período:</b> ${{p.dias_sin_vit}} días en Vitacura<br>
-          <b>Tiempo de reposición estimado:</b> ${{p.tiempo_repo}} día${{p.tiempo_repo!==1?'s':''}} (moda de períodos sin stock)<br>
-          <b>Períodos sin stock detectados:</b> ${{p.periodos_sin.length>0?p.periodos_sin.join(', ')+'d':'Ninguno'}}
-        </div>
-        <div class="ib">
-          <b>Despacho sugerido a Pataguas (7 días):</b> ${{ds}}<br>
-          <b>Lote sugerido de producción:</b> ${{p.lote?p.lote+' und (reposición + 7 días colchón)':'—'}}
-        </div>
-      </div>
-    </div>
-  </div>`;
-}}
-function toggle(h){{
-  const d=h.parentElement.querySelector('.det');
-  const c=h.querySelector('.chev');
-  d.classList.toggle('open');c.classList.toggle('open');
-}}
-function render(){{
-  const est=document.getElementById('fe').value;
-  const coc=document.getElementById('fc').value.toLowerCase();
-  const bus=document.getElementById('fb').value.toLowerCase();
-  const cnt={{sin_stock:0,critico:0,bajo:0,ok:0}};
-  DATA.forEach(p=>cnt[p.estado]++);
-  document.getElementById('css').textContent=cnt.sin_stock;
-  document.getElementById('ccr').textContent=cnt.critico;
-  document.getElementById('cbj').textContent=cnt.bajo;
-  document.getElementById('cok').textContent=cnt.ok;
-  document.getElementById('cards').innerHTML=DATA
-    .filter(p=>{{
-      if(est&&p.estado!==est)return false;
-      if(coc&&p.cocinero.toLowerCase()!==coc)return false;
-      if(bus&&!p.nombre.toLowerCase().includes(bus))return false;
-      return true;
-    }}).map(buildCard).join('');
-}}
-function imprimirGuias(){{
-  const hoy=new Date().toLocaleDateString('es-CL');
-  const cocineros=['Carolina','Adriana','César','Jesús'];
-  let html=`<!DOCTYPE html><html lang="es"><head><meta charset="UTF-8"><title>Guías de producción</title>
-  <style>body{{font-family:monospace;font-size:11px;margin:20px}}h1{{font-size:13px;font-weight:bold;margin-bottom:2px}}
-  h2{{font-size:12px;font-weight:bold;margin:16px 0 4px;border-bottom:1px solid #000;padding-bottom:2px}}
-  p.sub{{font-size:10px;color:#666;margin-bottom:10px}}
-  table{{width:100%;border-collapse:collapse;margin-bottom:12px}}
-  th{{text-align:left;border-bottom:1px solid #000;padding:3px 6px;font-size:10px}}
-  td{{padding:3px 6px;border-bottom:1px solid #eee}}
-  .u{{font-weight:bold;color:#A32D2D}}.pb{{page-break-before:always}}
-  .np{{display:none}}@media print{{.np{{display:none}}}}</style></head><body>
-  <button class="np" onclick="window.print()" style="margin-bottom:16px;padding:6px 14px;cursor:pointer">🖨 Imprimir</button>`;
-  html+=`<h1>Producción — Cocina Ángeles Álamos</h1><p class="sub">Generado: ${{hoy}} · Ordenado por urgencia</p>
-  <h2>Guía general — todos los productos</h2>
-  <table><thead><tr><th>Días</th><th>Producto</th><th>Cocinero</th><th>Vit</th><th>Pat</th><th>Total</th><th>Lote</th><th>Despacho Pat.</th></tr></thead><tbody>`;
-  DATA.forEach(p=>{{
-    const cls=p.dias_rest!==null&&p.dias_rest<=3?'u':'';
-    const d=p.estado==='sin_stock'?'0d':p.dias_rest?Math.round(p.dias_rest)+'d':'—';
-    html+=`<tr class="${{cls}}"><td>${{d}}</td><td>${{p.nombre}}</td><td>${{p.cocinero}}</td><td>${{p.vit}}</td><td>${{p.pat}}</td><td>${{p.vit+p.pat}}</td><td>${{p.lote||'—'}}</td><td>${{p.despacho>0?'+'+p.despacho:'—'}}</td></tr>`;
-  }});
-  html+=`</tbody></table>`;
-  cocineros.forEach(coc=>{{
-    const prods=DATA.filter(p=>p.cocinero===coc);
-    html+=`<div class="pb"></div><h1>Producción — Cocina Ángeles Álamos</h1><p class="sub">Generado: ${{hoy}} · Cocinero: ${{coc}}</p>
-    <h2>${{coc}} — ${{prods.length}} productos</h2>
-    <table><thead><tr><th>Días</th><th>Producto</th><th>Vit</th><th>Pat</th><th>Total</th><th>Lote</th></tr></thead><tbody>`;
-    prods.forEach(p=>{{
-      const cls=p.dias_rest!==null&&p.dias_rest<=3?'u':'';
-      const d=p.estado==='sin_stock'?'0d':p.dias_rest?Math.round(p.dias_rest)+'d':'—';
-      html+=`<tr class="${{cls}}"><td>${{d}}</td><td>${{p.nombre}}</td><td>${{p.vit}}</td><td>${{p.pat}}</td><td>${{p.vit+p.pat}}</td><td>${{p.lote||'—'}}</td></tr>`;
-    }});
-    html+=`</tbody></table>`;
-  }});
-  const ds=DATA.filter(p=>p.despacho>0);
-  html+=`<div class="pb"></div><h1>Producción — Cocina Ángeles Álamos</h1><p class="sub">Generado: ${{hoy}} · Despacho Vitacura → Las Pataguas (7 días)</p>
-  <h2>Guía de despacho a Las Pataguas</h2>`;
-  if(ds.length===0){{html+=`<p>Pataguas tiene stock suficiente para 7 días.</p>`;}}
-  else{{
-    html+=`<table><thead><tr><th>Producto</th><th>Stock Pat.</th><th>Vel. Pat.</th><th>Despacho sug.</th></tr></thead><tbody>`;
-    ds.forEach(p=>{{html+=`<tr><td>${{p.nombre}}</td><td>${{p.pat}}</td><td>${{p.vel_pat.toFixed(2)}} und/día</td><td class="u">+${{p.despacho}}</td></tr>`;}});
-    html+=`</tbody></table>`;
-  }}
-  html+=`</body></html>`;
-  const w=window.open('','_blank');w.document.write(html);w.document.close();
-}}
-render();
-</script></body></html>"""
+const DATA = DATA_PLACEHOLDER;
+JS_PLACEHOLDER
+</script>
+</body>
+</html>"""
 
-# ─────────────────────────────────────────────────────────────
-# MAIN
-# ─────────────────────────────────────────────────────────────
-def main():
-    print("🚀 Generando dashboard — Cocina Ángeles Álamos")
+def generar_html(datos, fecha_str):
+    data_json = json.dumps(datos, ensure_ascii=False)
+    js_final  = JS.replace('FECHA_HOY_PLACEHOLDER', fecha_str)
+    html = HTML_TEMPLATE
+    html = html.replace('CSS_PLACEHOLDER',         CSS)
+    html = html.replace('DATA_PLACEHOLDER',        data_json)
+    html = html.replace('JS_PLACEHOLDER',          js_final)
+    html = html.replace('FECHA_HOY_PLACEHOLDER',   fecha_str)
+    return html
 
-    print("\n📊 Leyendo datos históricos de Google Sheets...")
-    sh = conectar_sheets()
-    ventas  = leer_hoja(sh, 'VENTAS')
-    mov_vit = leer_hoja(sh, 'MOV_VITACURA')
-    mov_pat = leer_hoja(sh, 'MOV_PATAGUAS')
-    print(f"   → Ventas: {len(ventas)} | Vit: {len(mov_vit)} | Pat: {len(mov_pat)}")
-
-    stock_actual = obtener_stock()
-    analisis = calcular_analisis(ventas, mov_vit, mov_pat, stock_actual)
-
-    filas = []
-    for sku, meta in PRODUCTOS.items():
-        s = stock_actual.get(sku, {"vit": 0, "pat": 0})
-        a = analisis.get(sku, {})
-        filas.append({
-            "sku": sku, "nombre": meta['nombre'], "cocinero": meta['cocinero'],
-            "vit": s['vit'], "pat": s['pat'],
-            "estado": a.get('estado','ok'),
-            "dias_rest": a.get('dias_rest'),
-            "dias_rest_vit": a.get('dias_rest_vit'),
-            "dias_rest_pat": a.get('dias_rest_pat'),
-            "vel_vit": a.get('vel_vit',0), "vel_pat": a.get('vel_pat',0),
-            "vel_total": a.get('vel_total',0),
-            "dias_con_vit": a.get('dias_con_vit',0),
-            "dias_con_pat": a.get('dias_con_pat',0),
-            "dias_sin_vit": a.get('dias_sin_vit',0),
-            "total_vend_vit": a.get('total_vend_vit',0),
-            "total_vend_pat": a.get('total_vend_pat',0),
-            "tiempo_repo": a.get('tiempo_repo',0),
-            "periodos_sin": a.get('periodos_sin',[]),
-            "despacho": a.get('despacho',0),
-            "lote": a.get('lote'),
-        })
-
-    orden = {"sin_stock":0,"critico":1,"bajo":2,"ok":3}
-    filas.sort(key=lambda f: (orden[f["estado"]], f["dias_rest"] if f["dias_rest"] is not None else 9999))
-
-    fecha_str = datetime.now().strftime("%d/%m/%Y %H:%M")
-    html = generar_html(filas, fecha_str)
-    with open("index.html", "w", encoding="utf-8") as f:
+# ─── MAIN ────────────────────────────────────────────────────
+if __name__ == '__main__':
+    print('='*50)
+    print('La Cocina — Generador de Dashboard')
+    print('='*50)
+    datos = procesar()
+    print(f'\nGenerando HTML con {len(datos)} productos...')
+    html = generar_html(datos, FECHA_STR)
+    with open(ARCHIVO_HTML, 'w', encoding='utf-8') as f:
         f.write(html)
-
-    print(f"\n✅ index.html generado — {len(filas)} productos · {fecha_str}")
-
-if __name__ == "__main__":
-    main()
+    print(f'Dashboard: {ARCHIVO_HTML}')
+    print(f'Tamanio: {len(html):,} chars')
