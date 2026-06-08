@@ -106,6 +106,7 @@ def bsale_stock():
     headers = {'access_token': BSALE_TOKEN}
     result  = {}
     offset  = 0
+    debug_shown = False
     while True:
         r = requests.get('https://api.bsale.cl/v1/stocks.json', headers=headers,
                          params={'limit':50,'offset':offset,'expand':'[variant,office]'}, timeout=30)
@@ -113,6 +114,11 @@ def bsale_stock():
             break
         data  = r.json()
         items = data.get('items', [])
+        if items and not debug_shown:
+            v = items[0].get('variant', {})
+            print(f"  DEBUG variant fields: {list(v.keys())}")
+            print(f"  DEBUG primer variant: barCode={v.get('barCode')!r}, code={v.get('code')!r}, description={v.get('description')!r}")
+            debug_shown = True
         for item in items:
             try:
                 sku = ' '.join(str(item['variant']['barCode']).split()).upper()
