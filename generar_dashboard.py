@@ -106,7 +106,6 @@ def bsale_stock():
     headers = {'access_token': BSALE_TOKEN}
     result  = {}
     offset  = 0
-    debug_shown = False
     while True:
         r = requests.get('https://api.bsale.cl/v1/stocks.json', headers=headers,
                          params={'limit':50,'offset':offset,'expand':'[variant,variant.product,office]'}, timeout=30)
@@ -114,18 +113,12 @@ def bsale_stock():
             break
         data  = r.json()
         items = data.get('items', [])
-        if items and not debug_shown:
-            v = items[0].get('variant', {})
-            p = v.get('product', {})
-            o = items[0].get('office', {})
-            print(f"  DEBUG variant: code={v.get('code')!r}, description={v.get('description')!r}")
-            print(f"  DEBUG product fields: {list(p.keys()) if isinstance(p, dict) else p}")
-            print(f"  DEBUG product: name={p.get('name')!r}, description={p.get('description')!r}" if isinstance(p, dict) else "")
-            print(f"  DEBUG office: id={o.get('id')!r}, name={o.get('name')!r}")
-            debug_shown = True
         for item in items:
             try:
-                sku = ' '.join(str(item['variant']['barCode']).split()).upper()
+                nombre = ' '.join(str(item['variant']['product']['name']).split()).upper()
+                sku    = MAPA.get(nombre)
+                if sku is None:
+                    continue
                 oid = int(item['office']['id'])
                 qty = int(item.get('quantityAvailable', 0) or 0)
                 if sku not in result:
@@ -252,10 +245,7 @@ def procesar():
     if not sb:
         print("  Warning: sin datos Bsale")
     else:
-        sample = list(sb.keys())[:10]
-        print(f"  Bsale devolvió {len(sb)} variantes. Primeros barCodes: {sample}")
-        matched = [k for k in NOMBRES if k in sb or k.replace('Ñ','N') in sb]
-        print(f"  SKUs con match: {len(matched)}/{len(NOMBRES)}")
+        print(f"  {len(sb)} productos con stock desde Bsale")
 
     resultados = []
     for sku in NOMBRES:
