@@ -239,7 +239,13 @@ def procesar():
 
     print("Obteniendo stock desde Bsale...")
     sb = bsale_stock()
-    if not sb: print("  Warning: sin datos Bsale")
+    if not sb:
+        print("  Warning: sin datos Bsale")
+    else:
+        sample = list(sb.keys())[:10]
+        print(f"  Bsale devolvió {len(sb)} variantes. Primeros barCodes: {sample}")
+        matched = [k for k in NOMBRES if k in sb or k.replace('Ñ','N') in sb]
+        print(f"  SKUs con match: {len(matched)}/{len(NOMBRES)}")
 
     resultados = []
     for sku in NOMBRES:
