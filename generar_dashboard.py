@@ -755,9 +755,9 @@ function setDiasDesp(d, btn){
 function abrirRollo(contenido){
   var win = window.open('','_blank','width=400,height=700');
   var html = '<!DOCTYPE html><html><head><title>La Cocina</title>'
-    + '<style>body{font-family:Courier New,monospace;font-size:10px;margin:4mm;width:72mm;line-height:1.4}'
+    + '<style>body{font-family:Courier New,monospace;font-size:13px;margin:4mm;width:72mm;line-height:1.4}'
     + 'pre{white-space:pre-wrap;word-break:break-word}'
-    + '@media print{@page{size:80mm auto;margin:2mm 3mm}body{margin:0}}'
+    + '@media print{@page{size:80mm 297mm;margin:2mm 3mm}body{margin:0}}'
     + '</style></head><body><pre>' + contenido + '</pre>'
     + '<script>window.onload=function(){window.print();window.close();}<\/script>'
     + '</body></html>';
@@ -775,15 +775,17 @@ function imprimirProduccion(){
   prods.sort(function(a,b){
     var oa=ORDEN_EST[a.estado],ob=ORDEN_EST[b.estado];
     if(oa!==ob) return oa-ob;
-    return (a.dias_total!==null?a.dias_total:9999)-(b.dias_total!==null?b.dias_total:9999);
+    return (a.dias_prod!==null?a.dias_prod:9999)-(b.dias_prod!==null?b.dias_prod:9999);
   });
   var lineas = [sep,'  LA COCINA - '+tit,'  FECHA_HOY_PLACEHOLDER','  Producir para '+dias+' dias',sep2,
-    'DIAS PRODUCTO               PRODUCIR',sep2];
+    'PRODUCTO        DIAS VIT PAT PROD',sep2];
   prods.forEach(function(p){
-    var dt  = p.dias_total!==null ? ('   '+Math.round(p.dias_total)).slice(-4) : '  --';
-    var nom = (p.nombre+'                      ').substring(0,22);
-    var und = ('       '+( p.vel_total>0?Math.ceil(p.vel_total*dias):0 )+'u').slice(-8);
-    lineas.push(dt+' '+nom+und);
+    var nom  = (p.nombre+'                ').substring(0,16);
+    var dp   = p.dias_prod!==null ? ('   '+Math.round(p.dias_prod)+'d').slice(-4) : '  --';
+    var vit  = ('   '+p.vit).slice(-4);
+    var pat  = ('   '+p.pat).slice(-4);
+    var prod = ('    '+(p.vel_total>0?Math.ceil(p.vel_total*dias):0)).slice(-4);
+    lineas.push(nom+dp+vit+pat+prod);
   });
   lineas.push(sep2,'TOTAL: '+prods.length+' productos',sep);
   abrirRollo(lineas.join('\\n'));
@@ -802,12 +804,13 @@ function imprimirDespacho(){
     return da-db;
   });
   var lineas = [sep,'  LA COCINA - DESPACHO','  FECHA_HOY_PLACEHOLDER',
-    '  Vitacura -> Pataguas ('+dias+'d)',sep2,'PRODUCTO               PAT  DESP',sep2];
+    '  Vitacura -> Pataguas ('+dias+'d)',sep2,'PRODUCTO           VIT  PAT DESP',sep2];
   prods.forEach(function(p){
-    var nom  = (p.nombre+'                      ').substring(0,22);
-    var pat  = ('    '+p.pat).slice(-4);
-    var desp = ('    +'+Math.max(0,Math.ceil(p.vel_pat*dias)-p.pat)).slice(-5);
-    lineas.push(nom+pat+desp);
+    var nom  = (p.nombre+'                  ').substring(0,18);
+    var vit  = ('   '+p.vit).slice(-4);
+    var pat  = ('   '+p.pat).slice(-4);
+    var desp = (' +'+('   '+Math.max(0,Math.ceil(p.vel_pat*dias)-p.pat)).slice(-3));
+    lineas.push(nom+vit+pat+desp);
   });
   lineas.push(sep2,'TOTAL: '+prods.length+' productos',sep);
   abrirRollo(lineas.join('\\n'));
