@@ -272,15 +272,17 @@ def procesar():
 
         # Días restantes
         total_hoy = sv_hoy + sp_hoy
-        dias_v = round(sv_hoy/vel_v,1) if vel_v>0 and sv_hoy>0 else (0 if sv_hoy==0 else None)
-        dias_p = round(sp_hoy/vel_p,1) if vel_p>0 and sp_hoy>0 else (0 if sp_hoy==0 else None)
-        dias_t = round(total_hoy/vel_t,1) if vel_t>0 else None
+        dias_v    = round(sv_hoy/vel_v,1) if vel_v>0 and sv_hoy>0 else (0 if sv_hoy==0 else None)
+        dias_p    = round(sp_hoy/vel_p,1) if vel_p>0 and sp_hoy>0 else (0 if sp_hoy==0 else None)
+        dias_t    = round(total_hoy/vel_t,1) if vel_t>0 else None
+        # días que le queda a Vitacura considerando demanda total (ventas VIT + PAT)
+        dias_prod = round(sv_hoy/vel_t,1) if vel_t>0 and sv_hoy>0 else (0 if sv_hoy==0 else None)
 
-        # Estado basado en Vitacura (centro de producción)
-        if   sv_hoy == 0:                                      estado = 'sin_stock'
-        elif dias_v is not None and dias_v <= 3:               estado = 'critico'
-        elif dias_v is not None and dias_v <= 14:              estado = 'bajo'
-        else:                                                  estado = 'ok'
+        # Estado basado en cuánto le queda a Vitacura para abastecer ambas tiendas
+        if   sv_hoy == 0:                                          estado = 'sin_stock'
+        elif dias_prod is not None and dias_prod <= 3:             estado = 'critico'
+        elif dias_prod is not None and dias_prod <= 14:            estado = 'bajo'
+        else:                                                      estado = 'ok'
 
         alerta = (sv_hoy==0 and sp_hoy>0 and vel_v>0) or (sp_hoy==0 and sv_hoy>0 and vel_p>0)
         pto_reorden   = math.ceil(vel_t * trepo)              if vel_t > 0 else 0
@@ -299,7 +301,7 @@ def procesar():
             'sku': sku, 'nombre': NOMBRES[sku], 'cocinero': COCINEROS.get(sku,''),
             'vit': sv_hoy, 'pat': sp_hoy, 'total': total_hoy,
             'vel_vit': vel_v, 'vel_pat': vel_p, 'vel_total': round(vel_t,4),
-            'dias_vit': dias_v, 'dias_pat': dias_p, 'dias_total': dias_t,
+            'dias_vit': dias_v, 'dias_pat': dias_p, 'dias_total': dias_t, 'dias_prod': dias_prod,
             'estado': estado, 'alerta_dist': alerta,
             'tiempo_repo': trepo, 'pto_reorden': pto_reorden,
             'lote_sugerido': lote_sugerido, 'despacho_sug': despacho,
@@ -312,7 +314,7 @@ def procesar():
         print(f"  ✓ {sku} — {NOMBRES[sku][:30]}")
 
     orden = {'sin_stock':0,'critico':1,'bajo':2,'ok':3}
-    resultados.sort(key=lambda x: (orden[x['estado']], x['dias_vit'] if x['dias_vit'] is not None else 9999))
+    resultados.sort(key=lambda x: (orden[x['estado']], x['dias_prod'] if x['dias_prod'] is not None else 9999))
     return resultados
 
 # ─── HTML (sin f-string para evitar conflictos con JS) ───────
@@ -420,9 +422,9 @@ const MESES_L = {'2026-01':'Enero','2026-02':'Febrero','2026-03':'Marzo',
 // ── Helpers ────────────────────────────────────────────────
 function diasStr(p){
   if(p.estado==='sin_stock') return 'SIN STOCK';
-  if(p.dias_vit===null||p.dias_vit===undefined) return '—';
-  if(p.dias_vit>365) return '+1 año';
-  return Math.round(p.dias_vit)+'d';
+  if(p.dias_prod===null||p.dias_prod===undefined) return '—';
+  if(p.dias_prod>365) return '+1 año';
+  return Math.round(p.dias_prod)+'d';
 }
 function badgeCls(e){
   if(e==='sin_stock'||e==='critico') return 'badge-rojo';
@@ -432,7 +434,7 @@ function badgeCls(e){
 
 // ── Barra estilo escala con marcador ───────────────────────
 function buildBarra(p){
-  const dias = p.dias_vit !== null && p.dias_vit !== undefined ? Math.round(p.dias_vit) : -1;
+  const dias = p.dias_prod !== null && p.dias_prod !== undefined ? Math.round(p.dias_prod) : -1;
   let pct;
   if(dias <= 0) pct = 0;
   else if(dias <= 3)  pct = (dias/3)*10;
