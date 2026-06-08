@@ -108,17 +108,14 @@ def bsale_stock():
     offset  = 0
     while True:
         r = requests.get('https://api.bsale.cl/v1/stocks.json', headers=headers,
-                         params={'limit':50,'offset':offset,'expand':'[variant,variant.product,office]'}, timeout=30)
+                         params={'limit':50,'offset':offset,'expand':'[variant,office]'}, timeout=30)
         if r.status_code != 200:
             break
         data  = r.json()
         items = data.get('items', [])
         for item in items:
             try:
-                nombre = ' '.join(str(item['variant']['product']['name']).split()).upper()
-                sku    = MAPA.get(nombre)
-                if sku is None:
-                    continue
+                sku = ' '.join(str(item['variant']['code']).split()).upper()
                 oid = int(item['office']['id'])
                 qty = int(item.get('quantityAvailable', 0) or 0)
                 if sku not in result:
