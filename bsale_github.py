@@ -133,14 +133,14 @@ def calcular_productos(stock_bsale):
         pataguas = int(stock_bsale.get((cm, "LAS PATAGUAS"), 0))
         total    = vitacura + pataguas
 
-        # Velocidad real del dashboard, fallback a promedio fijo
-        vel_vit = velocidades.get(p["cm"], {}).get("vel_vit") or (p["promedio"] / 30 if p["promedio"] > 0 else 0)
+        # Velocidad total del dashboard (vel_vit + vel_pat), fallback a promedio fijo
+        vel_total = velocidades.get(p["cm"], {}).get("vel_total") or (p["promedio"] / 30 if p["promedio"] > 0 else 0)
 
         if vitacura == 0:
             dias_vit = 0
             estado   = "sin_stock"
-        elif vel_vit > 0:
-            dias_vit = round(vitacura / vel_vit, 1)
+        elif vel_total > 0:
+            dias_vit = round(vitacura / vel_total, 1)
             if   dias_vit <= 3:  estado = "critico"
             elif dias_vit <= 14: estado = "bajo"
             else:                estado = "ok"
