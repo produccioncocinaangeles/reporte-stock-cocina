@@ -1,9 +1,9 @@
-name: Generar y publicar dashboard
+name: Dashboard y Reporte Diario
 
 on:
   schedule:
-    - cron: '0 11 * * *'   # 8:00 AM Chile (UTC-3)
-  workflow_dispatch:         # permite ejecutar manualmente desde GitHub
+    - cron: '0 22 * * *'   # 19:00 Chile (UTC-3)
+  workflow_dispatch:
 
 permissions:
   contents: write
@@ -24,19 +24,23 @@ jobs:
       - name: Instalar dependencias
         run: pip install pandas openpyxl requests numpy
 
+      # ── PASO 1: Generar dashboard + velocidades.json ──────────
       - name: Generar dashboard
         env:
           BSALE_TOKEN: ${{ secrets.BSALE_TOKEN }}
         run: python generar_dashboard.py
 
-      - name: Guardar velocidades.json en repo
-        run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add velocidades.json
-          git diff --staged --quiet || git commit -m "Actualizar velocidades.json"
-          git push origin main
+      # ── PASO 2: Enviar correo (usa velocidades.json del paso 1)
+      - name: Enviar reporte por correo
+        env:
+          BSALE_TOKEN: ${{ secrets.BSALE_TOKEN }}
+          GMAIL_REMITENTE: ${{ secrets.GMAIL_REMITENTE }}
+          GMAIL_PASSWORD: ${{ secrets.GMAIL_PASSWORD }}
+          CORREOS_DESTINO: ${{ secrets.CORREOS_DESTINO }}
+          TZ: America/Santiago
+        run: python bsale_github.py
 
+      # ── PASO 3: Publicar dashboard en GitHub Pages ────────────
       - name: Preparar carpeta de deploy
         run: |
           mkdir -p /tmp/deploy

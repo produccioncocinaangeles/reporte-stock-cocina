@@ -1,26 +1,19 @@
-name: Reporte Stock Cocina
+name: Reporte Stock Cocina (desactivado - reemplazado por dashboard.yml)
+
 on:
-  schedule:
-    - cron: '0 23 * * *'  # 19:00 invierno / 20:00 verano - siempre después del cierre
-  workflow_dispatch:
+  workflow_dispatch:   # solo manual, no corre automaticamente
+
 jobs:
   reporte:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - name: Instalar Python
-        uses: actions/setup-python@v4
+        uses: actions/setup-python@v5
         with:
           python-version: '3.11'
       - name: Instalar librerias
         run: pip install requests openpyxl
-      - name: Crear config.txt
-        run: |
-          echo "BSALE_TOKEN = ${{ secrets.BSALE_TOKEN }}" > config.txt
-          echo "GMAIL_REMITENTE = ${{ secrets.GMAIL_REMITENTE }}" >> config.txt
-          echo "GMAIL_PASSWORD = ${{ secrets.GMAIL_PASSWORD }}" >> config.txt
-          echo "CORREOS_DESTINO = ${{ secrets.CORREOS_DESTINO }}" >> config.txt
-          echo "RUTA_EXCEL = cocina_STOCK_NUEVA.xlsx" >> config.txt
       - name: Ejecutar script
         env:
           BSALE_TOKEN: ${{ secrets.BSALE_TOKEN }}
