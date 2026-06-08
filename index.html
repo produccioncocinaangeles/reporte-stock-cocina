@@ -1,316 +1,230 @@
 <!DOCTYPE html>
-<html lang="es">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
+<html lang="es"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Producción — Cocina Ángeles Álamos</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
-body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:#f5f5f3;color:#1a1a1a;min-height:100vh}
-.header{background:#fff;border-bottom:1px solid #e5e5e5;padding:16px 24px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:100}
-.header-left{display:flex;align-items:center;gap:10px}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:#f5f5f3;color:#1a1a1a}
+.header{background:#fff;border-bottom:1px solid #e5e5e5;padding:16px 24px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:100;box-shadow:0 1px 3px rgba(0,0,0,.04)}
+.hl{display:flex;align-items:center;gap:10px}
 .dot{width:8px;height:8px;border-radius:50%;background:#639922;flex-shrink:0}
-.header-stack{display:flex;flex-direction:column;gap:1px}
-.header-sub{font-size:10px;color:#888;letter-spacing:0.06em;text-transform:uppercase}
-.header-title{font-size:17px;font-weight:500;color:#1a1a1a}
-.header-fecha{font-size:12px;color:#888}
-.resumen{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;padding:16px 24px}
+.hs{display:flex;flex-direction:column;gap:1px}
+.hsub{font-size:10px;color:#888;letter-spacing:.06em;text-transform:uppercase}
+.htit{font-size:17px;font-weight:500;color:#1a1a1a}
+.hf{font-size:12px;color:#888}
+.wrap{max-width:900px;margin:0 auto;padding:0 24px}
+.resumen{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;padding:16px 0}
 .stat{background:#fff;border:1px solid #e5e5e5;border-radius:10px;padding:12px 16px;text-align:center}
-.stat-n{font-size:22px;font-weight:500}
-.stat-l{font-size:11px;color:#888;margin-top:2px}
-.s-rojo{color:#A32D2D}.s-amber{color:#854F0B}.s-azul{color:#185FA5}.s-verde{color:#3B6D11}
-.filtros{padding:0 24px 12px;display:flex;gap:8px;flex-wrap:wrap}
+.sn{font-size:22px;font-weight:500}.sl{font-size:11px;color:#888;margin-top:2px}
+.sr{color:#A32D2D}.sa{color:#854F0B}.sb{color:#185FA5}.sv{color:#3B6D11}
+.filtros{display:flex;gap:8px;flex-wrap:wrap;padding-bottom:12px}
 .filtros select,.filtros input{font-size:12px;padding:6px 10px;border-radius:8px;border:1px solid #e0e0e0;background:#fff;color:#1a1a1a;outline:none}
-.filtros select:focus,.filtros input:focus{border-color:#639922}
 .filtros input{flex:1;min-width:160px}
-.cards{padding:0 24px 24px;display:flex;flex-direction:column;gap:8px}
+.cards{display:flex;flex-direction:column;gap:8px;padding-bottom:24px}
 .card{background:#fff;border:1px solid #e5e5e5;border-radius:12px;overflow:hidden;transition:box-shadow .15s}
 .card:hover{box-shadow:0 2px 8px rgba(0,0,0,.06)}
-.card-header{display:flex;align-items:center;gap:10px;padding:12px 14px;cursor:pointer;user-select:none}
+.ch{display:flex;align-items:center;gap:10px;padding:12px 14px;cursor:pointer;user-select:none}
 .badge{font-size:10px;font-weight:500;padding:3px 8px;border-radius:999px;white-space:nowrap;flex-shrink:0}
-.b-rojo{background:#FCEBEB;color:#A32D2D}
-.b-amber{background:#FAEEDA;color:#854F0B}
-.b-azul{background:#E6F1FB;color:#185FA5}
-.b-verde{background:#EAF3DE;color:#3B6D11}
-.card-nombre{font-size:13px;font-weight:500;flex:1}
-.card-cocinero{font-size:11px;color:#888}
-.card-dias{font-size:12px;font-weight:500;white-space:nowrap;margin-left:8px}
-.chevron{font-size:12px;color:#ccc;transition:transform .2s;flex-shrink:0}
-.chevron.open{transform:rotate(180deg)}
-.term-wrap{padding:4px 14px 10px;display:flex;align-items:center;gap:8px}
-.term-labels{display:flex;justify-content:space-between;font-size:9px;margin-bottom:3px}
-.term-track{position:relative;height:7px;border-radius:4px;flex:1}
-.term-bg{position:absolute;inset:0;border-radius:4px;background:linear-gradient(to right,#E24B4A 0%,#E24B4A 10%,#EF9F27 10%,#EF9F27 30%,#378ADD 30%,#378ADD 70%,#639922 70%,#639922 100%)}
-.term-marker{position:absolute;top:50%;width:11px;height:11px;border-radius:50%;background:#fff;border:2px solid #333;transform:translate(-50%,-50%);z-index:2}
-.term-nums{display:flex;justify-content:space-between;font-size:9px;color:#aaa;margin-top:3px}
-.stats-row{display:grid;grid-template-columns:repeat(4,1fr);border-top:1px solid #f0f0f0}
+.br{background:#FCEBEB;color:#A32D2D}.ba{background:#FAEEDA;color:#854F0B}
+.bb{background:#E6F1FB;color:#185FA5}.bv{background:#EAF3DE;color:#3B6D11}
+.cn{font-size:13px;font-weight:500;flex:1}
+.cc{font-size:11px;color:#888}
+.cd{font-size:12px;font-weight:500;white-space:nowrap;margin-left:8px}
+.chev{font-size:12px;color:#ccc;transition:transform .2s;flex-shrink:0}
+.chev.open{transform:rotate(180deg)}
+.tw{padding:4px 14px 10px;display:flex;align-items:center;gap:8px}
+.tl{display:flex;justify-content:space-between;font-size:9px;margin-bottom:3px}
+.tt{position:relative;height:7px;border-radius:4px;flex:1}
+.tbg{position:absolute;inset:0;border-radius:4px;background:linear-gradient(to right,#E24B4A 0%,#E24B4A 10%,#EF9F27 10%,#EF9F27 30%,#378ADD 30%,#378ADD 70%,#639922 70%,#639922 100%)}
+.tm{position:absolute;top:50%;width:11px;height:11px;border-radius:50%;background:#fff;border:2px solid #333;transform:translate(-50%,-50%);z-index:2}
+.tn{display:flex;justify-content:space-between;font-size:9px;color:#aaa;margin-top:3px}
+.sr2{display:grid;grid-template-columns:repeat(4,1fr);border-top:1px solid #f0f0f0}
 .sc{padding:8px 12px;text-align:center;border-right:1px solid #f0f0f0}
 .sc:last-child{border-right:none}
-.sc .v{font-size:13px;font-weight:500}
-.sc .l{font-size:10px;color:#aaa;margin-top:1px}
-.detalle{display:none;border-top:1px solid #f0f0f0}
-.detalle.open{display:block}
-.tabs{display:flex;border-bottom:1px solid #f0f0f0}
-.tab{font-size:11px;padding:8px 14px;cursor:pointer;color:#aaa;border-bottom:2px solid transparent}
-.tab.active{color:#3B6D11;border-bottom-color:#3B6D11;font-weight:500}
-.tc{padding:12px 14px;display:none}
-.tc.active{display:block}
-.movs{width:100%;font-size:11px;border-collapse:collapse}
-.movs th{text-align:left;color:#aaa;padding:4px 6px;font-weight:500;border-bottom:1px solid #f0f0f0}
-.movs td{padding:5px 6px;border-bottom:1px solid #f5f5f5;color:#333}
-.movs tr:last-child td{border-bottom:none}
-.vit{color:#3B6D11;font-weight:500}.pat{color:#185FA5;font-weight:500}
-.pos{color:#3B6D11}.neg{color:#A32D2D}
+.sc .v{font-size:13px;font-weight:500}.sc .l{font-size:10px;color:#aaa;margin-top:1px}
+.det{display:none;border-top:1px solid #f0f0f0}
+.det.open{display:block}
+.tc{padding:12px 14px}
 .ib{background:#f9f9f9;border-radius:8px;padding:10px 12px;font-size:11px;color:#666;line-height:1.8;margin-bottom:8px}
 .ib b{color:#1a1a1a;font-weight:500}
-.alerta{font-size:11px;color:#854F0B;background:#FAEEDA;padding:6px 10px;border-radius:6px;margin-bottom:8px}
-.guias-btn{margin:0 24px 24px;display:flex;gap:10px}
-.btn{padding:9px 20px;border-radius:8px;border:1px solid #e0e0e0;background:#fff;font-size:12px;cursor:pointer;color:#1a1a1a;font-weight:500}
-.btn:hover{background:#f5f5f3;border-color:#ccc}
-.btn-primary{background:#3B6D11;color:#fff;border-color:#3B6D11}
-.btn-primary:hover{background:#2d5a0d}
-@media print{body{background:#fff}.header{position:static}.filtros,.guias-btn,.chevron,.tabs{display:none!important}.detalle{display:block!important}.card{break-inside:avoid;box-shadow:none;border:1px solid #ddd}}
-</style>
-</head>
-<body>
-
+.al{font-size:11px;color:#854F0B;background:#FAEEDA;padding:6px 10px;border-radius:6px;margin-bottom:8px}
+.gbtn{padding-bottom:24px}
+.btn{padding:9px 20px;border-radius:8px;border:1px solid #3B6D11;background:#3B6D11;color:#fff;font-size:12px;cursor:pointer;font-weight:500}
+.btn:hover{background:#2d5a0d}
+</style></head><body>
 <div class="header">
-  <div class="header-left">
-    <div class="dot"></div>
-    <div class="header-stack">
-      <div class="header-sub">Sistema de producción · Vitacura &amp; Las Pataguas</div>
-      <div class="header-title">Cocina Ángeles Álamos</div>
+  <div class="hl"><div class="dot"></div>
+    <div class="hs">
+      <div class="hsub">Sistema de producción · Vitacura &amp; Las Pataguas</div>
+      <div class="htit">Cocina Ángeles Álamos</div>
     </div>
   </div>
-  <div class="header-fecha">Actualizado: 07/06/2026 23:56</div>
+  <div class="hf">Actualizado: 08/06/2026 01:09</div>
 </div>
-
+<div class="wrap">
 <div class="resumen">
-  <div class="stat"><div class="stat-n s-rojo" id="cnt-sinstock">-</div><div class="stat-l">Sin stock</div></div>
-  <div class="stat"><div class="stat-n s-amber" id="cnt-critico">-</div><div class="stat-l">Crítico ≤3d</div></div>
-  <div class="stat"><div class="stat-n s-azul" id="cnt-bajo">-</div><div class="stat-l">Bajo ≤14d</div></div>
-  <div class="stat"><div class="stat-n s-verde" id="cnt-ok">-</div><div class="stat-l">OK</div></div>
+  <div class="stat"><div class="sn sr" id="css">-</div><div class="sl">Sin stock</div></div>
+  <div class="stat"><div class="sn sa" id="ccr">-</div><div class="sl">Crítico ≤3d</div></div>
+  <div class="stat"><div class="sn sb" id="cbj">-</div><div class="sl">Bajo ≤14d</div></div>
+  <div class="stat"><div class="sn sv" id="cok">-</div><div class="sl">OK</div></div>
 </div>
-
 <div class="filtros">
-  <select id="f-estado" onchange="render()">
+  <select id="fe" onchange="render()">
     <option value="">Todos los estados</option>
     <option value="sin_stock">Sin stock</option>
     <option value="critico">Crítico</option>
     <option value="bajo">Bajo stock</option>
     <option value="ok">OK</option>
   </select>
-  <select id="f-cocinero" onchange="render()">
+  <select id="fc" onchange="render()">
     <option value="">Todos los cocineros</option>
-    <option>Carolina</option>
-    <option>Adriana</option>
-    <option>César</option>
-    <option>Jesús</option>
+    <option>Carolina</option><option>Adriana</option><option>César</option><option>Jesús</option>
   </select>
-  <input id="f-buscar" placeholder="Buscar producto..." oninput="render()">
+  <input id="fb" placeholder="Buscar producto..." oninput="render()">
 </div>
-
 <div class="cards" id="cards"></div>
-
-<div class="guias-btn">
-  <button class="btn btn-primary" onclick="imprimirGuias()">Imprimir guías</button>
+<div class="gbtn"><button class="btn" onclick="imprimirGuias()">Imprimir guías</button></div>
 </div>
-
 <script>
-const DATA = [{"sku": "OP", "nombre": "Ostión a la parmesana", "cocinero": "Carolina", "estado": "sin_stock", "dias": null, "dias_vit": null, "dias_pat": null, "vit": 0, "pat": 0, "prom": 10.0, "despacho": 3, "lote": 5}, {"sku": "LCM", "nombre": "Lasaña carne mechada", "cocinero": "Adriana", "estado": "sin_stock", "dias": null, "dias_vit": null, "dias_pat": null, "vit": 0, "pat": 0, "prom": 7.0, "despacho": 2, "lote": 4}, {"sku": "RC", "nombre": "Rollo camarón", "cocinero": "César", "estado": "critico", "dias": 3.0, "dias_vit": null, "dias_pat": 7.5, "vit": 0, "pat": 1, "prom": 10.0, "despacho": 2, "lote": 5}, {"sku": "LS", "nombre": "Lomo saltado", "cocinero": "César", "estado": "bajo", "dias": 3.3, "dias_vit": 5.6, "dias_pat": null, "vit": 2, "pat": 0, "prom": 18.0, "despacho": 5, "lote": 9}, {"sku": "ÑC", "nombre": "Ñoquis de camarón", "cocinero": "Carolina", "estado": "bajo", "dias": 5.5, "dias_vit": null, "dias_pat": 13.6, "vit": 0, "pat": 2, "prom": 11.0, "despacho": 1, "lote": 6}, {"sku": "LJC", "nombre": "Lasaña jaiba camarón", "cocinero": "Adriana", "estado": "bajo", "dias": 6.0, "dias_vit": null, "dias_pat": 15.0, "vit": 0, "pat": 1, "prom": 5.0, "despacho": 1, "lote": 3}, {"sku": "PC", "nombre": "Puré de camote", "cocinero": "Carolina", "estado": "bajo", "dias": 7.5, "dias_vit": null, "dias_pat": 18.7, "vit": 0, "pat": 3, "prom": 12.0, "despacho": 0, "lote": 6}, {"sku": "CLC", "nombre": "Chupe loco camarón grande", "cocinero": "Jesús", "estado": "bajo", "dias": 9.3, "dias_vit": 10.0, "dias_pat": 8.3, "vit": 9, "pat": 5, "prom": 45.0, "despacho": 6, "lote": 21}, {"sku": "CF", "nombre": "Carpaccio de filete", "cocinero": "Jesús", "estado": "bajo", "dias": 9.9, "dias_vit": 9.9, "dias_pat": 9.9, "vit": 3, "pat": 2, "prom": 15.1, "despacho": 2, "lote": 8}, {"sku": "TS", "nombre": "Tártaro salmón", "cocinero": "César", "estado": "bajo", "dias": 10.5, "dias_vit": 5.0, "dias_pat": 18.8, "vit": 2, "pat": 5, "prom": 20.0, "despacho": 0, "lote": 10}, {"sku": "RS", "nombre": "Rollo salmón", "cocinero": "César", "estado": "bajo", "dias": 10.5, "dias_vit": 7.5, "dias_pat": 15.0, "vit": 3, "pat": 4, "prom": 20.0, "despacho": 1, "lote": 10}, {"sku": "MMR", "nombre": "Mix masitas rellenas", "cocinero": "Adriana", "estado": "bajo", "dias": 10.9, "dias_vit": 9.1, "dias_pat": 13.6, "vit": 2, "pat": 2, "prom": 11.0, "despacho": 1, "lote": 6}, {"sku": "TLS", "nombre": "Tequeños lomo saltado", "cocinero": "Adriana", "estado": "bajo", "dias": 12.0, "dias_vit": 12.5, "dias_pat": 11.2, "vit": 5, "pat": 3, "prom": 20.0, "despacho": 2, "lote": 10}, {"sku": "TSA", "nombre": "Tallarín salmón ahumado", "cocinero": "Adriana", "estado": "bajo", "dias": 12.0, "dias_vit": 6.7, "dias_pat": 20.0, "vit": 2, "pat": 4, "prom": 15.0, "despacho": 0, "lote": 7}, {"sku": "PCM", "nombre": "Pastel de choclo", "cocinero": "Carolina", "estado": "bajo", "dias": 12.0, "dias_vit": 15.0, "dias_pat": 7.5, "vit": 3, "pat": 1, "prom": 10.0, "despacho": 2, "lote": 5}, {"sku": "ÑJ", "nombre": "Ñoquis con jamón serrano", "cocinero": "Carolina", "estado": "bajo", "dias": 14.0, "dias_vit": 10.0, "dias_pat": 20.0, "vit": 3, "pat": 4, "prom": 15.0, "despacho": 0, "lote": 7}, {"sku": "RB", "nombre": "Roast beef", "cocinero": "Jesús", "estado": "bajo", "dias": 14.0, "dias_vit": 11.7, "dias_pat": 17.5, "vit": 7, "pat": 7, "prom": 30.0, "despacho": 0, "lote": 14}, {"sku": "AS", "nombre": "Arroz salvaje", "cocinero": "Jesús", "estado": "ok", "dias": 15.0, "dias_vit": null, "dias_pat": 37.5, "vit": 0, "pat": 1, "prom": 2.0, "despacho": 0, "lote": 1}, {"sku": "RM", "nombre": "Rollo mechada", "cocinero": "César", "estado": "ok", "dias": 15.6, "dias_vit": 14.0, "dias_pat": 18.0, "vit": 7, "pat": 6, "prom": 25.0, "despacho": 0, "lote": 12}, {"sku": "PV", "nombre": "Caja de postres en vasito", "cocinero": "Carolina", "estado": "ok", "dias": 16.0, "dias_vit": 20.0, "dias_pat": 10.0, "vit": 6, "pat": 2, "prom": 15.0, "despacho": 2, "lote": 7}, {"sku": "MCC", "nombre": "Mini chupe camarón", "cocinero": "Jesús", "estado": "ok", "dias": 17.5, "dias_vit": 8.3, "dias_pat": 31.2, "vit": 2, "pat": 5, "prom": 12.0, "despacho": 0, "lote": 6}, {"sku": "RPP", "nombre": "Rollo pollo pimentón", "cocinero": "César", "estado": "ok", "dias": 18.0, "dias_vit": 10.0, "dias_pat": 30.0, "vit": 1, "pat": 2, "prom": 5.0, "despacho": 0, "lote": 3}, {"sku": "FCT", "nombre": "Filete champiñón tocino", "cocinero": "Jesús", "estado": "ok", "dias": 18.0, "dias_vit": 10.0, "dias_pat": 30.0, "vit": 1, "pat": 2, "prom": 5.0, "despacho": 0, "lote": 3}, {"sku": "ÑP", "nombre": "Ñoquis pesto tomate cherry", "cocinero": "Carolina", "estado": "ok", "dias": 18.2, "dias_vit": 15.2, "dias_pat": 22.7, "vit": 3, "pat": 3, "prom": 9.9, "despacho": 0, "lote": 5}, {"sku": "CM", "nombre": "Carne mechada", "cocinero": "César", "estado": "ok", "dias": 21.0, "dias_vit": 15.0, "dias_pat": 30.0, "vit": 3, "pat": 4, "prom": 10.0, "despacho": 0, "lote": 5}, {"sku": "EJ", "nombre": "Empanaditas jamón serrano", "cocinero": "Carolina", "estado": "ok", "dias": 21.8, "dias_vit": 13.6, "dias_pat": 34.1, "vit": 3, "pat": 5, "prom": 11.0, "despacho": 0, "lote": 6}, {"sku": "CAMA", "nombre": "Camarones apanados", "cocinero": "Adriana", "estado": "ok", "dias": 22.3, "dias_vit": 24.3, "dias_pat": 19.3, "vit": 17, "pat": 9, "prom": 35.0, "despacho": 0, "lote": 17}, {"sku": "PAC", "nombre": "Milhojas de papas", "cocinero": "César", "estado": "ok", "dias": 24.0, "dias_vit": 27.5, "dias_pat": 18.8, "vit": 11, "pat": 5, "prom": 20.0, "despacho": 0, "lote": 10}, {"sku": "RA", "nombre": "Rollo alcachofa", "cocinero": "César", "estado": "ok", "dias": 25.0, "dias_vit": null, "dias_pat": 62.5, "vit": 0, "pat": 5, "prom": 6.0, "despacho": 0, "lote": 3}, {"sku": "LA", "nombre": "Lomito acaramelado", "cocinero": "César", "estado": "ok", "dias": 25.7, "dias_vit": 21.4, "dias_pat": 32.1, "vit": 3, "pat": 3, "prom": 7.0, "despacho": 0, "lote": 4}, {"sku": "CJ", "nombre": "Chupe jaiba grande", "cocinero": "Jesús", "estado": "ok", "dias": 26.0, "dias_vit": 23.3, "dias_pat": 30.0, "vit": 7, "pat": 6, "prom": 15.0, "despacho": 0, "lote": 7}, {"sku": "MMRM", "nombre": "Mix masitas rellenas del mar", "cocinero": "Adriana", "estado": "ok", "dias": 26.2, "dias_vit": 18.8, "dias_pat": 37.5, "vit": 3, "pat": 4, "prom": 8.0, "despacho": 0, "lote": 4}, {"sku": "BAP", "nombre": "Berenjenas a la parmesana", "cocinero": "Adriana", "estado": "ok", "dias": 27.0, "dias_vit": 20.0, "dias_pat": 37.5, "vit": 4, "pat": 5, "prom": 10.0, "despacho": 0, "lote": 5}, {"sku": "TPP", "nombre": "Tallarines pollo pimentón", "cocinero": "Adriana", "estado": "ok", "dias": 30.0, "dias_vit": 28.6, "dias_pat": 32.1, "vit": 4, "pat": 3, "prom": 7.0, "despacho": 0, "lote": 4}, {"sku": "MIGNON", "nombre": "Mignon de pollo", "cocinero": "César", "estado": "ok", "dias": 30.0, "dias_vit": 20.0, "dias_pat": 45.0, "vit": 4, "pat": 6, "prom": 10.0, "despacho": 0, "lote": 5}, {"sku": "TA", "nombre": "Tártaro atún", "cocinero": "César", "estado": "ok", "dias": 31.5, "dias_vit": 40.0, "dias_pat": 18.8, "vit": 16, "pat": 5, "prom": 20.0, "despacho": 0, "lote": 10}, {"sku": "MCL", "nombre": "Mini chupe loco", "cocinero": "Jesús", "estado": "ok", "dias": 32.0, "dias_vit": 41.7, "dias_pat": 17.5, "vit": 25, "pat": 7, "prom": 30.0, "despacho": 0, "lote": 14}, {"sku": "CP", "nombre": "Carpaccio pulpo con salsa al olivo", "cocinero": "Jesús", "estado": "ok", "dias": 33.0, "dias_vit": 30.0, "dias_pat": 37.5, "vit": 6, "pat": 5, "prom": 10.0, "despacho": 0, "lote": 5}, {"sku": "LSA", "nombre": "Lasaña salmón", "cocinero": "Adriana", "estado": "ok", "dias": 34.4, "dias_vit": 24.6, "dias_pat": 49.2, "vit": 3, "pat": 4, "prom": 6.1, "despacho": 0, "lote": 3}, {"sku": "RJ", "nombre": "Rollo jamón serrano", "cocinero": "César", "estado": "ok", "dias": 36.0, "dias_vit": null, "dias_pat": 90.0, "vit": 0, "pat": 6, "prom": 5.0, "despacho": 0, "lote": 3}, {"sku": "TCM", "nombre": "Tallarín carne mechada", "cocinero": "Adriana", "estado": "ok", "dias": 36.0, "dias_vit": 20.0, "dias_pat": 60.0, "vit": 2, "pat": 4, "prom": 5.0, "despacho": 0, "lote": 3}, {"sku": "LR", "nombre": "Lomo relleno", "cocinero": "Jesús", "estado": "ok", "dias": 37.5, "dias_vit": 25.0, "dias_pat": 56.2, "vit": 2, "pat": 3, "prom": 4.0, "despacho": 0, "lote": 2}, {"sku": "PCP", "nombre": "Paté con peras", "cocinero": "Jesús", "estado": "ok", "dias": 40.7, "dias_vit": 53.3, "dias_pat": 21.7, "vit": 48, "pat": 13, "prom": 45.0, "despacho": 0, "lote": 21}, {"sku": "MCJ", "nombre": "Mini chupe jaiba", "cocinero": "Jesús", "estado": "ok", "dias": 42.0, "dias_vit": 55.0, "dias_pat": 22.5, "vit": 22, "pat": 6, "prom": 20.0, "despacho": 0, "lote": 10}, {"sku": "CL", "nombre": "Carpaccio de locos", "cocinero": "Jesús", "estado": "ok", "dias": 45.0, "dias_vit": 57.5, "dias_pat": 26.2, "vit": 23, "pat": 7, "prom": 20.0, "despacho": 0, "lote": 10}, {"sku": "SSA", "nombre": "Salmón con salsa de alcaparras", "cocinero": "Jesús", "estado": "ok", "dias": 45.0, "dias_vit": 25.0, "dias_pat": 75.0, "vit": 1, "pat": 2, "prom": 2.0, "despacho": 0, "lote": 1}, {"sku": "EM", "nombre": "Empanaditas mechada", "cocinero": "Carolina", "estado": "ok", "dias": 57.3, "dias_vit": 72.7, "dias_pat": 34.1, "vit": 16, "pat": 5, "prom": 11.0, "despacho": 0, "lote": 6}, {"sku": "CC", "nombre": "Chupe centolla grande", "cocinero": "Jesús", "estado": "ok", "dias": 60.0, "dias_vit": 50.0, "dias_pat": 75.0, "vit": 5, "pat": 5, "prom": 5.0, "despacho": 0, "lote": 3}, {"sku": "LM", "nombre": "Lasaña mediterránea", "cocinero": "Adriana", "estado": "ok", "dias": 61.4, "dias_vit": 56.8, "dias_pat": 68.2, "vit": 5, "pat": 4, "prom": 4.4, "despacho": 0, "lote": 3}, {"sku": "EC", "nombre": "Empanaditas camarón", "cocinero": "Carolina", "estado": "ok", "dias": 73.6, "dias_vit": 100.0, "dias_pat": 34.1, "vit": 22, "pat": 5, "prom": 11.0, "despacho": 0, "lote": 6}, {"sku": "CAC", "nombre": "Choclo a la crema", "cocinero": "Jesús", "estado": "ok", "dias": 84.0, "dias_vit": 90.0, "dias_pat": 75.0, "vit": 9, "pat": 5, "prom": 5.0, "despacho": 0, "lote": 3}, {"sku": "TPU", "nombre": "Tequeños de pulpo con salsa", "cocinero": "Adriana", "estado": "ok", "dias": 97.5, "dias_vit": 100.0, "dias_pat": 93.8, "vit": 8, "pat": 5, "prom": 4.0, "despacho": 0, "lote": 2}, {"sku": "TF", "nombre": "Tártaro filete", "cocinero": "César", "estado": "ok", "dias": 120.0, "dias_vit": 140.0, "dias_pat": 90.0, "vit": 14, "pat": 6, "prom": 5.0, "despacho": 0, "lote": 3}, {"sku": "BAR", "nombre": "Barquillos", "cocinero": "Carolina", "estado": "ok", "dias": null, "dias_vit": null, "dias_pat": null, "vit": 3, "pat": 3, "prom": null, "despacho": 0, "lote": null}, {"sku": "SA", "nombre": "Salsa en frasco", "cocinero": "Adriana", "estado": "ok", "dias": null, "dias_vit": null, "dias_pat": null, "vit": 50, "pat": 10, "prom": null, "despacho": 0, "lote": null}, {"sku": "CAMAC", "nombre": "Camarones cocidos con salsa", "cocinero": "César", "estado": "ok", "dias": null, "dias_vit": null, "dias_pat": null, "vit": 8, "pat": 4, "prom": null, "despacho": 0, "lote": null}];
-
-const EC = {
-  sin_stock:{label:'Sin stock',cls:'b-rojo',color:'#A32D2D',orden:0},
-  critico:  {label:'Crítico',  cls:'b-amber',color:'#854F0B',orden:1},
-  bajo:     {label:'Bajo',     cls:'b-azul', color:'#185FA5',orden:2},
-  ok:       {label:'OK',       cls:'b-verde',color:'#3B6D11',orden:3},
+const DATA=[{"sku": "OP", "nombre": "Ostión a la parmesana", "cocinero": "Carolina", "vit": 0, "pat": 0, "estado": "sin_stock", "dias_rest": null, "dias_rest_vit": null, "dias_rest_pat": null, "vel_vit": 1.0714, "vel_pat": 0.2386, "vel_total": 1.3101, "dias_con_vit": 14, "dias_con_pat": 88, "dias_sin_vit": 2, "total_vend_vit": 15, "total_vend_pat": 21, "tiempo_repo": 16, "periodos_sin": [16], "despacho": 2, "lote": 31}, {"sku": "LCM", "nombre": "Lasaña carne mechada", "cocinero": "Adriana", "vit": 0, "pat": 0, "estado": "sin_stock", "dias_rest": null, "dias_rest_vit": null, "dias_rest_pat": null, "vel_vit": 0.6296, "vel_pat": 0.3649, "vel_total": 0.9945, "dias_con_vit": 27, "dias_con_pat": 74, "dias_sin_vit": 8, "total_vend_vit": 17, "total_vend_pat": 27, "tiempo_repo": 20, "periodos_sin": [20, 6, 9, 3, 16], "despacho": 3, "lote": 27}, {"sku": "RPP", "nombre": "Rollo pollo pimentón", "cocinero": "César", "vit": 1, "pat": 2, "estado": "critico", "dias_rest": 1.0, "dias_rest_vit": 1.0, "dias_rest_pat": 9.0, "vel_vit": 1.0, "vel_pat": 0.2222, "vel_total": 1.2222, "dias_con_vit": 11, "dias_con_pat": 18, "dias_sin_vit": 3, "total_vend_vit": 11, "total_vend_pat": 4, "tiempo_repo": 29, "periodos_sin": [29, 38], "despacho": 0, "lote": 44}, {"sku": "MCC", "nombre": "Mini chupe camarón", "cocinero": "Jesús", "vit": 2, "pat": 5, "estado": "critico", "dias_rest": 1.8, "dias_rest_vit": 1.8, "dias_rest_pat": 18.4, "vel_vit": 1.1333, "vel_pat": 0.2717, "vel_total": 1.4051, "dias_con_vit": 15, "dias_con_pat": 92, "dias_sin_vit": 2, "total_vend_vit": 17, "total_vend_pat": 25, "tiempo_repo": 1, "periodos_sin": [1, 2], "despacho": 0, "lote": 12}, {"sku": "MMR", "nombre": "Mix masitas rellenas", "cocinero": "Adriana", "vit": 2, "pat": 2, "estado": "critico", "dias_rest": 2.1, "dias_rest_vit": 2.1, "dias_rest_pat": 14.8, "vel_vit": 0.9615, "vel_pat": 0.1348, "vel_total": 1.0963, "dias_con_vit": 26, "dias_con_pat": 141, "dias_sin_vit": 0, "total_vend_vit": 25, "total_vend_pat": 19, "tiempo_repo": 7, "periodos_sin": [], "despacho": 0, "lote": 16}, {"sku": "TSA", "nombre": "Tallarín salmón ahumado", "cocinero": "Adriana", "vit": 2, "pat": 4, "estado": "critico", "dias_rest": 2.1, "dias_rest_vit": 2.1, "dias_rest_pat": 23.8, "vel_vit": 0.9615, "vel_pat": 0.1679, "vel_total": 1.1295, "dias_con_vit": 26, "dias_con_pat": 131, "dias_sin_vit": 5, "total_vend_vit": 25, "total_vend_pat": 22, "tiempo_repo": 18, "periodos_sin": [18, 40, 7, 9, 6], "despacho": 0, "lote": 29}, {"sku": "TS", "nombre": "Tártaro salmón", "cocinero": "César", "vit": 2, "pat": 5, "estado": "critico", "dias_rest": 2.6, "dias_rest_vit": 2.6, "dias_rest_pat": 12.9, "vel_vit": 0.7727, "vel_pat": 0.3876, "vel_total": 1.1603, "dias_con_vit": 44, "dias_con_pat": 129, "dias_sin_vit": 2, "total_vend_vit": 34, "total_vend_pat": 50, "tiempo_repo": 9, "periodos_sin": [9, 3], "despacho": 0, "lote": 19}, {"sku": "FCT", "nombre": "Filete champiñón tocino", "cocinero": "Jesús", "vit": 1, "pat": 2, "estado": "critico", "dias_rest": 2.6, "dias_rest_vit": 2.6, "dias_rest_pat": 13.1, "vel_vit": 0.3889, "vel_pat": 0.1525, "vel_total": 0.5414, "dias_con_vit": 18, "dias_con_pat": 118, "dias_sin_vit": 4, "total_vend_vit": 7, "total_vend_pat": 18, "tiempo_repo": 12, "periodos_sin": [12, 7, 9, 18], "despacho": 0, "lote": 11}, {"sku": "MMRM", "nombre": "Mix masitas rellenas del mar", "cocinero": "Adriana", "vit": 3, "pat": 4, "estado": "critico", "dias_rest": 3.0, "dias_rest_vit": 3.0, "dias_rest_pat": 36.7, "vel_vit": 1.0, "vel_pat": 0.1091, "vel_total": 1.1091, "dias_con_vit": 14, "dias_con_pat": 55, "dias_sin_vit": 3, "total_vend_vit": 14, "total_vend_pat": 6, "tiempo_repo": 57, "periodos_sin": [57], "despacho": 0, "lote": 71}, {"sku": "LR", "nombre": "Lomo relleno", "cocinero": "Jesús", "vit": 2, "pat": 3, "estado": "bajo", "dias_rest": 3.2, "dias_rest_vit": 3.2, "dias_rest_pat": 35.6, "vel_vit": 0.6154, "vel_pat": 0.0842, "vel_total": 0.6996, "dias_con_vit": 13, "dias_con_pat": 95, "dias_sin_vit": 4, "total_vend_vit": 8, "total_vend_pat": 8, "tiempo_repo": 10, "periodos_sin": [10, 15], "despacho": 0, "lote": 12}, {"sku": "TCM", "nombre": "Tallarín carne mechada", "cocinero": "Adriana", "vit": 2, "pat": 4, "estado": "bajo", "dias_rest": 3.5, "dias_rest_vit": 3.5, "dias_rest_pat": 23.7, "vel_vit": 0.5789, "vel_pat": 0.1687, "vel_total": 0.7476, "dias_con_vit": 19, "dias_con_pat": 83, "dias_sin_vit": 5, "total_vend_vit": 11, "total_vend_pat": 14, "tiempo_repo": 25, "periodos_sin": [25, 11, 3, 19], "despacho": 0, "lote": 24}, {"sku": "PCM", "nombre": "Pastel de choclo", "cocinero": "Carolina", "vit": 3, "pat": 1, "estado": "bajo", "dias_rest": 3.6, "dias_rest_vit": 7.2, "dias_rest_pat": 3.6, "vel_vit": 0.4167, "vel_pat": 0.2769, "vel_total": 0.6936, "dias_con_vit": 24, "dias_con_pat": 65, "dias_sin_vit": 2, "total_vend_vit": 10, "total_vend_pat": 18, "tiempo_repo": 19, "periodos_sin": [19, 23], "despacho": 1, "lote": 19}, {"sku": "RB", "nombre": "Roast beef", "cocinero": "Jesús", "vit": 7, "pat": 7, "estado": "bajo", "dias_rest": 4.0, "dias_rest_vit": 4.0, "dias_rest_pat": 9.4, "vel_vit": 1.7609, "vel_pat": 0.7416, "vel_total": 2.5024, "dias_con_vit": 46, "dias_con_pat": 89, "dias_sin_vit": 15, "total_vend_vit": 81, "total_vend_pat": 66, "tiempo_repo": 1, "periodos_sin": [1, 1, 5, 4, 16, 1, 8, 5, 11, 4], "despacho": 0, "lote": 21}, {"sku": "CF", "nombre": "Carpaccio de filete", "cocinero": "Jesús", "vit": 3, "pat": 2, "estado": "bajo", "dias_rest": 4.0, "dias_rest_vit": 4.0, "dias_rest_pat": 9.3, "vel_vit": 0.7568, "vel_pat": 0.2158, "vel_total": 0.9726, "dias_con_vit": 37, "dias_con_pat": 139, "dias_sin_vit": 5, "total_vend_vit": 28, "total_vend_pat": 30, "tiempo_repo": 9, "periodos_sin": [9, 9, 1, 5], "despacho": 0, "lote": 16}, {"sku": "RS", "nombre": "Rollo salmón", "cocinero": "César", "vit": 3, "pat": 4, "estado": "bajo", "dias_rest": 4.0, "dias_rest_vit": 4.0, "dias_rest_pat": 11.1, "vel_vit": 0.7442, "vel_pat": 0.3613, "vel_total": 1.1055, "dias_con_vit": 43, "dias_con_pat": 119, "dias_sin_vit": 4, "total_vend_vit": 32, "total_vend_pat": 43, "tiempo_repo": 7, "periodos_sin": [7, 13, 7, 6], "despacho": 0, "lote": 16}, {"sku": "CM", "nombre": "Carne mechada", "cocinero": "César", "vit": 3, "pat": 4, "estado": "bajo", "dias_rest": 4.1, "dias_rest_vit": 4.1, "dias_rest_pat": 10.2, "vel_vit": 0.7241, "vel_pat": 0.3936, "vel_total": 1.1178, "dias_con_vit": 29, "dias_con_pat": 94, "dias_sin_vit": 3, "total_vend_vit": 21, "total_vend_pat": 37, "tiempo_repo": 15, "periodos_sin": [15, 2], "despacho": 0, "lote": 25}, {"sku": "RC", "nombre": "Rollo camarón", "cocinero": "César", "vit": 0, "pat": 1, "estado": "bajo", "dias_rest": 4.2, "dias_rest_vit": null, "dias_rest_pat": 4.2, "vel_vit": 0.5769, "vel_pat": 0.2404, "vel_total": 0.8173, "dias_con_vit": 26, "dias_con_pat": 104, "dias_sin_vit": 7, "total_vend_vit": 15, "total_vend_pat": 25, "tiempo_repo": 3, "periodos_sin": [3, 24, 14, 1, 6], "despacho": 1, "lote": 9}, {"sku": "TPP", "nombre": "Tallarines pollo pimentón", "cocinero": "Adriana", "vit": 4, "pat": 3, "estado": "bajo", "dias_rest": 4.3, "dias_rest_vit": 4.3, "dias_rest_pat": 20.8, "vel_vit": 0.9231, "vel_pat": 0.1444, "vel_total": 1.0675, "dias_con_vit": 13, "dias_con_pat": 90, "dias_sin_vit": 3, "total_vend_vit": 12, "total_vend_pat": 13, "tiempo_repo": 29, "periodos_sin": [29, 25, 17], "despacho": 0, "lote": 39}, {"sku": "SSA", "nombre": "Salmón con salsa de alcaparras", "cocinero": "Jesús", "vit": 1, "pat": 2, "estado": "bajo", "dias_rest": 4.3, "dias_rest_vit": 4.3, "dias_rest_pat": 7.6, "vel_vit": 0.2308, "vel_pat": 0.2642, "vel_total": 0.4949, "dias_con_vit": 13, "dias_con_pat": 53, "dias_sin_vit": 2, "total_vend_vit": 3, "total_vend_pat": 14, "tiempo_repo": 2, "periodos_sin": [2], "despacho": 0, "lote": 5}, {"sku": "LSA", "nombre": "Lasaña salmón", "cocinero": "Adriana", "vit": 3, "pat": 4, "estado": "bajo", "dias_rest": 4.4, "dias_rest_vit": 4.4, "dias_rest_pat": 41.8, "vel_vit": 0.6842, "vel_pat": 0.0957, "vel_total": 0.7799, "dias_con_vit": 19, "dias_con_pat": 115, "dias_sin_vit": 3, "total_vend_vit": 13, "total_vend_pat": 11, "tiempo_repo": 15, "periodos_sin": [15, 6, 7], "despacho": 0, "lote": 18}, {"sku": "EJ", "nombre": "Empanaditas jamón serrano", "cocinero": "Carolina", "vit": 3, "pat": 5, "estado": "bajo", "dias_rest": 4.8, "dias_rest_vit": 4.8, "dias_rest_pat": 19.6, "vel_vit": 0.625, "vel_pat": 0.2556, "vel_total": 0.8806, "dias_con_vit": 32, "dias_con_pat": 133, "dias_sin_vit": 5, "total_vend_vit": 20, "total_vend_pat": 34, "tiempo_repo": 13, "periodos_sin": [13, 8, 4, 12], "despacho": 0, "lote": 18}, {"sku": "TLS", "nombre": "Tequeños lomo saltado", "cocinero": "Adriana", "vit": 5, "pat": 3, "estado": "bajo", "dias_rest": 4.9, "dias_rest_vit": 8.5, "dias_rest_pat": 4.9, "vel_vit": 0.587, "vel_pat": 0.6174, "vel_total": 1.2043, "dias_con_vit": 46, "dias_con_pat": 115, "dias_sin_vit": 4, "total_vend_vit": 27, "total_vend_pat": 71, "tiempo_repo": 8, "periodos_sin": [5, 8, 8, 2], "despacho": 2, "lote": 19}, {"sku": "LA", "nombre": "Lomito acaramelado", "cocinero": "César", "vit": 3, "pat": 3, "estado": "bajo", "dias_rest": 5.0, "dias_rest_vit": 5.0, "dias_rest_pat": 12.2, "vel_vit": 0.6, "vel_pat": 0.2463, "vel_total": 0.8463, "dias_con_vit": 25, "dias_con_pat": 134, "dias_sin_vit": 3, "total_vend_vit": 15, "total_vend_pat": 33, "tiempo_repo": 11, "periodos_sin": [11, 1, 3], "despacho": 0, "lote": 16}, {"sku": "AS", "nombre": "Arroz salvaje", "cocinero": "Jesús", "vit": 0, "pat": 1, "estado": "bajo", "dias_rest": 5.0, "dias_rest_vit": null, "dias_rest_pat": 5.0, "vel_vit": 0.6, "vel_pat": 0.2, "vel_total": 0.8, "dias_con_vit": 5, "dias_con_pat": 25, "dias_sin_vit": 0, "total_vend_vit": 3, "total_vend_pat": 5, "tiempo_repo": 7, "periodos_sin": [], "despacho": 1, "lote": 12}, {"sku": "ÑJ", "nombre": "Ñoquis con jamón serrano", "cocinero": "Carolina", "vit": 3, "pat": 4, "estado": "bajo", "dias_rest": 5.4, "dias_rest_vit": 5.4, "dias_rest_pat": 17.7, "vel_vit": 0.5526, "vel_pat": 0.2258, "vel_total": 0.7784, "dias_con_vit": 38, "dias_con_pat": 155, "dias_sin_vit": 3, "total_vend_vit": 21, "total_vend_pat": 35, "tiempo_repo": 5, "periodos_sin": [5, 8, 15], "despacho": 0, "lote": 10}, {"sku": "ÑP", "nombre": "Ñoquis pesto tomate cherry", "cocinero": "Carolina", "vit": 3, "pat": 3, "estado": "bajo", "dias_rest": 5.4, "dias_rest_vit": 5.4, "dias_rest_pat": 16.3, "vel_vit": 0.56, "vel_pat": 0.184, "vel_total": 0.744, "dias_con_vit": 25, "dias_con_pat": 125, "dias_sin_vit": 4, "total_vend_vit": 14, "total_vend_pat": 23, "tiempo_repo": 4, "periodos_sin": [4, 14, 7], "despacho": 0, "lote": 9}, {"sku": "MIGNON", "nombre": "Mignon de pollo", "cocinero": "César", "vit": 4, "pat": 6, "estado": "bajo", "dias_rest": 6.7, "dias_rest_vit": 6.7, "dias_rest_pat": 21.5, "vel_vit": 0.5938, "vel_pat": 0.2793, "vel_total": 0.873, "dias_con_vit": 32, "dias_con_pat": 111, "dias_sin_vit": 4, "total_vend_vit": 19, "total_vend_pat": 31, "tiempo_repo": 10, "periodos_sin": [10, 18, 2], "despacho": 0, "lote": 15}, {"sku": "CJ", "nombre": "Chupe jaiba grande", "cocinero": "Jesús", "vit": 7, "pat": 6, "estado": "bajo", "dias_rest": 6.8, "dias_rest_vit": 6.8, "dias_rest_pat": 17.7, "vel_vit": 1.0233, "vel_pat": 0.3393, "vel_total": 1.3625, "dias_con_vit": 43, "dias_con_pat": 112, "dias_sin_vit": 8, "total_vend_vit": 44, "total_vend_pat": 38, "tiempo_repo": 11, "periodos_sin": [6, 11, 12, 10, 11], "despacho": 0, "lote": 25}, {"sku": "CC", "nombre": "Chupe centolla grande", "cocinero": "Jesús", "vit": 5, "pat": 5, "estado": "bajo", "dias_rest": 6.8, "dias_rest_vit": 6.8, "dias_rest_pat": 65.0, "vel_vit": 0.7368, "vel_pat": 0.0769, "vel_total": 0.8138, "dias_con_vit": 19, "dias_con_pat": 117, "dias_sin_vit": 6, "total_vend_vit": 14, "total_vend_pat": 9, "tiempo_repo": 12, "periodos_sin": [12, 44, 21], "despacho": 0, "lote": 16}, {"sku": "CLC", "nombre": "Chupe loco camarón grande", "cocinero": "Jesús", "vit": 9, "pat": 5, "estado": "bajo", "dias_rest": 7.5, "dias_rest_vit": 7.5, "dias_rest_pat": 11.5, "vel_vit": 1.2, "vel_pat": 0.4345, "vel_total": 1.6345, "dias_con_vit": 50, "dias_con_pat": 145, "dias_sin_vit": 7, "total_vend_vit": 60, "total_vend_pat": 63, "tiempo_repo": 5, "periodos_sin": [5, 1, 47, 2, 3, 1, 5], "despacho": 0, "lote": 20}, {"sku": "BAR", "nombre": "Barquillos", "cocinero": "Carolina", "vit": 3, "pat": 3, "estado": "bajo", "dias_rest": 7.5, "dias_rest_vit": 7.5, "dias_rest_pat": 96.0, "vel_vit": 0.4, "vel_pat": 0.0312, "vel_total": 0.4313, "dias_con_vit": 5, "dias_con_pat": 32, "dias_sin_vit": 0, "total_vend_vit": 2, "total_vend_pat": 1, "tiempo_repo": 7, "periodos_sin": [], "despacho": 0, "lote": 7}, {"sku": "LS", "nombre": "Lomo saltado", "cocinero": "César", "vit": 2, "pat": 0, "estado": "bajo", "dias_rest": 7.8, "dias_rest_vit": 7.8, "dias_rest_pat": null, "vel_vit": 0.2571, "vel_pat": 0.4386, "vel_total": 0.6957, "dias_con_vit": 35, "dias_con_pat": 114, "dias_sin_vit": 3, "total_vend_vit": 9, "total_vend_pat": 50, "tiempo_repo": 1, "periodos_sin": [1, 2, 9], "despacho": 4, "lote": 6}, {"sku": "CP", "nombre": "Carpaccio pulpo con salsa al olivo", "cocinero": "Jesús", "vit": 6, "pat": 5, "estado": "bajo", "dias_rest": 8.0, "dias_rest_vit": 8.0, "dias_rest_pat": 27.9, "vel_vit": 0.75, "vel_pat": 0.1791, "vel_total": 0.9291, "dias_con_vit": 32, "dias_con_pat": 134, "dias_sin_vit": 1, "total_vend_vit": 24, "total_vend_pat": 24, "tiempo_repo": 15, "periodos_sin": [15], "despacho": 0, "lote": 21}, {"sku": "ÑC", "nombre": "Ñoquis de camarón", "cocinero": "Carolina", "vit": 0, "pat": 2, "estado": "bajo", "dias_rest": 8.1, "dias_rest_vit": null, "dias_rest_pat": 8.1, "vel_vit": 0.7609, "vel_pat": 0.2463, "vel_total": 1.0071, "dias_con_vit": 46, "dias_con_pat": 134, "dias_sin_vit": 6, "total_vend_vit": 35, "total_vend_pat": 33, "tiempo_repo": 5, "periodos_sin": [5, 8, 7, 12], "despacho": 0, "lote": 13}, {"sku": "PV", "nombre": "Caja de postres en vasito", "cocinero": "Carolina", "vit": 6, "pat": 2, "estado": "bajo", "dias_rest": 8.2, "dias_rest_vit": 9.3, "dias_rest_pat": 8.2, "vel_vit": 0.6429, "vel_pat": 0.2435, "vel_total": 0.8863, "dias_con_vit": 28, "dias_con_pat": 115, "dias_sin_vit": 3, "total_vend_vit": 18, "total_vend_pat": 28, "tiempo_repo": 9, "periodos_sin": [9, 24], "despacho": 0, "lote": 15}, {"sku": "BAP", "nombre": "Berenjenas a la parmesana", "cocinero": "Adriana", "vit": 4, "pat": 5, "estado": "bajo", "dias_rest": 9.3, "dias_rest_vit": 9.3, "dias_rest_pat": 28.7, "vel_vit": 0.4286, "vel_pat": 0.1742, "vel_total": 0.6028, "dias_con_vit": 35, "dias_con_pat": 155, "dias_sin_vit": 0, "total_vend_vit": 15, "total_vend_pat": 27, "tiempo_repo": 7, "periodos_sin": [], "despacho": 0, "lote": 9}, {"sku": "RM", "nombre": "Rollo mechada", "cocinero": "César", "vit": 7, "pat": 6, "estado": "bajo", "dias_rest": 9.7, "dias_rest_vit": 9.7, "dias_rest_pat": 11.9, "vel_vit": 0.7183, "vel_pat": 0.5038, "vel_total": 1.2221, "dias_con_vit": 71, "dias_con_pat": 131, "dias_sin_vit": 4, "total_vend_vit": 51, "total_vend_pat": 66, "tiempo_repo": 8, "periodos_sin": [8, 2, 4], "despacho": 0, "lote": 19}, {"sku": "TPU", "nombre": "Tequeños de pulpo con salsa", "cocinero": "Adriana", "vit": 8, "pat": 5, "estado": "bajo", "dias_rest": 10.5, "dias_rest_vit": 10.5, "dias_rest_pat": 61.5, "vel_vit": 0.76, "vel_pat": 0.0813, "vel_total": 0.8413, "dias_con_vit": 25, "dias_con_pat": 123, "dias_sin_vit": 1, "total_vend_vit": 19, "total_vend_pat": 10, "tiempo_repo": 6, "periodos_sin": [6], "despacho": 0, "lote": 11}, {"sku": "MCL", "nombre": "Mini chupe loco", "cocinero": "Jesús", "vit": 25, "pat": 7, "estado": "bajo", "dias_rest": 10.7, "dias_rest_vit": 28.7, "dias_rest_pat": 10.7, "vel_vit": 0.871, "vel_pat": 0.6538, "vel_total": 1.5248, "dias_con_vit": 31, "dias_con_pat": 78, "dias_sin_vit": 7, "total_vend_vit": 27, "total_vend_pat": 51, "tiempo_repo": 1, "periodos_sin": [1, 12, 33, 9, 17, 13], "despacho": 0, "lote": 13}, {"sku": "LM", "nombre": "Lasaña mediterránea", "cocinero": "Adriana", "vit": 5, "pat": 4, "estado": "bajo", "dias_rest": 11.2, "dias_rest_vit": 11.2, "dias_rest_pat": 56.5, "vel_vit": 0.4444, "vel_pat": 0.0708, "vel_total": 0.5152, "dias_con_vit": 9, "dias_con_pat": 113, "dias_sin_vit": 2, "total_vend_vit": 4, "total_vend_pat": 8, "tiempo_repo": 40, "periodos_sin": [40, 44], "despacho": 0, "lote": 25}, {"sku": "PCP", "nombre": "Paté con peras", "cocinero": "Jesús", "vit": 48, "pat": 13, "estado": "bajo", "dias_rest": 12.2, "dias_rest_vit": 46.7, "dias_rest_pat": 12.2, "vel_vit": 1.0278, "vel_pat": 1.0638, "vel_total": 2.0916, "dias_con_vit": 72, "dias_con_pat": 141, "dias_sin_vit": 2, "total_vend_vit": 74, "total_vend_pat": 150, "tiempo_repo": 5, "periodos_sin": [5, 5], "despacho": 0, "lote": 26}, {"sku": "PAC", "nombre": "Milhojas de papas", "cocinero": "César", "vit": 11, "pat": 5, "estado": "bajo", "dias_rest": 12.7, "dias_rest_vit": 13.9, "dias_rest_pat": 12.7, "vel_vit": 0.7895, "vel_pat": 0.3937, "vel_total": 1.1832, "dias_con_vit": 38, "dias_con_pat": 127, "dias_sin_vit": 3, "total_vend_vit": 30, "total_vend_pat": 50, "tiempo_repo": 5, "periodos_sin": [5, 7, 10], "despacho": 0, "lote": 15}, {"sku": "PC", "nombre": "Puré de camote", "cocinero": "Carolina", "vit": 0, "pat": 3, "estado": "bajo", "dias_rest": 13.0, "dias_rest_vit": null, "dias_rest_pat": 13.0, "vel_vit": 0.5263, "vel_pat": 0.2303, "vel_total": 0.7566, "dias_con_vit": 38, "dias_con_pat": 152, "dias_sin_vit": 2, "total_vend_vit": 20, "total_vend_pat": 35, "tiempo_repo": 4, "periodos_sin": [4], "despacho": 0, "lote": 9}, {"sku": "CAMA", "nombre": "Camarones apanados", "cocinero": "Adriana", "vit": 17, "pat": 9, "estado": "bajo", "dias_rest": 13.1, "dias_rest_vit": 22.3, "dias_rest_pat": 13.1, "vel_vit": 0.7612, "vel_pat": 0.6871, "vel_total": 1.4483, "dias_con_vit": 67, "dias_con_pat": 147, "dias_sin_vit": 2, "total_vend_vit": 51, "total_vend_pat": 101, "tiempo_repo": 4, "periodos_sin": [4, 2], "despacho": 0, "lote": 16}, {"sku": "CL", "nombre": "Carpaccio de locos", "cocinero": "Jesús", "vit": 23, "pat": 7, "estado": "ok", "dias_rest": 14.4, "dias_rest_vit": 25.4, "dias_rest_pat": 14.4, "vel_vit": 0.9048, "vel_pat": 0.486, "vel_total": 1.3907, "dias_con_vit": 42, "dias_con_pat": 107, "dias_sin_vit": 2, "total_vend_vit": 38, "total_vend_pat": 52, "tiempo_repo": 26, "periodos_sin": [26, 18], "despacho": 0, "lote": 46}, {"sku": "LJC", "nombre": "Lasaña jaiba camarón", "cocinero": "Adriana", "vit": 0, "pat": 1, "estado": "ok", "dias_rest": 15.6, "dias_rest_vit": null, "dias_rest_pat": 15.6, "vel_vit": 0.5385, "vel_pat": 0.0642, "vel_total": 0.6027, "dias_con_vit": 13, "dias_con_pat": 109, "dias_sin_vit": 4, "total_vend_vit": 7, "total_vend_pat": 7, "tiempo_repo": 69, "periodos_sin": [69, 4, 8], "despacho": 0, "lote": 46}, {"sku": "MCJ", "nombre": "Mini chupe jaiba", "cocinero": "Jesús", "vit": 22, "pat": 6, "estado": "ok", "dias_rest": 15.9, "dias_rest_vit": 15.9, "dias_rest_pat": 16.9, "vel_vit": 1.3846, "vel_pat": 0.3546, "vel_total": 1.7392, "dias_con_vit": 39, "dias_con_pat": 141, "dias_sin_vit": 4, "total_vend_vit": 54, "total_vend_pat": 50, "tiempo_repo": 1, "periodos_sin": [1, 2, 25], "despacho": 0, "lote": 14}, {"sku": "EM", "nombre": "Empanaditas mechada", "cocinero": "Carolina", "vit": 16, "pat": 5, "estado": "ok", "dias_rest": 16.2, "dias_rest_vit": 27.1, "dias_rest_pat": 16.2, "vel_vit": 0.5897, "vel_pat": 0.3087, "vel_total": 0.8985, "dias_con_vit": 39, "dias_con_pat": 149, "dias_sin_vit": 5, "total_vend_vit": 23, "total_vend_pat": 46, "tiempo_repo": 11, "periodos_sin": [11, 9, 6, 12], "despacho": 0, "lote": 17}, {"sku": "TA", "nombre": "Tártaro atún", "cocinero": "César", "vit": 16, "pat": 5, "estado": "ok", "dias_rest": 17.6, "dias_rest_vit": 21.2, "dias_rest_pat": 17.6, "vel_vit": 0.7551, "vel_pat": 0.2846, "vel_total": 1.0397, "dias_con_vit": 49, "dias_con_pat": 130, "dias_sin_vit": 2, "total_vend_vit": 37, "total_vend_pat": 37, "tiempo_repo": 5, "periodos_sin": [5, 9], "despacho": 0, "lote": 13}, {"sku": "CAC", "nombre": "Choclo a la crema", "cocinero": "Jesús", "vit": 9, "pat": 5, "estado": "ok", "dias_rest": 18.0, "dias_rest_vit": 18.0, "dias_rest_pat": 46.4, "vel_vit": 0.5, "vel_pat": 0.1077, "vel_total": 0.6077, "dias_con_vit": 8, "dias_con_pat": 65, "dias_sin_vit": 0, "total_vend_vit": 4, "total_vend_pat": 7, "tiempo_repo": 7, "periodos_sin": [], "despacho": 0, "lote": 9}, {"sku": "SA", "nombre": "Salsa en frasco", "cocinero": "Adriana", "vit": 50, "pat": 10, "estado": "ok", "dias_rest": 18.2, "dias_rest_vit": 29.2, "dias_rest_pat": 18.2, "vel_vit": 1.7143, "vel_pat": 0.5484, "vel_total": 2.2627, "dias_con_vit": 28, "dias_con_pat": 155, "dias_sin_vit": 0, "total_vend_vit": 48, "total_vend_pat": 85, "tiempo_repo": 7, "periodos_sin": [], "despacho": 0, "lote": 32}, {"sku": "TF", "nombre": "Tártaro filete", "cocinero": "César", "vit": 14, "pat": 6, "estado": "ok", "dias_rest": 22.6, "dias_rest_vit": 22.6, "dias_rest_pat": 71.5, "vel_vit": 0.619, "vel_pat": 0.0839, "vel_total": 0.7029, "dias_con_vit": 21, "dias_con_pat": 155, "dias_sin_vit": 0, "total_vend_vit": 13, "total_vend_pat": 13, "tiempo_repo": 7, "periodos_sin": [], "despacho": 0, "lote": 10}, {"sku": "RA", "nombre": "Rollo alcachofa", "cocinero": "César", "vit": 0, "pat": 5, "estado": "ok", "dias_rest": 31.4, "dias_rest_vit": null, "dias_rest_pat": 31.4, "vel_vit": 0.8824, "vel_pat": 0.1594, "vel_total": 1.0418, "dias_con_vit": 17, "dias_con_pat": 69, "dias_sin_vit": 6, "total_vend_vit": 15, "total_vend_pat": 11, "tiempo_repo": 45, "periodos_sin": [45, 6, 17, 15], "despacho": 0, "lote": 55}, {"sku": "EC", "nombre": "Empanaditas camarón", "cocinero": "Carolina", "vit": 22, "pat": 5, "estado": "ok", "dias_rest": 32.1, "dias_rest_vit": 39.9, "dias_rest_pat": 32.1, "vel_vit": 0.5517, "vel_pat": 0.1558, "vel_total": 0.7076, "dias_con_vit": 29, "dias_con_pat": 154, "dias_sin_vit": 4, "total_vend_vit": 16, "total_vend_pat": 24, "tiempo_repo": 12, "periodos_sin": [12, 9, 5, 12], "despacho": 0, "lote": 14}, {"sku": "CAMAC", "nombre": "Camarones cocidos con salsa", "cocinero": "César", "vit": 8, "pat": 4, "estado": "ok", "dias_rest": 50.0, "dias_rest_vit": null, "dias_rest_pat": 50.0, "vel_vit": 0.0, "vel_pat": 0.08, "vel_total": 0.08, "dias_con_vit": 3, "dias_con_pat": 25, "dias_sin_vit": 0, "total_vend_vit": 0, "total_vend_pat": 2, "tiempo_repo": 7, "periodos_sin": [], "despacho": 0, "lote": 2}, {"sku": "RJ", "nombre": "Rollo jamón serrano", "cocinero": "César", "vit": 0, "pat": 6, "estado": "ok", "dias_rest": 61.2, "dias_rest_vit": null, "dias_rest_pat": 61.2, "vel_vit": 0.6667, "vel_pat": 0.098, "vel_total": 0.7647, "dias_con_vit": 9, "dias_con_pat": 51, "dias_sin_vit": 2, "total_vend_vit": 6, "total_vend_pat": 5, "tiempo_repo": 59, "periodos_sin": [59], "despacho": 0, "lote": 51}];
+const EC={
+  sin_stock:{label:'Sin stock',cls:'br',color:'#A32D2D',orden:0},
+  critico:{label:'Crítico',cls:'ba',color:'#854F0B',orden:1},
+  bajo:{label:'Bajo',cls:'bb',color:'#185FA5',orden:2},
+  ok:{label:'OK',cls:'bv',color:'#3B6D11',orden:3},
 };
-
 function pct(d){
-  if(!d||d<=0) return 0;
-  if(d>=30) return 100;
-  if(d<=3) return Math.round(d/3*20);
-  if(d<=14) return Math.round(20+(d-3)/11*40);
+  if(!d||d<=0)return 0;if(d>=30)return 100;
+  if(d<=3)return Math.round(d/3*20);
+  if(d<=14)return Math.round(20+(d-3)/11*40);
   return Math.round(60+(d-14)/16*40);
 }
-
-function diasStr(d,est){
-  if(est==='sin_stock') return 'Sin stock';
-  if(!d) return '—';
-  return d+'d restantes';
+function fd(d,e){
+  if(e==='sin_stock')return'Sin stock';
+  if(!d&&d!==0)return'—';
+  return Math.round(d)+'d restantes';
 }
-
 function buildCard(p){
-  const ec = EC[p.estado];
-  const mc = ec.color;
-  const pt = pct(p.dias);
-  const dvit = p.vit===0?'sin stock':(p.dias_vit?p.dias_vit+'d':'—');
-  const dpat = p.pat===0?'sin stock':(p.dias_pat?p.dias_pat+'d':'—');
-  const alerta = (p.vit===0&&p.pat>0)||(p.pat===0&&p.vit>0)
-    ? `<div class="alerta">Revisar distribución — una sucursal sin stock</div>` : '';
-  const desp = p.despacho>0
-    ? `<span class="pos">+${p.despacho} und</span>`
-    : `<span style="color:#aaa">No necesita</span>`;
-
-  return `<div class="card" data-estado="${p.estado}" data-cocinero="${p.cocinero.toLowerCase()}" data-nombre="${p.nombre.toLowerCase()}">
-    <div class="card-header" onclick="toggle(this)">
+  const ec=EC[p.estado],pt=pct(p.dias_rest),mc=ec.color;
+  const dv=p.vit===0?'sin stock':(p.dias_rest_vit?Math.round(p.dias_rest_vit)+'d':'—');
+  const dp=p.pat===0?'sin stock':(p.dias_rest_pat?Math.round(p.dias_rest_pat)+'d':'—');
+  const al=(p.vit===0&&p.pat>0)||(p.pat===0&&p.vit>0)?`<div class="al">⚠ Revisar distribución — una sucursal sin stock</div>`:'';
+  const ds=p.despacho>0?`<span style="color:#3B6D11;font-weight:500">+${p.despacho} und sugeridas</span>`:`<span style="color:#aaa">No necesita</span>`;
+  return`<div class="card" data-estado="${p.estado}" data-cocinero="${p.cocinero.toLowerCase()}" data-nombre="${p.nombre.toLowerCase()}">
+    <div class="ch" onclick="toggle(this)">
       <span class="badge ${ec.cls}">${ec.label}</span>
-      <span class="card-nombre">${p.nombre}</span>
-      <span class="card-cocinero">${p.cocinero}</span>
-      <span class="card-dias" style="color:${mc}">${diasStr(p.dias,p.estado)}</span>
-      <span class="chevron">▼</span>
+      <span class="cn">${p.nombre}</span>
+      <span class="cc">${p.cocinero}</span>
+      <span class="cd" style="color:${mc}">${fd(p.dias_rest,p.estado)}</span>
+      <span class="chev">▼</span>
     </div>
-    <div class="term-wrap">
+    <div class="tw">
       <span style="font-size:9px;color:#A32D2D">0d</span>
       <div style="flex:1">
-        <div class="term-labels">
-          <span style="color:#A32D2D">Sin stock</span>
-          <span style="color:#854F0B">Crítico</span>
-          <span style="color:#185FA5">Bajo stock</span>
-          <span style="color:#3B6D11">OK</span>
+        <div class="tl">
+          <span style="color:#A32D2D">Sin stock</span><span style="color:#854F0B">Crítico</span>
+          <span style="color:#185FA5">Bajo stock</span><span style="color:#3B6D11">OK</span>
         </div>
-        <div class="term-track">
-          <div class="term-bg"></div>
-          <div class="term-marker" style="left:${pt}%;border-color:${mc}"></div>
-        </div>
-        <div class="term-nums"><span>0</span><span>3d</span><span>14d</span><span>30d+</span></div>
+        <div class="tt"><div class="tbg"></div><div class="tm" style="left:${pt}%;border-color:${mc}"></div></div>
+        <div class="tn"><span>0</span><span>3d</span><span>14d</span><span>30d+</span></div>
       </div>
       <span style="font-size:9px;color:#3B6D11">30d+</span>
     </div>
-    <div class="stats-row">
-      <div class="sc"><div class="v">${p.vit}</div><div class="l">Vitacura</div></div>
-      <div class="sc"><div class="v">${p.pat}</div><div class="l">Pataguas</div></div>
+    <div class="sr2">
+      <div class="sc"><div class="v">${p.vit}</div><div class="l">Vitacura (${dv})</div></div>
+      <div class="sc"><div class="v">${p.pat}</div><div class="l">Pataguas (${dp})</div></div>
       <div class="sc"><div class="v">${p.vit+p.pat}</div><div class="l">Total</div></div>
       <div class="sc"><div class="v">${p.despacho>0?'+'+p.despacho:'OK'}</div><div class="l">Despacho Pat.</div></div>
     </div>
-    <div class="detalle">
-      <div class="tabs">
-        <div class="tab active" onclick="switchTab(this,'m-${p.sku}','a-${p.sku}')">Movimientos</div>
-        <div class="tab" onclick="switchTab(this,'a-${p.sku}','m-${p.sku}')">Análisis</div>
-      </div>
-      <div class="tc active" id="m-${p.sku}">
-        <p style="font-size:11px;color:#aaa;text-align:center;padding:16px 0">Los movimientos detallados estarán disponibles cuando se habiliten los endpoints de Bsale.</p>
-      </div>
-      <div class="tc" id="a-${p.sku}">
-        ${alerta}
+    <div class="det">
+      <div class="tc">
+        ${al}
         <div class="ib">
-          <b>Stock actual:</b> Vitacura ${p.vit} und (${dvit}) · Pataguas ${p.pat} und (${dpat})<br>
-          <b>Promedio mensual:</b> ${p.prom?p.prom+' und/mes':'Sin datos históricos'}<br>
-          <b>Velocidad diaria:</b> ${p.prom?Math.round(p.prom/30*100)/100+' und/día':'—'}
+          <b>Velocidad real de venta:</b><br>
+          Vitacura: ${p.vel_vit.toFixed(3)} und/día (${p.total_vend_vit} und en ${p.dias_con_vit} días con stock)<br>
+          Pataguas: ${p.vel_pat.toFixed(3)} und/día (${p.total_vend_pat} und en ${p.dias_con_pat} días con stock)<br>
+          Total: ${p.vel_total.toFixed(3)} und/día
         </div>
         <div class="ib">
-          <b>Despacho sugerido a Pataguas (7 días):</b> ${desp}<br>
-          <b>Lote sugerido de producción:</b> ${p.lote?p.lote+' und':'—'}
+          <b>Días sin stock en el período:</b> ${p.dias_sin_vit} días en Vitacura<br>
+          <b>Tiempo de reposición estimado:</b> ${p.tiempo_repo} día${p.tiempo_repo!==1?'s':''} (moda de períodos sin stock)<br>
+          <b>Períodos sin stock detectados:</b> ${p.periodos_sin.length>0?p.periodos_sin.join(', ')+'d':'Ninguno'}
+        </div>
+        <div class="ib">
+          <b>Despacho sugerido a Pataguas (7 días):</b> ${ds}<br>
+          <b>Lote sugerido de producción:</b> ${p.lote?p.lote+' und (reposición + 7 días colchón)':'—'}
         </div>
       </div>
     </div>
   </div>`;
 }
-
 function toggle(h){
-  const d=h.parentElement.querySelector('.detalle');
-  const c=h.querySelector('.chevron');
-  d.classList.toggle('open');
-  c.classList.toggle('open');
+  const d=h.parentElement.querySelector('.det');
+  const c=h.querySelector('.chev');
+  d.classList.toggle('open');c.classList.toggle('open');
 }
-
-function switchTab(tab,showId,hideId){
-  const card=tab.closest('.card');
-  card.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
-  tab.classList.add('active');
-  document.getElementById(showId).classList.add('active');
-  document.getElementById(hideId).classList.remove('active');
-}
-
 function render(){
-  const est = document.getElementById('f-estado').value;
-  const coc = document.getElementById('f-cocinero').value.toLowerCase();
-  const bus = document.getElementById('f-buscar').value.toLowerCase();
-  const cnt = {sin_stock:0,critico:0,bajo:0,ok:0};
+  const est=document.getElementById('fe').value;
+  const coc=document.getElementById('fc').value.toLowerCase();
+  const bus=document.getElementById('fb').value.toLowerCase();
+  const cnt={sin_stock:0,critico:0,bajo:0,ok:0};
   DATA.forEach(p=>cnt[p.estado]++);
-  document.getElementById('cnt-sinstock').textContent = cnt.sin_stock;
-  document.getElementById('cnt-critico').textContent  = cnt.critico;
-  document.getElementById('cnt-bajo').textContent     = cnt.bajo;
-  document.getElementById('cnt-ok').textContent       = cnt.ok;
-  const filtrado = DATA
+  document.getElementById('css').textContent=cnt.sin_stock;
+  document.getElementById('ccr').textContent=cnt.critico;
+  document.getElementById('cbj').textContent=cnt.bajo;
+  document.getElementById('cok').textContent=cnt.ok;
+  document.getElementById('cards').innerHTML=DATA
     .filter(p=>{
-      if(est && p.estado!==est) return false;
-      if(coc && p.cocinero.toLowerCase()!==coc) return false;
-      if(bus && !p.nombre.toLowerCase().includes(bus)) return false;
+      if(est&&p.estado!==est)return false;
+      if(coc&&p.cocinero.toLowerCase()!==coc)return false;
+      if(bus&&!p.nombre.toLowerCase().includes(bus))return false;
       return true;
-    });
-  document.getElementById('cards').innerHTML = filtrado.map(buildCard).join('');
+    }).map(buildCard).join('');
 }
-
 function imprimirGuias(){
-  const hoy = new Date().toLocaleDateString('es-CL');
-  const cocineros = ['Carolina','Adriana','César','Jesús'];
-
-  let html = `<!DOCTYPE html><html lang="es"><head><meta charset="UTF-8">
-  <title>Guías de producción</title>
-  <style>
-    body{font-family:monospace;font-size:11px;margin:20px;color:#000}
-    h1{font-size:14px;font-weight:bold;margin-bottom:4px}
-    h2{font-size:12px;font-weight:bold;margin:16px 0 4px;border-bottom:1px solid #000;padding-bottom:2px}
-    table{width:100%;border-collapse:collapse;margin-bottom:12px}
-    th{text-align:left;border-bottom:1px solid #000;padding:3px 6px;font-size:10px}
-    td{padding:3px 6px;border-bottom:1px solid #eee;font-size:11px}
-    .urgente{font-weight:bold}
-    .page-break{page-break-before:always}
-    @media print{.no-print{display:none}}
-  </style></head><body>
-  <button class="no-print" onclick="window.print()" style="margin-bottom:16px;padding:6px 14px;cursor:pointer">Imprimir</button>`;
-
-  // GUÍA GENERAL
-  html += `<h1>Producción — Cocina Ángeles Álamos</h1>
-  <p style="font-size:10px;color:#666;margin-bottom:12px">Generado: ${hoy} · Ordenado por urgencia</p>
+  const hoy=new Date().toLocaleDateString('es-CL');
+  const cocineros=['Carolina','Adriana','César','Jesús'];
+  let html=`<!DOCTYPE html><html lang="es"><head><meta charset="UTF-8"><title>Guías de producción</title>
+  <style>body{font-family:monospace;font-size:11px;margin:20px}h1{font-size:13px;font-weight:bold;margin-bottom:2px}
+  h2{font-size:12px;font-weight:bold;margin:16px 0 4px;border-bottom:1px solid #000;padding-bottom:2px}
+  p.sub{font-size:10px;color:#666;margin-bottom:10px}
+  table{width:100%;border-collapse:collapse;margin-bottom:12px}
+  th{text-align:left;border-bottom:1px solid #000;padding:3px 6px;font-size:10px}
+  td{padding:3px 6px;border-bottom:1px solid #eee}
+  .u{font-weight:bold;color:#A32D2D}.pb{page-break-before:always}
+  .np{display:none}@media print{.np{display:none}}</style></head><body>
+  <button class="np" onclick="window.print()" style="margin-bottom:16px;padding:6px 14px;cursor:pointer">🖨 Imprimir</button>`;
+  html+=`<h1>Producción — Cocina Ángeles Álamos</h1><p class="sub">Generado: ${hoy} · Ordenado por urgencia</p>
   <h2>Guía general — todos los productos</h2>
-  <table><thead><tr><th>Días</th><th>Producto</th><th>Cocinero</th><th>Vit</th><th>Pat</th><th>Total</th><th>Lote sug.</th></tr></thead><tbody>`;
-
+  <table><thead><tr><th>Días</th><th>Producto</th><th>Cocinero</th><th>Vit</th><th>Pat</th><th>Total</th><th>Lote</th><th>Despacho Pat.</th></tr></thead><tbody>`;
   DATA.forEach(p=>{
-    const cls = p.dias!==null&&p.dias<=3?'urgente':'';
-    const diasTxt = p.estado==='sin_stock'?'0':p.dias?p.dias+'d':'—';
-    html += `<tr class="${cls}"><td>${diasTxt}</td><td>${p.nombre}</td><td>${p.cocinero}</td><td>${p.vit}</td><td>${p.pat}</td><td>${p.vit+p.pat}</td><td>${p.lote||'—'}</td></tr>`;
+    const cls=p.dias_rest!==null&&p.dias_rest<=3?'u':'';
+    const d=p.estado==='sin_stock'?'0d':p.dias_rest?Math.round(p.dias_rest)+'d':'—';
+    html+=`<tr class="${cls}"><td>${d}</td><td>${p.nombre}</td><td>${p.cocinero}</td><td>${p.vit}</td><td>${p.pat}</td><td>${p.vit+p.pat}</td><td>${p.lote||'—'}</td><td>${p.despacho>0?'+'+p.despacho:'—'}</td></tr>`;
   });
-  html += `</tbody></table>`;
-
-  // GUÍAS POR COCINERO
+  html+=`</tbody></table>`;
   cocineros.forEach(coc=>{
-    const prods = DATA.filter(p=>p.cocinero===coc);
-    html += `<div class="page-break"></div><h1>Producción — Cocina Ángeles Álamos</h1>
-    <p style="font-size:10px;color:#666;margin-bottom:12px">Generado: ${hoy} · Cocinero: ${coc}</p>
+    const prods=DATA.filter(p=>p.cocinero===coc);
+    html+=`<div class="pb"></div><h1>Producción — Cocina Ángeles Álamos</h1><p class="sub">Generado: ${hoy} · Cocinero: ${coc}</p>
     <h2>${coc} — ${prods.length} productos</h2>
-    <table><thead><tr><th>Días</th><th>Producto</th><th>Vit</th><th>Pat</th><th>Total</th><th>Lote sug.</th></tr></thead><tbody>`;
+    <table><thead><tr><th>Días</th><th>Producto</th><th>Vit</th><th>Pat</th><th>Total</th><th>Lote</th></tr></thead><tbody>`;
     prods.forEach(p=>{
-      const cls = p.dias!==null&&p.dias<=3?'urgente':'';
-      const diasTxt = p.estado==='sin_stock'?'0':p.dias?p.dias+'d':'—';
-      html += `<tr class="${cls}"><td>${diasTxt}</td><td>${p.nombre}</td><td>${p.vit}</td><td>${p.pat}</td><td>${p.vit+p.pat}</td><td>${p.lote||'—'}</td></tr>`;
+      const cls=p.dias_rest!==null&&p.dias_rest<=3?'u':'';
+      const d=p.estado==='sin_stock'?'0d':p.dias_rest?Math.round(p.dias_rest)+'d':'—';
+      html+=`<tr class="${cls}"><td>${d}</td><td>${p.nombre}</td><td>${p.vit}</td><td>${p.pat}</td><td>${p.vit+p.pat}</td><td>${p.lote||'—'}</td></tr>`;
     });
-    html += `</tbody></table>`;
+    html+=`</tbody></table>`;
   });
-
-  // GUÍA DESPACHO PATAGUAS
-  const despachos = DATA.filter(p=>p.despacho>0);
-  html += `<div class="page-break"></div><h1>Producción — Cocina Ángeles Álamos</h1>
-  <p style="font-size:10px;color:#666;margin-bottom:12px">Generado: ${hoy} · Despacho a Las Pataguas (7 días)</p>
-  <h2>Guía de despacho — Vitacura → Las Pataguas</h2>`;
-  if(despachos.length===0){
-    html += `<p style="color:#666">No hay despachos sugeridos — Pataguas tiene stock suficiente para 7 días.</p>`;
-  }else{
-    html += `<table><thead><tr><th>Producto</th><th>Stock Pat.</th><th>Despacho sug.</th></tr></thead><tbody>`;
-    despachos.forEach(p=>{
-      html += `<tr><td>${p.nombre}</td><td>${p.pat}</td><td class="urgente">+${p.despacho}</td></tr>`;
-    });
-    html += `</tbody></table>`;
+  const ds=DATA.filter(p=>p.despacho>0);
+  html+=`<div class="pb"></div><h1>Producción — Cocina Ángeles Álamos</h1><p class="sub">Generado: ${hoy} · Despacho Vitacura → Las Pataguas (7 días)</p>
+  <h2>Guía de despacho a Las Pataguas</h2>`;
+  if(ds.length===0){html+=`<p>Pataguas tiene stock suficiente para 7 días.</p>`;}
+  else{
+    html+=`<table><thead><tr><th>Producto</th><th>Stock Pat.</th><th>Vel. Pat.</th><th>Despacho sug.</th></tr></thead><tbody>`;
+    ds.forEach(p=>{html+=`<tr><td>${p.nombre}</td><td>${p.pat}</td><td>${p.vel_pat.toFixed(2)} und/día</td><td class="u">+${p.despacho}</td></tr>`;});
+    html+=`</tbody></table>`;
   }
-
-  html += `</body></html>`;
-  const w = window.open('','_blank');
-  w.document.write(html);
-  w.document.close();
+  html+=`</body></html>`;
+  const w=window.open('','_blank');w.document.write(html);w.document.close();
 }
-
 render();
-</script>
-</body>
-</html>
+</script></body></html>
