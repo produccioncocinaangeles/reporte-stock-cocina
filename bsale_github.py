@@ -116,18 +116,26 @@ def obtener_stock_bsale(token):
 # ============================================================
 
 def calcular_productos(stock_bsale):
+    ORDEN = {"sin_stock": 0, "critico": 1, "bajo": 2, "ok": 3}
     resultado = []
     for p in PRODUCTOS:
-        cm = normalizar(p["cm"])
+        cm       = normalizar(p["cm"])
         vitacura = int(stock_bsale.get((cm, "VITACURA"), 0))
         pataguas = int(stock_bsale.get((cm, "LAS PATAGUAS"), 0))
         total    = vitacura + pataguas
-        prom     = p["promedio"]
+        vel_dia  = p["promedio"] / 30 if p["promedio"] > 0 else 0
 
-        if prom > 0:
-            dias = round(total / (prom / 30), 1)
+        if vitacura == 0:
+            dias_vit = 0
+            estado   = "sin_stock"
+        elif vel_dia > 0:
+            dias_vit = round(vitacura / vel_dia, 1)
+            if   dias_vit <= 3:  estado = "critico"
+            elif dias_vit <= 14: estado = "bajo"
+            else:                estado = "ok"
         else:
-            dias = None
+            dias_vit = None
+            estado   = "ok"
 
         resultado.append({
             "nombre":   p["nombre"],
@@ -135,116 +143,116 @@ def calcular_productos(stock_bsale):
             "vitacura": vitacura,
             "pataguas": pataguas,
             "total":    total,
-            "dias":     dias,
+            "dias_vit": dias_vit,
+            "estado":   estado,
         })
 
-    resultado.sort(key=lambda x: (x["dias"] is None, x["dias"] if x["dias"] is not None else 9999))
+    resultado.sort(key=lambda x: (
+        ORDEN[x["estado"]],
+        x["dias_vit"] if x["dias_vit"] is not None else 9999
+    ))
     return resultado
 
 # ============================================================
 # PASO 3: ARMAR CORREO HTML
 # ============================================================
 
-def dias_label(dias):
-    if dias is None: return "-"
-    if dias == 0:    return "0 dias"
-    if dias == 1:    return "1 dia"
-    return f"{dias} dias"
-
-def color_dias(dias):
-    if dias is None:  return "#888780"
-    if dias <= 1:     return "#A32D2D"
-    if dias <= 3:     return "#854F0B"
-    return "#3B6D11"
-
 def armar_html(productos):
-    fecha = datetime.now().strftime("%d de %B de %Y · %H:%M")
+    fecha = datetime.now().strftime("%d/%m/%Y · %H:%M")
 
-    sin_stock = [p for p in productos if p["total"] == 0]
-    criticos  = [p for p in productos if p["total"] > 0 and p["dias"] is not None and p["dias"] <= 3]
-    bajos     = [p for p in productos if p["total"] > 0 and (p["dias"] is None or p["dias"] > 3) and p["total"] <= 8]
-    ok        = [p for p in productos if p["total"] > 8 and (p["dias"] is None or p["dias"] > 3)]
+    sin_stock = [p for p in productos if p["estado"] == "sin_stock"]
+    criticos  = [p for p in productos if p["estado"] == "critico"]
+    bajos     = [p for p in productos if p["estado"] == "bajo"]
+    ok        = [p for p in productos if p["estado"] == "ok"]
 
-    def badge(tipo):
-        estilos = {
-            "sin_stock": "background:#FCEBEB;color:#A32D2D;",
-            "critico":   "background:#FAEEDA;color:#854F0B;",
-            "bajo":      "background:#FAF3DA;color:#7A6010;",
-        }
-        textos = {
-            "sin_stock": "Sin stock",
-            "critico":   "Critico",
-            "bajo":      "Bajo stock",
-        }
-        return f'<span style="display:inline-block;font-size:11px;font-weight:500;padding:2px 8px;border-radius:99px;{estilos[tipo]}">{textos[tipo]}</span>'
+    BG    = {"sin_stock":"#FCEBEB","critico":"#FAEEDA","bajo":"#FAF3DA","ok":"#E1F5EE"}
+    COLOR = {"sin_stock":"#A32D2D","critico":"#854F0B","bajo":"#7A6010","ok":"#0F6E56"}
+    LABEL = {"sin_stock":"Sin stock","critico":"Crítico","bajo":"Bajo stock","ok":"OK"}
 
-    def filas(lista, tipo):
-        html = ""
-        for p in lista:
-            cd = color_dias(p["dias"])
-            b  = badge(tipo) + "&nbsp; " if tipo != "ok" else ""
-            html += f"""<tr>
-          <td style="padding:8px 10px;font-size:13px;border-bottom:0.5px solid #e5e5e2;">{b}{p['nombre']}</td>
-          <td style="padding:8px 10px;font-size:13px;text-align:right;border-bottom:0.5px solid #e5e5e2;">{p['vitacura']}</td>
-          <td style="padding:8px 10px;font-size:13px;text-align:right;border-bottom:0.5px solid #e5e5e2;">{p['pataguas']}</td>
-          <td style="padding:8px 10px;font-size:13px;text-align:right;font-weight:500;border-bottom:0.5px solid #e5e5e2;">{p['total']}</td>
-          <td style="padding:8px 10px;font-size:13px;text-align:right;color:{cd};font-weight:500;border-bottom:0.5px solid #e5e5e2;">{dias_label(p['dias'])}</td>
-          <td style="padding:8px 10px;font-size:13px;border-bottom:0.5px solid #e5e5e2;">{p['cocinero']}</td>
-        </tr>"""
-        return html
+    def badge(estado):
+        return (f'<span style="font-size:10px;font-weight:600;padding:2px 7px;border-radius:99px;'
+                f'background:{BG[estado]};color:{COLOR[estado]}">{LABEL[estado]}</span>')
 
-    def tabla(titulo, lista, tipo, color):
-        if not lista: return ""
-        return f"""
-    <p style="font-size:12px;font-weight:500;text-transform:uppercase;letter-spacing:0.05em;color:{color};margin:20px 0 6px;">{titulo}</p>
-    <table style="width:100%;border-collapse:collapse;border:0.5px solid #e5e5e2;border-radius:8px;overflow:hidden;">
-      <thead><tr style="background:#f5f4f0;">
-        <th style="padding:8px 10px;font-size:11px;font-weight:500;color:#888780;text-align:left;border-bottom:0.5px solid #e5e5e2;">Producto</th>
-        <th style="padding:8px 10px;font-size:11px;font-weight:500;color:#888780;text-align:right;border-bottom:0.5px solid #e5e5e2;">Vitacura</th>
-        <th style="padding:8px 10px;font-size:11px;font-weight:500;color:#888780;text-align:right;border-bottom:0.5px solid #e5e5e2;">Pataguas</th>
-        <th style="padding:8px 10px;font-size:11px;font-weight:500;color:#888780;text-align:right;border-bottom:0.5px solid #e5e5e2;">Total</th>
-        <th style="padding:8px 10px;font-size:11px;font-weight:500;color:#888780;text-align:right;border-bottom:0.5px solid #e5e5e2;">Dias</th>
-        <th style="padding:8px 10px;font-size:11px;font-weight:500;color:#888780;text-align:left;border-bottom:0.5px solid #e5e5e2;">Cocinero</th>
-      </tr></thead>
-      <tbody>{filas(lista, tipo)}</tbody>
-    </table>"""
+    def dias_str(p):
+        if p["estado"] == "sin_stock": return "Sin stock"
+        if p["dias_vit"] is None:      return "—"
+        return f'{round(p["dias_vit"])}d'
+
+    def fila(p):
+        clr = COLOR[p["estado"]]
+        return (f'<tr>'
+                f'<td style="padding:7px 10px;font-size:12px;border-bottom:0.5px solid #eee">{badge(p["estado"])} {p["nombre"]}</td>'
+                f'<td style="padding:7px 10px;font-size:12px;text-align:right;border-bottom:0.5px solid #eee">{p["vitacura"]}</td>'
+                f'<td style="padding:7px 10px;font-size:12px;text-align:right;color:#185FA5;border-bottom:0.5px solid #eee">{p["pataguas"]}</td>'
+                f'<td style="padding:7px 10px;font-size:12px;text-align:right;font-weight:600;color:{clr};border-bottom:0.5px solid #eee">{dias_str(p)}</td>'
+                f'</tr>')
+
+    def tabla(lista):
+        if not lista: return '<p style="font-size:12px;color:#aaa;padding:8px 0">Sin productos</p>'
+        filas = "".join(fila(p) for p in lista)
+        return (f'<table style="width:100%;border-collapse:collapse">'
+                f'<thead><tr style="background:#f5f4f0">'
+                f'<th style="padding:6px 10px;font-size:10px;font-weight:600;color:#888;text-align:left;border-bottom:1px solid #eee;text-transform:uppercase">Producto</th>'
+                f'<th style="padding:6px 10px;font-size:10px;font-weight:600;color:#888;text-align:right;border-bottom:1px solid #eee;text-transform:uppercase">Vitacura</th>'
+                f'<th style="padding:6px 10px;font-size:10px;font-weight:600;color:#185FA5;text-align:right;border-bottom:1px solid #eee;text-transform:uppercase">Pataguas</th>'
+                f'<th style="padding:6px 10px;font-size:10px;font-weight:600;color:#888;text-align:right;border-bottom:1px solid #eee;text-transform:uppercase">Días VIT</th>'
+                f'</tr></thead><tbody>{filas}</tbody></table>')
+
+    def seccion(titulo, lista, color="#1A1A1A"):
+        return (f'<div style="margin-bottom:16px">'
+                f'<p style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.07em;color:{color};margin:0 0 6px;padding-bottom:4px;border-bottom:2px solid {color}">{titulo}</p>'
+                f'{tabla(lista)}</div>')
+
+    # Secciones por cocinero (ordenados por urgencia dentro de cada uno)
+    COCINEROS = ["CAROLINA", "CESAR", "JESUS", "ADRIANA"]
+    secciones_cocinero = ""
+    for coc in COCINEROS:
+        prods_coc = [p for p in productos if p["cocinero"] == coc]
+        if prods_coc:
+            urgentes = [p for p in prods_coc if p["estado"] in ("sin_stock","critico")]
+            color_titulo = "#A32D2D" if urgentes else "#444"
+            secciones_cocinero += seccion(coc, prods_coc, color_titulo)
 
     html = f"""<!DOCTYPE html>
 <html><head><meta charset="utf-8"></head>
 <body style="margin:0;padding:20px;background:#f5f4f0;font-family:Arial,sans-serif;">
 <div style="max-width:640px;margin:0 auto;">
 
-  <div style="background:#ffffff;border:0.5px solid #e5e5e2;border-radius:12px;padding:20px 24px;margin-bottom:12px;">
-    <p style="font-size:18px;font-weight:500;margin:0 0 4px;color:#2c2c2a;">Reporte de produccion</p>
-    <p style="font-size:13px;color:#888780;margin:0;">{fecha} &nbsp;·&nbsp; Vitacura y Pataguas</p>
+  <div style="background:#fff;border:0.5px solid #e5e5e2;border-radius:12px;padding:18px 24px;margin-bottom:10px;">
+    <p style="font-size:17px;font-weight:700;margin:0 0 2px;color:#1A1A1A;">La Cocina — Reporte de Producción</p>
+    <p style="font-size:12px;color:#888;margin:0">{fecha} · Prioridad por stock Vitacura</p>
   </div>
 
-  <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:12px;">
-    <div style="background:#FCEBEB;border-radius:8px;padding:12px;text-align:center;">
-      <div style="font-size:24px;font-weight:500;color:#A32D2D;">{len(sin_stock)}</div>
-      <div style="font-size:11px;color:#A32D2D;margin-top:2px;">Sin stock</div>
+  <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:10px;">
+    <div style="background:#FCEBEB;border-radius:8px;padding:12px;text-align:center">
+      <div style="font-size:26px;font-weight:700;color:#A32D2D">{len(sin_stock)}</div>
+      <div style="font-size:10px;font-weight:600;color:#A32D2D;margin-top:2px">Sin stock</div>
     </div>
-    <div style="background:#FAEEDA;border-radius:8px;padding:12px;text-align:center;">
-      <div style="font-size:24px;font-weight:500;color:#854F0B;">{len(criticos)}</div>
-      <div style="font-size:11px;color:#854F0B;margin-top:2px;">Critico</div>
+    <div style="background:#FAEEDA;border-radius:8px;padding:12px;text-align:center">
+      <div style="font-size:26px;font-weight:700;color:#854F0B">{len(criticos)}</div>
+      <div style="font-size:10px;font-weight:600;color:#854F0B;margin-top:2px">Crítico ≤3d</div>
     </div>
-    <div style="background:#FAF3DA;border-radius:8px;padding:12px;text-align:center;">
-      <div style="font-size:24px;font-weight:500;color:#7A6010;">{len(bajos)}</div>
-      <div style="font-size:11px;color:#7A6010;margin-top:2px;">Bajo stock</div>
+    <div style="background:#FAF3DA;border-radius:8px;padding:12px;text-align:center">
+      <div style="font-size:26px;font-weight:700;color:#7A6010">{len(bajos)}</div>
+      <div style="font-size:10px;font-weight:600;color:#7A6010;margin-top:2px">Bajo ≤14d</div>
     </div>
-    <div style="background:#E1F5EE;border-radius:8px;padding:12px;text-align:center;">
-      <div style="font-size:24px;font-weight:500;color:#0F6E56;">{len(ok)}</div>
-      <div style="font-size:11px;color:#0F6E56;margin-top:2px;">OK</div>
+    <div style="background:#E1F5EE;border-radius:8px;padding:12px;text-align:center">
+      <div style="font-size:26px;font-weight:700;color:#0F6E56">{len(ok)}</div>
+      <div style="font-size:10px;font-weight:600;color:#0F6E56;margin-top:2px">OK</div>
     </div>
   </div>
 
-  <div style="background:#ffffff;border:0.5px solid #e5e5e2;border-radius:12px;padding:16px 20px;">
-    {tabla("Sin stock y critico — producir hoy", sin_stock + criticos, "sin_stock", "#A32D2D")}
-    {tabla("Bajo stock — producir esta semana", bajos, "bajo", "#854F0B")}
-    {tabla("OK — sin urgencia", ok, "ok", "#0F6E56")}
+  <div style="background:#fff;border:0.5px solid #e5e5e2;border-radius:12px;padding:16px 20px;margin-bottom:10px;">
+    <p style="font-size:13px;font-weight:700;margin:0 0 14px;color:#1A1A1A">Por cocinero</p>
+    {secciones_cocinero}
   </div>
 
-  <p style="font-size:12px;color:#888780;text-align:center;margin-top:12px;">Generado automaticamente · Stock actualizado desde Bsale</p>
+  <div style="background:#fff;border:0.5px solid #e5e5e2;border-radius:12px;padding:16px 20px;">
+    <p style="font-size:13px;font-weight:700;margin:0 0 10px;color:#1A1A1A">Lista completa · {len(productos)} productos</p>
+    {tabla(productos)}
+  </div>
+
+  <p style="font-size:11px;color:#aaa;text-align:center;margin-top:10px">Generado automáticamente · Stock desde Bsale</p>
 </div>
 </body></html>"""
     return html
