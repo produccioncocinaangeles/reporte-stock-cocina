@@ -171,10 +171,12 @@ def calcular_productos(stock_bsale):
 def armar_html(productos):
     fecha = datetime.now().strftime("%d/%m/%Y · %H:%M")
 
-    sin_stock = [p for p in productos if p["estado"] == "sin_stock"]
-    criticos  = [p for p in productos if p["estado"] == "critico"]
-    bajos     = [p for p in productos if p["estado"] == "bajo"]
-    ok        = [p for p in productos if p["estado"] == "ok"]
+    sin_stock    = [p for p in productos if p["estado"] == "sin_stock"]
+    criticos     = [p for p in productos if p["estado"] == "critico"]
+    bajos        = [p for p in productos if p["estado"] == "bajo"]
+    ok           = [p for p in productos if p["estado"] == "ok"]
+    sin_stock_vit = [p for p in productos if p["vitacura"] == 0]
+    sin_stock_pat = [p for p in productos if p["pataguas"] == 0]
 
     BG    = {"sin_stock":"#FCEBEB","critico":"#FAEEDA","bajo":"#FAF3DA","ok":"#E1F5EE"}
     COLOR = {"sin_stock":"#A32D2D","critico":"#854F0B","bajo":"#7A6010","ok":"#0F6E56"}
@@ -234,10 +236,14 @@ def armar_html(productos):
     <p style="font-size:12px;color:#888;margin:0">{fecha} · Prioridad por stock Vitacura</p>
   </div>
 
-  <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:10px;">
+  <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:8px;margin-bottom:10px;">
     <div style="background:#FCEBEB;border-radius:8px;padding:12px;text-align:center">
-      <div style="font-size:26px;font-weight:700;color:#A32D2D">{len(sin_stock)}</div>
-      <div style="font-size:10px;font-weight:600;color:#A32D2D;margin-top:2px">Sin stock</div>
+      <div style="font-size:26px;font-weight:700;color:#A32D2D">{len(sin_stock_vit)}</div>
+      <div style="font-size:10px;font-weight:600;color:#A32D2D;margin-top:2px">Sin stock VIT</div>
+    </div>
+    <div style="background:#FCEBEB;border-radius:8px;padding:12px;text-align:center;border:1px solid #f0c0c0">
+      <div style="font-size:26px;font-weight:700;color:#A32D2D">{len(sin_stock_pat)}</div>
+      <div style="font-size:10px;font-weight:600;color:#A32D2D;margin-top:2px">Sin stock PAT</div>
     </div>
     <div style="background:#FAEEDA;border-radius:8px;padding:12px;text-align:center">
       <div style="font-size:26px;font-weight:700;color:#854F0B">{len(criticos)}</div>
