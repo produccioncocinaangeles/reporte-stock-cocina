@@ -153,11 +153,13 @@ def moda(lst):
     return Counter(lst).most_common(1)[0][0] if lst else 0
 
 def velocidad(df_sku, stock_d):
-    mask = (df_sku['Salida'] > 0) & (~df_sku['Movimiento de salida'].str.contains(
+    fecha_inicio = FECHA_HOY - pd.Timedelta(days=60)
+    df_rec = df_sku[df_sku['Fecha'] >= fecha_inicio]
+    mask = (df_rec['Salida'] > 0) & (~df_rec['Movimiento de salida'].str.contains(
         'GUÍA DE DESPACHO|Guía de Despacho|Consumo', na=False))
-    total    = int(df_sku[mask]['Salida'].sum())
-    con_stk  = sum(1 for v in stock_d.values() if v > 0)
-    vel      = round(total / con_stk, 4) if con_stk > 0 else 0.0
+    total   = int(df_rec[mask]['Salida'].sum())
+    con_stk = sum(1 for d, v in stock_d.items() if v > 0 and d >= fecha_inicio)
+    vel     = round(total / con_stk, 4) if con_stk > 0 else 0.0
     return vel, total, con_stk
 
 def lotes(df_sku):
