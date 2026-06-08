@@ -29,6 +29,14 @@ jobs:
           BSALE_TOKEN: ${{ secrets.BSALE_TOKEN }}
         run: python generar_dashboard.py
 
+      - name: Guardar velocidades.json en repo
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add velocidades.json
+          git diff --staged --quiet || git commit -m "Actualizar velocidades.json"
+          git push origin main
+
       - name: Preparar carpeta de deploy
         run: |
           mkdir -p /tmp/deploy

@@ -1,6 +1,7 @@
 import requests
 import smtplib
 import os
+import json
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 from datetime import datetime
@@ -115,21 +116,31 @@ def obtener_stock_bsale(token):
 # PASO 2: CALCULAR STOCK POR PRODUCTO
 # ============================================================
 
+def cargar_velocidades():
+    ruta = os.path.join(os.path.dirname(os.path.abspath(__file__)), "velocidades.json")
+    if os.path.exists(ruta):
+        with open(ruta, encoding="utf-8") as f:
+            return json.load(f)
+    return {}
+
 def calcular_productos(stock_bsale):
     ORDEN = {"sin_stock": 0, "critico": 1, "bajo": 2, "ok": 3}
+    velocidades = cargar_velocidades()
     resultado = []
     for p in PRODUCTOS:
         cm       = normalizar(p["cm"])
         vitacura = int(stock_bsale.get((cm, "VITACURA"), 0))
         pataguas = int(stock_bsale.get((cm, "LAS PATAGUAS"), 0))
         total    = vitacura + pataguas
-        vel_dia  = p["promedio"] / 30 if p["promedio"] > 0 else 0
+
+        # Velocidad real del dashboard, fallback a promedio fijo
+        vel_vit = velocidades.get(p["cm"], {}).get("vel_vit") or (p["promedio"] / 30 if p["promedio"] > 0 else 0)
 
         if vitacura == 0:
             dias_vit = 0
             estado   = "sin_stock"
-        elif vel_dia > 0:
-            dias_vit = round(vitacura / vel_dia, 1)
+        elif vel_vit > 0:
+            dias_vit = round(vitacura / vel_vit, 1)
             if   dias_vit <= 3:  estado = "critico"
             elif dias_vit <= 14: estado = "bajo"
             else:                estado = "ok"

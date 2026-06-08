@@ -966,3 +966,10 @@ if __name__ == '__main__':
         f.write(html)
     print(f'Dashboard: {ARCHIVO_HTML}')
     print(f'Tamanio: {len(html):,} chars')
+
+    # Guardar velocidades para el script de email
+    vel = {d['sku']: {'vel_vit': d['vel_vit'], 'vel_pat': d['vel_pat'], 'vel_total': d['vel_total']} for d in datos}
+    archivo_vel = os.path.join(CARPETA, 'velocidades.json')
+    with open(archivo_vel, 'w', encoding='utf-8') as f:
+        json.dump(vel, f, ensure_ascii=False)
+    print(f'Velocidades: {archivo_vel}')
