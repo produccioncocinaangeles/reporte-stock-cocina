@@ -109,15 +109,19 @@ def bsale_stock():
     debug_shown = False
     while True:
         r = requests.get('https://api.bsale.cl/v1/stocks.json', headers=headers,
-                         params={'limit':50,'offset':offset,'expand':'[variant,office]'}, timeout=30)
+                         params={'limit':50,'offset':offset,'expand':'[variant,variant.product,office]'}, timeout=30)
         if r.status_code != 200:
             break
         data  = r.json()
         items = data.get('items', [])
         if items and not debug_shown:
             v = items[0].get('variant', {})
-            print(f"  DEBUG variant fields: {list(v.keys())}")
-            print(f"  DEBUG primer variant: barCode={v.get('barCode')!r}, code={v.get('code')!r}, description={v.get('description')!r}")
+            p = v.get('product', {})
+            o = items[0].get('office', {})
+            print(f"  DEBUG variant: code={v.get('code')!r}, description={v.get('description')!r}")
+            print(f"  DEBUG product fields: {list(p.keys()) if isinstance(p, dict) else p}")
+            print(f"  DEBUG product: name={p.get('name')!r}, description={p.get('description')!r}" if isinstance(p, dict) else "")
+            print(f"  DEBUG office: id={o.get('id')!r}, name={o.get('name')!r}")
             debug_shown = True
         for item in items:
             try:
