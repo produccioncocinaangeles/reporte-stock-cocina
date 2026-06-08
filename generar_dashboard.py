@@ -115,13 +115,13 @@ def bsale_stock():
         items = data.get('items', [])
         for item in items:
             try:
-                sku = ' '.join(str(item['variant']['code']).split()).upper()
-                oid = int(item['office']['id'])
-                qty = int(item.get('quantityAvailable', 0) or 0)
+                sku      = ' '.join(str(item['variant']['code']).split()).upper()
+                sucursal = ' '.join(str(item['office']['name']).split()).upper()
+                qty      = int(item.get('quantityAvailable', 0) or 0)
                 if sku not in result:
                     result[sku] = {'vit':0,'pat':0}
-                if   oid == 1: result[sku]['vit'] += qty
-                elif oid == 3: result[sku]['pat'] += qty
+                if   sucursal == 'VITACURA':    result[sku]['vit'] += qty
+                elif sucursal == 'LAS PATAGUAS': result[sku]['pat'] += qty
             except: pass
         if offset + 50 >= data.get('count', 0): break
         offset += 50
