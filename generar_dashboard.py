@@ -184,18 +184,22 @@ def moda(lst):
 def velocidad(df_sku, stock_d):
     # Analiza últimos 6 meses mes a mes
     # Excluye meses con quiebre de stock (< 7 días con stock disponible)
+    # y el mes en curso (incompleto, sesga la velocidad)
     UMBRAL_DIAS = 7
     fecha_hist  = FECHA_HOY - pd.Timedelta(days=180)
     fecha_60    = FECHA_HOY - pd.Timedelta(days=60)
+    mes_actual  = pd.Period(FECHA_HOY, 'M')
 
     mask_v = (df_sku['Salida'] > 0) & (~df_sku['Movimiento de salida'].str.contains(
         'GUÍA DE DESPACHO|Guía de Despacho|Consumo', na=False))
 
-    # Días con stock por mes (últimos 6 meses)
+    # Días con stock por mes (últimos 6 meses, sin el mes en curso)
     dias_mes = {}
     for d, v in stock_d.items():
         if d >= fecha_hist and v > 0:
             mes = pd.Period(d, 'M')
+            if mes == mes_actual:
+                continue
             dias_mes[mes] = dias_mes.get(mes, 0) + 1
 
     # Ventas por mes (últimos 6 meses)
@@ -362,9 +366,10 @@ def procesar():
         lts, prom_lote, n_lotes = lotes(dv)
 
         # Ventas por mes combinadas
-        vm_v = ventas_mes(dv)
-        vm_p = ventas_mes(dp)
-        meses = sorted(set(list(vm_v)+list(vm_p)))
+        vm_v  = ventas_mes(dv)
+        vm_p  = ventas_mes(dp)
+        # Últimos 4 meses del conjunto combinado
+        meses = sorted(set(list(vm_v)+list(vm_p)))[-4:]
         vm = [{'mes':m,'vit':vm_v.get(m,0),'pat':vm_p.get(m,0),'total':vm_v.get(m,0)+vm_p.get(m,0)} for m in meses]
 
         resultados.append({
@@ -867,24 +872,38 @@ function renderRanking(){
 // ── Guías ──────────────────────────────────────────────────
 var ORDEN_EST = {'sin_stock':0,'critico':1,'bajo':2,'ok':3};
 
+function producir(p, dias){
+  if(p.vel_total<=0) return 0;
+  var nv = p.vel_vit*dias, np = p.vel_pat*dias;
+  var vit_need    = Math.max(0, nv - p.vit);
+  var vit_surplus = Math.max(0, p.vit - nv);
+  var pat_need    = Math.max(0, np - p.pat);
+  var pat_after   = Math.max(0, pat_need - vit_surplus);
+  return Math.ceil(vit_need + pat_after);
+}
+function cobertura(p){
+  if(p.vel_total<=0) return 99999;
+  var dvit = p.vel_vit>0 ? p.vit/p.vel_vit : 99999;
+  var dtot = (p.vit+p.pat)/p.vel_total;
+  return Math.min(dvit, dtot);
+}
+
 function renderGuiaProduccion(){
   const coc  = document.getElementById('g-cocinero').value;
   const dias = parseInt(document.getElementById('g-dias').value)||7;
   document.getElementById('g-dias-label').textContent = dias+' días';
 
   var prods = DATA.filter(function(p){return coc ? p.cocinero===coc : true;});
-  prods.sort(function(a,b){
-    var oa=ORDEN_EST[a.estado], ob=ORDEN_EST[b.estado];
-    if(oa!==ob) return oa-ob;
-    return (a.dias_total!==null?a.dias_total:9999)-(b.dias_total!==null?b.dias_total:9999);
-  });
+  prods.sort(function(a,b){ return cobertura(a) - cobertura(b); });
 
   var filas = prods.map(function(p){
-    var und   = p.vel_total>0 ? Math.ceil(p.vel_total*dias) : 0;
-    var total = p.vit + p.pat;
-    var dt    = p.dias_total!==null ? Math.round(p.dias_total)+'d' : '—';
-    var clr   = p.estado==='sin_stock'||p.estado==='critico' ? '#E74C3C' : p.estado==='bajo' ? '#E67E22' : '#27AE60';
-    var urg   = p.estado==='sin_stock'||p.estado==='critico';
+    var total   = p.vit + p.pat;
+    var und     = producir(p, dias);
+    var und_str = und > 0 ? und : '—';
+    var cob   = cobertura(p);
+    var dt    = (p.vel_total<=0 || cob>=99999) ? '—' : Math.round(cob)+'d';
+    var clr   = cob<=3 ? '#E74C3C' : cob<=7 ? '#E67E22' : '#27AE60';
+    var urg   = cob<=3;
     return '<tr'+(urg?' class="urgente"':'')+'>'
       +'<td style="font-weight:'+(urg?700:400)+'">'+p.nombre+'</td>'
       +'<td style="color:'+clr+';font-weight:700;width:55px">'+dt+'</td>'
@@ -892,7 +911,7 @@ function renderGuiaProduccion(){
       +'<td style="text-align:right;color:#888">'+p.vit+'</td>'
       +'<td style="text-align:right;color:#185FA5">'+p.pat+'</td>'
       +'<td style="text-align:right;font-weight:600">'+total+'</td>'
-      +'<td style="text-align:right;font-weight:700;font-size:13px">'+und+'</td>'
+      +'<td style="text-align:right;font-weight:700;font-size:13px;color:'+(und>0?clr:'#bbb')+'">'+und_str+'</td>'
       +'</tr>';
   }).join('');
 
@@ -904,7 +923,10 @@ function renderGuiaDespacho(){
   const dias = parseInt(document.getElementById('d-dias').value)||7;
   document.getElementById('d-dias-label').textContent = dias+' días';
 
-  var prods = DATA.filter(function(p){return p.vel_pat>0;});
+  // Solo productos cuyo stock en Pataguas NO alcanza para los días seleccionados
+  var prods = DATA.filter(function(p){
+    return p.vel_pat>0 && (Math.ceil(p.vel_pat*dias) - p.pat) > 0;
+  });
   prods.sort(function(a,b){
     var nec_a = Math.max(0, Math.ceil(a.vel_pat*dias) - a.pat);
     var nec_b = Math.max(0, Math.ceil(b.vel_pat*dias) - b.pat);
@@ -959,12 +981,11 @@ function renderGuiaDespacho(){
       +'<td style="text-align:right;color:'+(p.vit===0?'#E74C3C':'#333')+'">'+p.vit+'</td>'
       +'<td style="text-align:right;color:#185FA5">'+p.pat+'</td>'
       +'<td style="text-align:right;color:#888">'+dpt+'</td>'
-      +'<td style="text-align:right;color:#888">'+nec+'</td>'
       +'<td style="text-align:right;font-size:13px">'+estado_desp+'</td>'
       +'</tr>';
   }).join('');
 
-  document.getElementById('tabla-despacho').innerHTML = filas||'<tr><td colspan="6" style="text-align:center;color:#aaa;padding:20px">Sin productos</td></tr>';
+  document.getElementById('tabla-despacho').innerHTML = filas||'<tr><td colspan="5" style="text-align:center;color:#aaa;padding:20px">Sin productos</td></tr>';
   document.getElementById('resumen-despacho').textContent = despachar+' productos a despachar · '+dias+' días de cobertura';
 }
 
@@ -982,14 +1003,32 @@ function setDiasDesp(d, btn){
 }
 
 // ── Impresión rollo 80mm ───────────────────────────────────
-function abrirRollo(contenido){
-  var win = window.open('','_blank','width=400,height=700');
-  var html = '<!DOCTYPE html><html><head><title>La Cocina</title>'
-    + '<style>body{font-family:Courier New,monospace;font-size:13px;padding:3mm 4mm;width:72mm;line-height:1.4}'
-    + 'pre{white-space:pre-wrap;word-break:break-word}'
-    + '@media print{@page{size:80mm 297mm;margin:0}body{padding:2mm 3mm}}'
-    + '</style></head><body><pre>' + contenido + '</pre>'
-    + '<script>window.onload=function(){window.print();window.close();}<\/script>'
+var ROLLO_CSS = [
+  '@import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap");',
+  '@page{size:80mm 297mm;margin:0}',
+  '*{box-sizing:border-box;margin:0;padding:0}',
+  'body{font-family:Inter,Arial,sans-serif;font-size:9pt;width:76mm;padding:4mm 3mm;color:#111}',
+  '.logo{font-size:13pt;font-weight:700;letter-spacing:-0.5px;text-align:center;padding-bottom:2mm;border-bottom:2px solid #111;margin-bottom:2mm}',
+  '.sub{font-size:7.5pt;color:#111;text-align:center;margin-bottom:1mm}',
+  '.fecha{font-size:7pt;color:#111;text-align:center;margin-bottom:3mm}',
+  'table{width:100%;border-collapse:collapse}',
+  'th{font-size:7pt;font-weight:600;text-transform:uppercase;letter-spacing:0.3px;color:#111;border-bottom:1px solid #ccc;padding:1mm 1mm 1mm 0;text-align:left}',
+  'th.r,td.r{text-align:right}',
+  'td{font-size:8.5pt;padding:1.5mm 1mm 1.5mm 0;border-bottom:1px solid #eee;vertical-align:middle}',
+  'tr:last-child td{border-bottom:none}',
+  '.urg td{font-weight:700}',
+  '.nom{font-weight:600;line-height:1.2}',
+  '.nom.ok{font-weight:400;color:#444}',
+  '.dias{font-weight:700;min-width:8mm}',
+  '.prod{font-weight:700;font-size:10pt}',
+  '.footer{margin-top:3mm;padding-top:2mm;border-top:1px solid #ccc;font-size:7pt;color:#111;text-align:center}',
+].join('');
+
+function abrirRollo(bodyHtml){
+  var win = window.open('','_blank','width=400,height:750');
+  var html = '<!DOCTYPE html><html><head><meta charset="utf-8"><title>La Cocina</title>'
+    + '<style>' + ROLLO_CSS + '</style></head><body>' + bodyHtml
+    + '<script>window.onload=function(){window.print();}<\/script>'
     + '</body></html>';
   win.document.write(html);
   win.document.close();
@@ -998,33 +1037,37 @@ function abrirRollo(contenido){
 function imprimirProduccion(){
   var coc  = document.getElementById('g-cocinero').value;
   var dias = parseInt(document.getElementById('g-dias').value)||7;
-  var sep  = '================================';
-  var sep2 = '--------------------------------';
-  var tit  = coc ? 'COCINERO: '+coc : 'PRODUCCION GENERAL';
   var prods = DATA.filter(function(p){return coc ? p.cocinero===coc : true;});
-  prods.sort(function(a,b){
-    var oa=ORDEN_EST[a.estado],ob=ORDEN_EST[b.estado];
-    if(oa!==ob) return oa-ob;
-    return (a.dias_prod!==null?a.dias_prod:9999)-(b.dias_prod!==null?b.dias_prod:9999);
-  });
-  var lineas = [sep,'  LA COCINA - '+tit,'  FECHA_HOY_PLACEHOLDER','  Producir para '+dias+' dias',sep2,
-    'PRODUCTO        DIAS VIT PAT PROD',sep2];
-  prods.forEach(function(p){
-    var nom  = (p.nombre+'                ').substring(0,16);
-    var dp   = p.dias_prod!==null ? ('   '+Math.round(p.dias_prod)+'d').slice(-4) : '  --';
-    var vit  = ('   '+p.vit).slice(-4);
-    var pat  = ('   '+p.pat).slice(-4);
-    var prod = ('    '+(p.vel_total>0?Math.ceil(p.vel_total*dias):0)).slice(-4);
-    lineas.push(nom+dp+vit+pat+prod);
-  });
-  lineas.push(sep2,'TOTAL: '+prods.length+' productos',sep);
-  abrirRollo(lineas.join('\\n'));
+  prods.sort(function(a,b){ return cobertura(a)-cobertura(b); });
+
+  var filas = prods.map(function(p){
+    var cob  = cobertura(p);
+    var und  = producir(p, dias);
+    var dt   = (p.vel_total<=0||cob>=99999) ? '—' : Math.round(cob)+'d';
+    var urg  = cob<=3;
+    return '<tr'+(urg?' class="urg"':'')+'>'
+      +'<td class="nom'+(cob>7?' ok':'')+'">'+p.nombre+'</td>'
+      +'<td class="r dias">'+dt+'</td>'
+      +'<td class="r">'+p.vit+'</td>'
+      +'<td class="r">'+p.pat+'</td>'
+      +'<td class="r prod">'+( und>0 ? und : '—' )+'</td>'
+      +'</tr>';
+  }).join('');
+
+  var tit = coc ? coc : 'Producción general';
+  abrirRollo(
+    '<div class="logo">La Cocina</div>'
+   +'<div class="sub">'+tit+' · '+dias+' días</div>'
+   +'<div class="fecha">FECHA_HOY_PLACEHOLDER</div>'
+   +'<table><thead><tr>'
+   +'<th>Producto</th><th class="r">Días</th><th class="r">VIT</th><th class="r">PAT</th><th class="r">Prod</th>'
+   +'</tr></thead><tbody>'+filas+'</tbody></table>'
+   +'<div class="footer">'+prods.length+' productos</div>'
+  );
 }
 
 function imprimirDespacho(){
   var dias = parseInt(document.getElementById('d-dias').value)||7;
-  var sep  = '================================';
-  var sep2 = '--------------------------------';
   var prods = DATA.filter(function(p){
     return p.vel_pat>0 && Math.max(0,Math.ceil(p.vel_pat*dias)-p.pat)>0;
   });
@@ -1033,17 +1076,26 @@ function imprimirDespacho(){
     var db = b.pat>0&&b.vel_pat>0 ? b.pat/b.vel_pat : 0;
     return da-db;
   });
-  var lineas = [sep,'  LA COCINA - DESPACHO','  FECHA_HOY_PLACEHOLDER',
-    '  Vitacura -> Pataguas ('+dias+'d)',sep2,'PRODUCTO           VIT  PAT DESP',sep2];
-  prods.forEach(function(p){
-    var nom  = (p.nombre+'                  ').substring(0,18);
-    var vit  = ('   '+p.vit).slice(-4);
-    var pat  = ('   '+p.pat).slice(-4);
-    var desp = (' +'+('   '+Math.max(0,Math.ceil(p.vel_pat*dias)-p.pat)).slice(-3));
-    lineas.push(nom+vit+pat+desp);
-  });
-  lineas.push(sep2,'TOTAL: '+prods.length+' productos',sep);
-  abrirRollo(lineas.join('\\n'));
+
+  var filas = prods.map(function(p){
+    var desp = Math.max(0, Math.ceil(p.vel_pat*dias)-p.pat);
+    return '<tr>'
+      +'<td class="nom">'+p.nombre+'</td>'
+      +'<td class="r">'+p.vit+'</td>'
+      +'<td class="r">'+p.pat+'</td>'
+      +'<td class="r prod">+'+desp+'</td>'
+      +'</tr>';
+  }).join('');
+
+  abrirRollo(
+    '<div class="logo">La Cocina</div>'
+   +'<div class="sub">Despacho Vitacura → Pataguas · '+dias+' días</div>'
+   +'<div class="fecha">FECHA_HOY_PLACEHOLDER</div>'
+   +'<table><thead><tr>'
+   +'<th>Producto</th><th class="r">VIT</th><th class="r">PAT</th><th class="r">Desp</th>'
+   +'</tr></thead><tbody>'+filas+'</tbody></table>'
+   +'<div class="footer">'+prods.length+' productos a despachar</div>'
+  );
 }
 
 // ── Init ───────────────────────────────────────────────────
@@ -1208,7 +1260,7 @@ HTML_TEMPLATE = """<!DOCTYPE html>
       <thead><tr>
         <th>Producto</th><th style="text-align:right">Stock VIT</th>
         <th style="text-align:right">Stock PAT</th>
-        <th style="text-align:right">Días PAT</th><th style="text-align:right">Necesita</th>
+        <th style="text-align:right">Días PAT</th>
         <th style="text-align:right">Despachar</th>
       </tr></thead>
       <tbody id="tabla-despacho"></tbody>
