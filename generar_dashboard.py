@@ -182,18 +182,20 @@ def moda(lst):
     return Counter(lst).most_common(1)[0][0] if lst else 0
 
 def velocidad(df_sku, stock_d):
-    # Analiza últimos 6 meses mes a mes
+    # Ventana: 3 meses completos anteriores al mes en curso (~90 días).
+    # Más reactiva a productos que cambian de ritmo (crecen o caen) que un
+    # promedio de 6 meses, que los arrastra con datos viejos.
     # Excluye meses con quiebre de stock (< 7 días con stock disponible)
-    # y el mes en curso (incompleto, sesga la velocidad)
+    # y el mes en curso (incompleto, sesga la velocidad).
     UMBRAL_DIAS = 7
-    fecha_hist  = FECHA_HOY - pd.Timedelta(days=180)
-    fecha_60    = FECHA_HOY - pd.Timedelta(days=60)
     mes_actual  = pd.Period(FECHA_HOY, 'M')
+    fecha_hist  = (mes_actual - 3).start_time
+    fecha_60    = FECHA_HOY - pd.Timedelta(days=60)
 
     mask_v = (df_sku['Salida'] > 0) & (~df_sku['Movimiento de salida'].str.contains(
         'GUÍA DE DESPACHO|Guía de Despacho|Consumo', na=False))
 
-    # Días con stock por mes (últimos 6 meses, sin el mes en curso)
+    # Días con stock por mes (ventana de 3 meses, sin el mes en curso)
     dias_mes = {}
     for d, v in stock_d.items():
         if d >= fecha_hist and v > 0:
@@ -519,21 +521,26 @@ const MESES_L = {
 };
 
 // ── Helpers ────────────────────────────────────────────────
+// Día principal de la tarjeta = cobertura del stock TOTAL (ambas tiendas)
 function diasStr(p){
-  if(p.estado==='sin_stock') return 'SIN STOCK';
-  if(p.dias_prod===null||p.dias_prod===undefined) return '—';
-  if(p.dias_prod>365) return '+1 año';
-  return Math.round(p.dias_prod)+'d';
+  if(p.total===0) return 'SIN STOCK';
+  if(p.dias_total===null||p.dias_total===undefined) return '+1 año';
+  if(p.dias_total>365) return '+1 año';
+  return Math.round(p.dias_total)+'d';
 }
-function badgeCls(e){
-  if(e==='sin_stock'||e==='critico') return 'badge-rojo';
-  if(e==='bajo') return 'badge-amarillo';
+// Color del badge según la cobertura total (coincide con el número y la barra)
+function badgeCls(p){
+  if(p.total===0) return 'badge-rojo';
+  if(p.dias_total===null||p.dias_total===undefined) return 'badge-verde';
+  if(p.dias_total<=3) return 'badge-rojo';
+  if(p.dias_total<=14) return 'badge-amarillo';
   return 'badge-verde';
 }
 
 // ── Barra estilo escala con marcador ───────────────────────
 function buildBarra(p){
-  const dias = p.dias_prod !== null && p.dias_prod !== undefined ? Math.round(p.dias_prod) : -1;
+  const dias = (p.dias_total !== null && p.dias_total !== undefined)
+    ? Math.round(p.dias_total) : (p.total>0 ? 999 : -1);
   let pct;
   if(dias <= 0) pct = 0;
   else if(dias <= 3)  pct = (dias/3)*10;
@@ -542,7 +549,7 @@ function buildBarra(p){
   else pct = 100;
   pct = Math.min(98, Math.max(2, pct));
   const label = dias < 0 ? '0d' : dias === 0 ? '0d' : dias >= 30 ? '30d+' : dias+'d';
-  const colorMark = dias <= 0 ? '#E74C3C' : dias <= 3 ? '#E67E22' : dias <= 14 ? '#E67E22' : '#27AE60';
+  const colorMark = dias <= 0 ? '#E74C3C' : dias <= 3 ? '#E74C3C' : dias <= 14 ? '#E67E22' : '#27AE60';
   return '<div style="padding:0 2px">'
     + '<div style="height:22px;border-radius:6px;overflow:hidden;display:flex">'
     +   '<div style="width:10%;background:#E74C3C;display:flex;align-items:center;justify-content:center;font-size:9px;color:#fff;font-weight:700">0</div>'
@@ -687,7 +694,7 @@ function renderCards(data){
   noRes.style.display='none';
   cont.innerHTML = data.map(function(p,i){
     const dStr = diasStr(p);
-    const bCls = badgeCls(p.estado);
+    const bCls = badgeCls(p);
     const alHtml = p.alerta_dist ? '<span class="badge badge-dist">⚠ Distribución</span>' : '';
 
     return '<div class="card '+p.estado+'">'
