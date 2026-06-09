@@ -182,13 +182,43 @@ def moda(lst):
     return Counter(lst).most_common(1)[0][0] if lst else 0
 
 def velocidad(df_sku, stock_d):
-    fecha_inicio = FECHA_HOY - pd.Timedelta(days=60)
-    df_rec = df_sku[df_sku['Fecha'] >= fecha_inicio]
-    mask = (df_rec['Salida'] > 0) & (~df_rec['Movimiento de salida'].str.contains(
+    # Analiza últimos 6 meses mes a mes
+    # Excluye meses con quiebre de stock (< 7 días con stock disponible)
+    UMBRAL_DIAS = 7
+    fecha_hist  = FECHA_HOY - pd.Timedelta(days=180)
+    fecha_60    = FECHA_HOY - pd.Timedelta(days=60)
+
+    mask_v = (df_sku['Salida'] > 0) & (~df_sku['Movimiento de salida'].str.contains(
         'GUÍA DE DESPACHO|Guía de Despacho|Consumo', na=False))
-    total   = int(df_rec[mask]['Salida'].sum())
-    con_stk = sum(1 for d, v in stock_d.items() if v > 0 and d >= fecha_inicio)
-    vel     = round(total / con_stk, 4) if con_stk > 0 else 0.0
+
+    # Días con stock por mes (últimos 6 meses)
+    dias_mes = {}
+    for d, v in stock_d.items():
+        if d >= fecha_hist and v > 0:
+            mes = pd.Period(d, 'M')
+            dias_mes[mes] = dias_mes.get(mes, 0) + 1
+
+    # Ventas por mes (últimos 6 meses)
+    df_v = df_sku[mask_v & (df_sku['Fecha'] >= fecha_hist)].copy()
+    ventas_mes = {}
+    if len(df_v) > 0:
+        df_v['mes'] = df_v['Fecha'].dt.to_period('M')
+        ventas_mes = df_v.groupby('mes')['Salida'].sum().to_dict()
+
+    # Meses válidos: al menos UMBRAL_DIAS días con stock
+    meses_validos = [(mes, dias) for mes, dias in dias_mes.items() if dias >= UMBRAL_DIAS]
+
+    if meses_validos:
+        total_v = sum(ventas_mes.get(mes, 0) for mes, _ in meses_validos)
+        total_d = sum(dias for _, dias in meses_validos)
+        vel = round(total_v / total_d, 4) if total_d > 0 else 0.0
+    else:
+        vel = 0.0
+
+    # Stats para display: últimos 60 días reales
+    df_60   = df_sku[mask_v & (df_sku['Fecha'] >= fecha_60)]
+    total   = int(df_60['Salida'].sum())
+    con_stk = sum(1 for d, v in stock_d.items() if v > 0 and d >= fecha_60)
     return vel, total, con_stk
 
 def lotes(df_sku):
