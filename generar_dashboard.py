@@ -10,14 +10,15 @@ import numpy as np
 from collections import Counter
 
 # ─── CONFIGURACIÓN ───────────────────────────────────────────
-CARPETA      = os.path.dirname(os.path.abspath(__file__))
-ARCHIVO_VIT  = os.path.join(CARPETA, 'consolidado_productos_vitacura.xlsx')
-ARCHIVO_PAT  = os.path.join(CARPETA, 'consolidado_productos_pataguas.xlsx')
-ARCHIVO_HTML = os.path.join(CARPETA, 'dashboard.html')
-BSALE_TOKEN  = os.environ.get('BSALE_TOKEN', '')
-_HOY         = pd.Timestamp.today().normalize()
-FECHA_HOY    = _HOY
-FECHA_STR    = _HOY.strftime('%d/%m/%Y')
+CARPETA       = os.path.dirname(os.path.abspath(__file__))
+ARCHIVO_VIT   = os.path.join(CARPETA, 'consolidado_productos_vitacura.xlsx')
+ARCHIVO_PAT   = os.path.join(CARPETA, 'consolidado_productos_pataguas.xlsx')
+ARCHIVO_JSON  = os.path.join(CARPETA, 'historial.json')
+ARCHIVO_HTML  = os.path.join(CARPETA, 'dashboard.html')
+BSALE_TOKEN   = os.environ.get('BSALE_TOKEN', '')
+_HOY          = pd.Timestamp.today().normalize()
+FECHA_HOY     = _HOY
+FECHA_STR     = _HOY.strftime('%d/%m/%Y')
 
 # ─── CATÁLOGO ────────────────────────────────────────────────
 NOMBRES = {
@@ -93,6 +94,34 @@ MAPA = {
 }
 
 # ─── LECTURA ─────────────────────────────────────────────────
+def leer_json(oficina):
+    with open(ARCHIVO_JSON, encoding='utf-8') as f:
+        cache = json.load(f)
+    movs = sorted(
+        [m for m in cache['movimientos'] if m['oficina'] == oficina],
+        key=lambda m: m['fecha']
+    )
+    # Calcular stock acumulado por SKU (entradas - salidas, mínimo 0)
+    stock_acum = {}
+    rows = []
+    for m in movs:
+        sku     = m['sku']
+        entrada = m['cantidad'] if m['tipo'] == 'produccion' else 0
+        salida  = m['cantidad'] if m['tipo'] in ('venta', 'despacho', 'consumo') else 0
+        stock_acum[sku] = max(0, stock_acum.get(sku, 0) + entrada - salida)
+        mov_sal = 'GUÍA DE DESPACHO' if m['tipo'] == 'despacho' else ('Consumo' if m['tipo'] == 'consumo' else 'BOLETA')
+        mov_ent = 'Recepción' if m['tipo'] == 'produccion' else ''
+        rows.append({
+            'Fecha':                  pd.Timestamp(m['fecha']),
+            'SKU':                    m['sku'],
+            'Entrada':                entrada,
+            'Salida':                 salida,
+            'Stock':                  stock_acum[sku],
+            'Movimiento de salida':   mov_sal if salida > 0 else '',
+            'Movimiento de entrada':  mov_ent if entrada > 0 else '',
+        })
+    return pd.DataFrame(rows)
+
 def leer(archivo):
     df = pd.read_excel(archivo)
     df['Fecha']   = pd.to_datetime(df['Fecha'], dayfirst=True, errors='coerce')
@@ -235,9 +264,14 @@ def movimientos(df_vit, df_pat):
 
 # ─── PIPELINE ────────────────────────────────────────────────
 def procesar():
-    print("Leyendo consolidados...")
-    vit = leer(ARCHIVO_VIT)
-    pat = leer(ARCHIVO_PAT)
+    if os.path.exists(ARCHIVO_JSON):
+        print("Leyendo historial.json...")
+        vit = leer_json('VIT')
+        pat = leer_json('PAT')
+    else:
+        print("Leyendo consolidados Excel...")
+        vit = leer(ARCHIVO_VIT)
+        pat = leer(ARCHIVO_PAT)
 
     print("Obteniendo stock desde Bsale...")
     sb = bsale_stock()
@@ -266,6 +300,7 @@ def procesar():
         per_p = periodos_sin_stock(sd_p)
         durs  = [p['dias'] for p in per_v if p['dias'] <= 30]
         trepo = moda(durs) if durs else (moda([p['dias'] for p in per_v]) if per_v else 7)
+        trepo = min(trepo, 7)  # máximo 7 días para evitar que casos atípicos bloqueen despachos
 
         # Velocidades
         vel_v, tot_v, dsc_v = velocidad(dv, sd_v)
@@ -280,16 +315,19 @@ def procesar():
         # días que le queda a Vitacura considerando demanda total (ventas VIT + PAT)
         dias_prod = round(sv_hoy/vel_t,1) if vel_t>0 and sv_hoy>0 else (0 if sv_hoy==0 else None)
 
-        # Estado basado en cuánto le queda a Vitacura para abastecer ambas tiendas
-        if   sv_hoy == 0:                                          estado = 'sin_stock'
-        elif dias_prod is not None and dias_prod <= 3:             estado = 'critico'
-        elif dias_prod is not None and dias_prod <= 14:            estado = 'bajo'
-        else:                                                      estado = 'ok'
-
         alerta = (sv_hoy==0 and sp_hoy>0 and vel_v>0) or (sp_hoy==0 and sv_hoy>0 and vel_p>0)
         pto_reorden   = math.ceil(vel_t * trepo)              if vel_t > 0 else 0
-        lote_sugerido = math.ceil(vel_t * max(trepo+7, 14))   if vel_t > 0 else 0
+        lote_sugerido = math.ceil(vel_t * 30)                 if vel_t > 0 else 0
         despacho      = max(0, math.ceil(vel_p * max(trepo,7)) - sp_hoy) if vel_p > 0 else 0
+
+        # Prioridad real: considera el despacho pendiente a Pataguas
+        vit_tras_despacho = max(0, sv_hoy - despacho)
+        dias_prod_real    = round(vit_tras_despacho / vel_t, 1) if vel_t > 0 else None
+
+        if   sv_hoy == 0:                                                estado = 'sin_stock'
+        elif dias_prod_real is not None and dias_prod_real <= 3:         estado = 'critico'
+        elif dias_prod_real is not None and dias_prod_real <= 7:         estado = 'bajo'
+        else:                                                            estado = 'ok'
 
         lts, prom_lote, n_lotes = lotes(dv)
 
@@ -321,33 +359,35 @@ def procesar():
 
 # ─── HTML (sin f-string para evitar conflictos con JS) ───────
 CSS = """
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
 *{box-sizing:border-box;margin:0;padding:0}
-body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:#F5F4F0;color:#1A1A1A;font-size:14px;max-width:900px;margin:0 auto}
-.header{background:#fff;border-bottom:1px solid #ddd;padding:14px 20px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:100}
-.logo{font-size:17px;font-weight:700;letter-spacing:-0.02em}.logo span{color:#E24B4A}
-.header-right{display:flex;gap:10px;align-items:center}
-.btn{font-size:12px;padding:7px 16px;border-radius:6px;border:1px solid #ddd;cursor:pointer;background:#fff;color:#444;font-family:inherit}
-.btn:hover{background:#f0f0f0}
+body{font-family:'Inter',-apple-system,BlinkMacSystemFont,sans-serif;background:#F4F5F7;color:#1A1A1A;font-size:14px;max-width:960px;margin:0 auto}
+.header{background:#fff;border-bottom:1px solid #E8E9EB;padding:14px 20px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:100;box-shadow:0 1px 4px rgba(0,0,0,0.05)}
+.logo{font-size:15px;font-weight:700;letter-spacing:-0.03em;color:#1A1A1A}.logo span{color:#E24B4A}
+.logo-sub{font-size:11px;font-weight:400;color:#999;letter-spacing:0.01em;margin-left:6px}
+.header-right{display:flex;gap:8px;align-items:center}
+.btn{font-size:12px;font-weight:500;padding:7px 14px;border-radius:7px;border:1px solid #E8E9EB;cursor:pointer;background:#fff;color:#555;font-family:inherit;transition:all 0.15s}
+.btn:hover{background:#F4F5F7;border-color:#ccc}
 .btn-primary{background:#1A1A1A;color:#fff;border-color:#1A1A1A}.btn-primary:hover{background:#333}
 .nav-active{background:#1A1A1A!important;color:#fff!important;border-color:#1A1A1A!important}
-.fecha{font-size:11px;color:#888}
-.metricas{display:grid;grid-template-columns:repeat(4,1fr);background:#fff;border-bottom:1px solid #ddd}
-.metrica{padding:16px 20px;border-right:1px solid #ddd}.metrica:last-child{border-right:none}
-.metrica-label{font-size:11px;color:#888;text-transform:uppercase;letter-spacing:0.06em;margin-bottom:6px}
-.metrica-valor{font-size:30px;font-weight:700;line-height:1}
-.metrica-sub{font-size:11px;color:#999;margin-top:4px}
+.fecha{font-size:11px;color:#aaa;font-weight:400}
+.metricas{display:grid;grid-template-columns:repeat(4,1fr);background:#fff;border-bottom:1px solid #E8E9EB}
+.metrica{padding:16px 20px;border-right:1px solid #E8E9EB}.metrica:last-child{border-right:none}
+.metrica-label{font-size:10px;font-weight:600;color:#999;text-transform:uppercase;letter-spacing:0.07em;margin-bottom:6px}
+.metrica-valor{font-size:32px;font-weight:700;line-height:1;letter-spacing:-0.02em}
+.metrica-sub{font-size:11px;color:#bbb;margin-top:4px}
 .val-rojo{color:#E24B4A}.val-amarillo{color:#EF9F27}.val-verde{color:#27AE60}
-.toolbar{background:#fff;border-bottom:1px solid #ddd;padding:10px 16px;display:flex;gap:8px;align-items:center;flex-wrap:wrap}
-.toolbar-label{font-size:11px;color:#888;text-transform:uppercase;letter-spacing:0.06em}
-select,input[type=text],input[type=number]{font-size:12px;padding:6px 10px;border:1px solid #ddd;border-radius:5px;background:#fff;color:#333;font-family:inherit}
+.toolbar{background:#fff;border-bottom:1px solid #E8E9EB;padding:10px 16px;display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.toolbar-label{font-size:11px;font-weight:500;color:#999;text-transform:uppercase;letter-spacing:0.06em}
+select,input[type=text],input[type=number]{font-size:12px;font-weight:500;padding:6px 10px;border:1px solid #E8E9EB;border-radius:6px;background:#fff;color:#333;font-family:inherit}
 input[type=text]{width:200px}
-.toolbar-sep{width:1px;height:20px;background:#ddd;margin:0 4px}
-.leyenda{padding:8px 16px;display:flex;gap:16px;align-items:center;background:#F5F4F0;border-bottom:1px solid #ddd;flex-wrap:wrap}
-.leg{display:flex;align-items:center;gap:5px;font-size:11px;color:#666}
+.toolbar-sep{width:1px;height:20px;background:#E8E9EB;margin:0 4px}
+.leyenda{padding:8px 16px;display:flex;gap:16px;align-items:center;background:#F4F5F7;border-bottom:1px solid #E8E9EB;flex-wrap:wrap}
+.leg{display:flex;align-items:center;gap:5px;font-size:11px;color:#777}
 .leg-dot{width:10px;height:10px;border-radius:2px}
 .container{padding:12px 16px}
-.card{background:#fff;border:1px solid #ddd;border-radius:10px;margin-bottom:8px;overflow:hidden;transition:box-shadow 0.15s}
-.card:hover{box-shadow:0 2px 10px rgba(0,0,0,0.08)}
+.card{background:#fff;border:1px solid #E8E9EB;border-radius:12px;margin-bottom:8px;overflow:hidden;transition:box-shadow 0.15s}
+.card:hover{box-shadow:0 4px 16px rgba(0,0,0,0.07)}
 .card.sin_stock{border-left:4px solid #E74C3C}
 .card.critico{border-left:4px solid #E74C3C}
 .card.bajo{border-left:4px solid #E67E22}
@@ -355,28 +395,27 @@ input[type=text]{width:200px}
 .card-top{padding:12px 14px;display:flex;align-items:center;justify-content:space-between;cursor:pointer;user-select:none}
 .card-info{flex:1;min-width:0}
 .card-nombre{font-size:13px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.card-meta{font-size:11px;color:#888;margin-top:2px}
+.card-meta{font-size:11px;color:#aaa;margin-top:2px;font-weight:400}
 .card-badges{display:flex;align-items:center;gap:8px;flex-shrink:0;margin-left:10px}
 .badge{font-size:11px;font-weight:600;padding:3px 10px;border-radius:20px}
 .badge-rojo{background:#FCEBEB;color:#A32D2D}
 .badge-amarillo{background:#FAEEDA;color:#854F0B}
 .badge-verde{background:#EAF3DE;color:#3B6D11}
 .badge-dist{background:#FEF3C7;color:#92400E;font-size:10px}
-.chevron{font-size:12px;color:#bbb;margin-left:6px;transition:transform 0.2s}
+.chevron{font-size:12px;color:#ccc;margin-left:6px;transition:transform 0.2s}
 .chevron.open{transform:rotate(180deg)}
 .tl-wrap{padding:6px 14px 10px}
-
-.btn-det{font-size:11px;background:none;border:none;color:#2563EB;padding:6px 14px;cursor:pointer;width:100%;text-align:left;border-top:1px solid #f0f0f0}
+.btn-det{font-size:11px;font-weight:500;background:none;border:none;color:#2563EB;padding:6px 14px;cursor:pointer;width:100%;text-align:left;border-top:1px solid #f0f0f0}
 .btn-det:hover{background:#f8f8f8}
 .detalle{display:none;border-top:1px solid #eee}
 .detalle.open{display:block}
 .tabs{display:flex;border-bottom:1px solid #eee;background:#fafafa}
-.tab{font-size:11px;padding:9px 16px;border:none;background:none;color:#888;cursor:pointer;font-family:inherit;border-bottom:2px solid transparent}
+.tab{font-size:11px;font-weight:500;padding:9px 16px;border:none;background:none;color:#aaa;cursor:pointer;font-family:inherit;border-bottom:2px solid transparent}
 .tab.active{color:#1A1A1A;border-bottom-color:#1A1A1A;font-weight:600}
 .tab-body{display:none;padding:14px}
 .tab-body.active{display:block}
 .movs-table{width:100%;border-collapse:collapse;font-size:12px}
-.movs-table th{text-align:left;color:#888;padding:6px 10px;border-bottom:1px solid #eee;font-size:10px;text-transform:uppercase;letter-spacing:0.05em;font-weight:600}
+.movs-table th{text-align:left;color:#aaa;padding:6px 10px;border-bottom:1px solid #eee;font-size:10px;text-transform:uppercase;letter-spacing:0.05em;font-weight:600}
 .movs-table td{padding:7px 10px;border-bottom:1px solid #f5f5f5;vertical-align:middle}
 .movs-table tr:last-child td{border-bottom:none}
 .movs-table tr:hover td{background:#fafafa}
@@ -390,36 +429,59 @@ input[type=text]{width:200px}
 .tienda-pat{font-size:10px;padding:1px 6px;border-radius:3px;background:#E6F1FB;color:#185FA5;font-weight:500}
 .cant-pos{color:#059669;font-weight:700}
 .cant-neg{color:#DC2626;font-weight:700}
-.insight{background:#F8F7F4;border-radius:8px;padding:12px 14px;font-size:12px;color:#555;line-height:1.8;margin-bottom:10px}
+.insight{background:#F8F8F9;border-radius:10px;padding:12px 14px;font-size:12px;color:#555;line-height:1.8;margin-bottom:10px;border:1px solid #EEEFF1}
 .insight b{color:#1A1A1A;font-weight:600}
-.insight-warn{background:#FFFBEB;border:1px solid #FDE68A;border-radius:8px;padding:12px 14px;font-size:12px;color:#92400E;line-height:1.8;margin-bottom:10px}
-.insight-ok{background:#EAF3DE;border-radius:8px;padding:12px 14px;font-size:12px;color:#3B6D11;line-height:1.8;margin-bottom:10px}
-.insight-peligro{background:#FEE2E2;border-radius:8px;padding:12px 14px;font-size:12px;color:#991B1B;line-height:1.8;margin-bottom:10px}
+.insight-warn{background:#FFFBEB;border:1px solid #FDE68A;border-radius:10px;padding:12px 14px;font-size:12px;color:#92400E;line-height:1.8;margin-bottom:10px}
+.insight-ok{background:#F0FDF4;border:1px solid #BBF7D0;border-radius:10px;padding:12px 14px;font-size:12px;color:#166534;line-height:1.8;margin-bottom:10px}
+.insight-peligro{background:#FEF2F2;border:1px solid #FECACA;border-radius:10px;padding:12px 14px;font-size:12px;color:#991B1B;line-height:1.8;margin-bottom:10px}
 .periodo-chip{display:inline-block;font-size:10px;padding:2px 8px;border-radius:4px;background:#FEE2E2;color:#991B1B;margin:2px}
-.lote-card{background:#fff;border:1px solid #eee;border-radius:6px;padding:10px 12px;font-size:11px;margin-bottom:6px}
+.lote-card{background:#fff;border:1px solid #eee;border-radius:8px;padding:10px 12px;font-size:11px;margin-bottom:6px}
 .mes-table{width:100%;border-collapse:collapse;font-size:12px;margin-top:8px}
-.mes-table th{text-align:left;color:#888;padding:5px 10px;border-bottom:1px solid #eee;font-size:10px;text-transform:uppercase}
+.mes-table th{text-align:left;color:#aaa;padding:5px 10px;border-bottom:1px solid #eee;font-size:10px;text-transform:uppercase;font-weight:600}
 .mes-table td{padding:6px 10px;border-bottom:1px solid #f5f5f5}
-.mes-bar{display:inline-block;height:8px;background:#5DCAA5;border-radius:2px;margin-left:6px;vertical-align:middle}
-.no-res{text-align:center;color:#aaa;font-size:13px;padding:40px}
-.dias-btn{font-size:11px;padding:5px 10px;border:none;background:none;border-radius:6px;cursor:pointer;color:#666;font-family:inherit}
+.mes-bar{display:inline-block;height:7px;background:#5DCAA5;border-radius:3px;margin-left:6px;vertical-align:middle}
+.no-res{text-align:center;color:#bbb;font-size:13px;padding:40px}
+.dias-btn{font-size:11px;font-weight:500;padding:5px 10px;border:none;background:none;border-radius:6px;cursor:pointer;color:#666;font-family:inherit}
 .dias-btn:hover{background:#e5e5e5}
-.dias-btn-active{background:#fff;color:#1A1A1A;font-weight:600;box-shadow:0 1px 3px rgba(0,0,0,0.15)}
-.guia-section{background:#fff;border-bottom:1px solid #ddd;padding:14px 20px}
+.dias-btn-active{background:#fff;color:#1A1A1A;font-weight:600;box-shadow:0 1px 3px rgba(0,0,0,0.12)}
+.guia-section{background:#fff;border-bottom:1px solid #E8E9EB;padding:14px 20px}
 .guia-header{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px}
-.guia-title{font-size:15px;font-weight:700;margin-bottom:2px}
-.guia-sub{font-size:11px;color:#888}
+.guia-title{font-size:15px;font-weight:700;margin-bottom:2px;letter-spacing:-0.01em}
+.guia-sub{font-size:11px;color:#aaa;font-weight:400}
 .guia-controls{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
-.dias-group{display:flex;align-items:center;gap:6px;background:#F5F4F0;border-radius:8px;padding:4px}
+.dias-group{display:flex;align-items:center;gap:4px;background:#F4F5F7;border-radius:8px;padding:4px}
 .guia-table{width:100%;border-collapse:collapse;font-size:12px}
-.guia-table th{text-align:left;color:#888;padding:8px 10px;border-bottom:2px solid #eee;font-size:10px;text-transform:uppercase}
-.guia-table td{padding:7px 10px;border-bottom:1px solid #f5f5f5}
-.guia-table tr.urgente{background:#FFF5F5}
+.guia-table th{text-align:left;color:#aaa;padding:8px 10px;border-bottom:2px solid #eee;font-size:10px;text-transform:uppercase;font-weight:600;letter-spacing:0.05em}
+.guia-table td{padding:8px 10px;border-bottom:1px solid #f5f5f5}
+.guia-table tr.urgente{background:#FFF8F8}
+.res-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;padding:16px}
+.res-card{background:#fff;border-radius:12px;padding:16px 18px;border:1px solid #E8E9EB}
+.res-card-title{font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:0.07em;color:#aaa;margin-bottom:12px}
+.res-item{display:flex;align-items:center;justify-content:space-between;padding:7px 0;border-bottom:1px solid #f5f5f5;font-size:12px;font-weight:500}
+.res-item:last-child{border-bottom:none}
+.res-item-nombre{color:#333;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;flex:1;margin-right:8px}
+.res-stat{display:flex;flex-direction:column;align-items:center;padding:0 16px;border-right:1px solid #E8E9EB}.res-stat:last-child{border-right:none}
+.res-stat-val{font-size:28px;font-weight:700;letter-spacing:-0.02em}
+.res-stat-label{font-size:10px;font-weight:500;color:#aaa;text-transform:uppercase;letter-spacing:0.06em;margin-top:2px}
+.res-stats-row{display:flex;background:#fff;border-bottom:1px solid #E8E9EB;padding:14px 20px;gap:0}
+.rank-table{width:100%;border-collapse:collapse;font-size:13px}
+.rank-table th{text-align:left;color:#aaa;padding:9px 12px;border-bottom:2px solid #eee;font-size:10px;text-transform:uppercase;font-weight:600;letter-spacing:0.05em}
+.rank-table td{padding:9px 12px;border-bottom:1px solid #f5f5f5;vertical-align:middle}
+.rank-table tr:hover td{background:#fafafa}
+.rank-num{color:#ddd;font-weight:700;font-size:12px;width:28px}
+.rank-bar{display:inline-block;height:6px;background:#5DCAA5;border-radius:3px;vertical-align:middle;margin-left:8px}
+.rank-zero{color:#ccc}
 """
 
 JS = """
-const MESES_L = {'2026-01':'Enero','2026-02':'Febrero','2026-03':'Marzo',
-  '2026-04':'Abril','2026-05':'Mayo','2026-06':'Junio'};
+const MESES_L = {
+  '2025-01':'Enero 25','2025-02':'Feb 25','2025-03':'Mar 25','2025-04':'Abr 25',
+  '2025-05':'May 25','2025-06':'Jun 25','2025-07':'Jul 25','2025-08':'Ago 25',
+  '2025-09':'Sep 25','2025-10':'Oct 25','2025-11':'Nov 25','2025-12':'Dic 25',
+  '2026-01':'Enero','2026-02':'Febrero','2026-03':'Marzo','2026-04':'Abril',
+  '2026-05':'Mayo','2026-06':'Junio','2026-07':'Julio','2026-08':'Agosto',
+  '2026-09':'Septiembre','2026-10':'Octubre','2026-11':'Noviembre','2026-12':'Diciembre'
+};
 
 // ── Helpers ────────────────────────────────────────────────
 function diasStr(p){
@@ -520,7 +582,7 @@ function buildAnalisis(p){
   if(vt>0){
     h += '<div class="insight-ok"><b>✅ Recomendaciones</b><br>'
       + 'Punto de reorden: cuando queden <b>'+p.pto_reorden+' und</b> → producir de inmediato<br>'
-      + 'Lote sugerido: <b>'+p.lote_sugerido+' und</b><br>'
+      + 'Consumo estimado 30 días: <b>'+p.lote_sugerido+' und</b><br>'
       + 'Despacho sugerido Pataguas: <b>'+p.despacho_sug+' und</b></div>';
   }
 
@@ -656,19 +718,120 @@ function updateMetricas(data){
 }
 
 // ── Navegación ─────────────────────────────────────────────
-function mostrarProductos(){
-  document.getElementById('vista-guias').style.display='none';
-  document.getElementById('vista-productos').style.display='block';
-  document.getElementById('nav-guias').classList.remove('nav-active');
-  document.getElementById('nav-productos').classList.add('nav-active');
+var VISTAS = ['vista-resumen','vista-productos','vista-guias','vista-ranking'];
+var NAVS   = ['nav-resumen','nav-productos','nav-guias','nav-ranking'];
+function switchVista(vistaId, navId, cb){
+  VISTAS.forEach(function(v){document.getElementById(v).style.display='none';});
+  NAVS.forEach(function(n){document.getElementById(n).classList.remove('nav-active');});
+  document.getElementById(vistaId).style.display='block';
+  document.getElementById(navId).classList.add('nav-active');
+  if(cb) cb();
 }
-function mostrarGuias(){
-  document.getElementById('vista-productos').style.display='none';
-  document.getElementById('vista-guias').style.display='block';
-  document.getElementById('nav-productos').classList.remove('nav-active');
-  document.getElementById('nav-guias').classList.add('nav-active');
-  renderGuiaProduccion();
-  renderGuiaDespacho();
+function mostrarResumen(){ switchVista('vista-resumen','nav-resumen', renderResumen); }
+function mostrarProductos(){ switchVista('vista-productos','nav-productos'); }
+function mostrarGuias(){ switchVista('vista-guias','nav-guias', function(){ renderGuiaProduccion(); renderGuiaDespacho(); }); }
+function mostrarRanking(){ switchVista('vista-ranking','nav-ranking', renderRanking); }
+
+// ── Resumen ejecutivo ──────────────────────────────────────
+function renderResumen(){
+  var urgentes  = DATA.filter(function(p){return p.estado==='sin_stock'||p.estado==='critico';});
+  var bajos     = DATA.filter(function(p){return p.estado==='bajo';});
+  var totalVit  = DATA.reduce(function(s,p){return s+p.vit;},0);
+  var totalPat  = DATA.reduce(function(s,p){return s+p.pat;},0);
+  var dias = 7;
+  var despachos = DATA.filter(function(p){
+    if(p.vel_pat<=0) return false;
+    var nec  = Math.max(0, Math.ceil(p.vel_pat*dias)-p.pat);
+    var res  = Math.ceil(p.vel_vit*(p.tiempo_repo||7));
+    var disp = Math.max(0, p.vit-res);
+    return Math.min(nec,disp)>0;
+  });
+
+  // Fila de stats
+  var sinStk = DATA.filter(function(p){return p.estado==='sin_stock';}).length;
+  var crit   = DATA.filter(function(p){return p.estado==='critico';}).length;
+  var statsHtml = '<div class="res-stats-row">'
+    +'<div class="res-stat"><div class="res-stat-val val-rojo">'+sinStk+'</div><div class="res-stat-label">Sin stock</div></div>'
+    +'<div class="res-stat"><div class="res-stat-val val-rojo">'+crit+'</div><div class="res-stat-label">Críticos</div></div>'
+    +'<div class="res-stat"><div class="res-stat-val val-amarillo">'+bajos.length+'</div><div class="res-stat-label">Bajo stock</div></div>'
+    +'<div class="res-stat"><div class="res-stat-val" style="color:#1A1A1A">'+despachos.length+'</div><div class="res-stat-label">Despachos</div></div>'
+    +'<div class="res-stat"><div class="res-stat-val val-verde">'+totalVit+'</div><div class="res-stat-label">Und VIT</div></div>'
+    +'<div class="res-stat"><div class="res-stat-val" style="color:#185FA5">'+totalPat+'</div><div class="res-stat-label">Und PAT</div></div>'
+    +'</div>';
+  document.getElementById('res-stats').innerHTML = statsHtml;
+
+  // Grid de cards
+  var urgHtml = urgentes.length===0
+    ? '<div style="color:#27AE60;font-size:13px;padding:8px 0;font-weight:500">Sin urgencias — todo bajo control</div>'
+    : urgentes.map(function(p){
+        var dias_s = p.estado==='sin_stock'?'Sin stock':Math.round(p.dias_prod)+'d';
+        var clr    = p.estado==='sin_stock'?'#E74C3C':'#E67E22';
+        return '<div class="res-item"><span class="res-item-nombre">'+p.nombre+'</span>'
+          +'<span style="color:'+clr+';font-weight:700;font-size:12px">'+dias_s+'</span></div>';
+      }).join('');
+
+  var despHtml = despachos.length===0
+    ? '<div style="color:#aaa;font-size:13px;padding:8px 0">Sin despachos pendientes</div>'
+    : despachos.map(function(p){
+        var nec  = Math.max(0, Math.ceil(p.vel_pat*dias)-p.pat);
+        var res  = Math.ceil(p.vel_vit*(p.tiempo_repo||7));
+        var disp = Math.max(0, p.vit-res);
+        var desp = Math.min(nec,disp);
+        return '<div class="res-item"><span class="res-item-nombre">'+p.nombre+'</span>'
+          +'<span style="color:#27AE60;font-weight:700">+'+desp+' und</span></div>';
+      }).join('');
+
+  var bajosHtml = bajos.length===0
+    ? '<div style="color:#aaa;font-size:13px;padding:8px 0">Ninguno</div>'
+    : bajos.map(function(p){
+        return '<div class="res-item"><span class="res-item-nombre">'+p.nombre+'</span>'
+          +'<span style="color:#E67E22;font-weight:600;font-size:12px">'+Math.round(p.dias_prod)+'d</span></div>';
+      }).join('');
+
+  document.getElementById('res-grid').innerHTML =
+    '<div class="res-card"><div class="res-card-title">Producir urgente ('+urgentes.length+')</div>'+urgHtml+'</div>'
+   +'<div class="res-card"><div class="res-card-title">Despachar a Pataguas ('+despachos.length+')</div>'+despHtml+'</div>'
+   +'<div class="res-card"><div class="res-card-title">Stock bajo ('+bajos.length+')</div>'+bajosHtml+'</div>'
+   +'<div class="res-card"><div class="res-card-title">Totales en stock</div>'
+   +'<div class="res-item"><span class="res-item-nombre">Vitacura</span><span style="font-weight:700">'+totalVit+' und</span></div>'
+   +'<div class="res-item"><span class="res-item-nombre">Pataguas</span><span style="color:#185FA5;font-weight:700">'+totalPat+' und</span></div>'
+   +'<div class="res-item"><span class="res-item-nombre">Total general</span><span style="font-weight:700">'+(totalVit+totalPat)+' und</span></div>'
+   +'</div>';
+}
+
+// ── Ranking ────────────────────────────────────────────────
+function buildMesesOpts(){
+  var meses = {};
+  DATA.forEach(function(p){(p.ventas_mes||[]).forEach(function(m){meses[m.mes]=1;});});
+  var keys = Object.keys(meses).sort();
+  var opts = '<option value="">Todos los meses</option>';
+  keys.forEach(function(k){opts+='<option value="'+k+'">'+(MESES_L[k]||k)+'</option>';});
+  document.getElementById('r-mes').innerHTML = opts;
+}
+function renderRanking(){
+  var mes = document.getElementById('r-mes').value;
+  var ranked = DATA.map(function(p){
+    var vit=0, pat=0;
+    (p.ventas_mes||[]).forEach(function(m){
+      if(!mes||m.mes===mes){vit+=m.vit; pat+=m.pat;}
+    });
+    return {nombre:p.nombre, sku:p.sku, vit:vit, pat:pat, total:vit+pat};
+  });
+  ranked.sort(function(a,b){return b.total-a.total;});
+  var mx = ranked[0]?ranked[0].total:1;
+  var filas = ranked.map(function(p,i){
+    var bw = Math.round(p.total/Math.max(mx,1)*120);
+    var z  = p.total===0;
+    return '<tr>'
+      +'<td class="rank-num rank-'+(z?'zero':'num')+'">'+(i+1)+'</td>'
+      +'<td style="font-weight:'+(z?400:500)+';color:'+(z?'#ccc':'#1A1A1A')+'">'+p.nombre+'</td>'
+      +'<td style="text-align:right;color:#3B6D11;font-weight:'+(z?400:600)+'">'+p.vit+'</td>'
+      +'<td style="text-align:right;color:#185FA5;font-weight:'+(z?400:600)+'">'+p.pat+'</td>'
+      +'<td style="text-align:right;font-weight:'+(z?400:700)+';color:'+(z?'#ccc':'#1A1A1A')+'">'+p.total+'</td>'
+      +'<td>'+(z?'':'<div class="rank-bar" style="width:'+bw+'px"></div>')+'</td>'
+      +'</tr>';
+  }).join('');
+  document.getElementById('tabla-ranking').innerHTML = filas;
 }
 
 // ── Guías ──────────────────────────────────────────────────
@@ -713,28 +876,65 @@ function renderGuiaDespacho(){
 
   var prods = DATA.filter(function(p){return p.vel_pat>0;});
   prods.sort(function(a,b){
-    var da = a.pat>0&&a.vel_pat>0 ? a.pat/a.vel_pat : 0;
-    var db = b.pat>0&&b.vel_pat>0 ? b.pat/b.vel_pat : 0;
+    var nec_a = Math.max(0, Math.ceil(a.vel_pat*dias) - a.pat);
+    var nec_b = Math.max(0, Math.ceil(b.vel_pat*dias) - b.pat);
+    var disp_a = Math.max(0, a.vit - Math.ceil(a.vel_vit*(a.tiempo_repo||7)));
+    var disp_b = Math.max(0, b.vit - Math.ceil(b.vel_vit*(b.tiempo_repo||7)));
+    var desp_a = Math.min(nec_a, disp_a);
+    var desp_b = Math.min(nec_b, disp_b);
+    // Orden: completo → parcial → sin stock → OK
+    var completo_a = desp_a>0 && desp_a>=nec_a;
+    var completo_b = desp_b>0 && desp_b>=nec_b;
+    var parcial_a  = desp_a>0 && desp_a<nec_a;
+    var parcial_b  = desp_b>0 && desp_b<nec_b;
+    var sinstk_a   = nec_a>0 && desp_a===0;
+    var sinstk_b   = nec_b>0 && desp_b===0;
+    var prio_a = completo_a ? 0 : parcial_a ? 1 : (sinstk_a || a.vit===0) ? 2 : 3;
+    var prio_b = completo_b ? 0 : parcial_b ? 1 : (sinstk_b || b.vit===0) ? 2 : 3;
+    if(prio_a !== prio_b) return prio_a - prio_b;
+    // Dentro de cada grupo, ordenar por días restantes en Pataguas
+    var da = a.pat>0&&a.vel_pat>0 ? a.pat/a.vel_pat : 999;
+    var db = b.pat>0&&b.vel_pat>0 ? b.pat/b.vel_pat : 999;
     return da-db;
   });
 
   var despachar = 0;
   var filas = prods.map(function(p){
-    var nec  = Math.ceil(p.vel_pat*dias);
-    var desp = Math.max(0, nec-p.pat);
+    var nec          = Math.ceil(p.vel_pat * dias);
+    var necesita_pat = Math.max(0, nec - p.pat);
+
+    // Reserva mínima que Vitacura necesita para sí misma (vel_vit × tiempo de reposición)
+    var reserva_vit  = Math.ceil(p.vel_vit * (p.tiempo_repo || 7));
+    var disponible   = Math.max(0, p.vit - reserva_vit);
+    var desp         = Math.min(necesita_pat, disponible);
+
+    var sin_stock_vit = p.vit === 0;
     var dpt  = p.pat>0&&p.vel_pat>0 ? Math.round(p.pat/p.vel_pat)+'d' : 'sin stock';
     var urg  = desp>0 && (p.pat===0||(p.pat/p.vel_pat)<3);
+    var bloqueado = necesita_pat>0 && desp===0 && !sin_stock_vit;
+
     if(desp>0) despachar++;
+
+    var completo = desp > 0 && desp >= necesita_pat;
+    var parcial  = desp > 0 && desp < necesita_pat;
+    var estado_desp;
+    if(sin_stock_vit)  estado_desp = '<span style="color:#aaa;font-weight:600">Sin stock</span>';
+    else if(bloqueado) estado_desp = '<span style="color:#aaa;font-weight:600">Sin stock</span>';
+    else if(completo)  estado_desp = '<span style="color:#27AE60;font-weight:700">+'+desp+'</span>';
+    else if(parcial)   estado_desp = '<span style="color:#E67E22;font-weight:700">+'+desp+'</span>';
+    else               estado_desp = '<span style="color:#27AE60;font-weight:700">OK</span>';
+
     return '<tr'+(urg?' class="urgente"':'')+'>'
       +'<td style="font-weight:'+(urg?700:400)+'">'+p.nombre+'</td>'
+      +'<td style="text-align:right;color:'+(p.vit===0?'#E74C3C':'#333')+'">'+p.vit+'</td>'
       +'<td style="text-align:right;color:#185FA5">'+p.pat+'</td>'
       +'<td style="text-align:right;color:#888">'+dpt+'</td>'
       +'<td style="text-align:right;color:#888">'+nec+'</td>'
-      +'<td style="text-align:right;font-weight:700;font-size:13px;color:'+(desp>0?'#E74C3C':'#27AE60')+'">'+( desp>0?'+'+desp:'OK')+'</td>'
+      +'<td style="text-align:right;font-size:13px">'+estado_desp+'</td>'
       +'</tr>';
   }).join('');
 
-  document.getElementById('tabla-despacho').innerHTML = filas||'<tr><td colspan="5" style="text-align:center;color:#aaa;padding:20px">Sin productos</td></tr>';
+  document.getElementById('tabla-despacho').innerHTML = filas||'<tr><td colspan="6" style="text-align:center;color:#aaa;padding:20px">Sin productos</td></tr>';
   document.getElementById('resumen-despacho').textContent = despachar+' productos a despachar · '+dias+' días de cobertura';
 }
 
@@ -820,8 +1020,11 @@ function imprimirDespacho(){
 document.getElementById('f-cocinero').addEventListener('change', filtrar);
 document.getElementById('f-estado').addEventListener('change', filtrar);
 document.getElementById('f-buscar').addEventListener('input', filtrar);
+document.getElementById('r-mes').addEventListener('change', renderRanking);
 renderCards(DATA);
 updateMetricas();
+buildMesesOpts();
+renderResumen();
 """
 
 HTML_TEMPLATE = """<!DOCTYPE html>
@@ -829,19 +1032,33 @@ HTML_TEMPLATE = """<!DOCTYPE html>
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>La Cocina — Dashboard</title>
+<title>La Cocina · Control de Producción</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>CSS_PLACEHOLDER</style>
 </head>
 <body>
 
 <div class="header">
-  <div class="logo">La <span>Cocina</span> — Producción</div>
+  <div class="logo">La <span>Cocina</span><span class="logo-sub">· Control de Producción</span></div>
   <div class="header-right">
-    <button class="btn nav-active" id="nav-productos" onclick="mostrarProductos()">📦 Productos</button>
-    <button class="btn" id="nav-guias" onclick="mostrarGuias()">📋 Guías</button>
-    <span class="fecha">FECHA_HOY_PLACEHOLDER · 56 productos</span>
+    <button class="btn nav-active" id="nav-resumen" onclick="mostrarResumen()">Resumen</button>
+    <button class="btn" id="nav-productos" onclick="mostrarProductos()">Productos</button>
+    <button class="btn" id="nav-guias" onclick="mostrarGuias()">Guías</button>
+    <button class="btn" id="nav-ranking" onclick="mostrarRanking()">Ranking</button>
+    <span class="fecha">FECHA_HOY_PLACEHOLDER</span>
   </div>
 </div>
+
+<!-- VISTA RESUMEN -->
+<div id="vista-resumen">
+  <div id="res-stats"></div>
+  <div class="res-grid" id="res-grid"></div>
+</div>
+
+<!-- VISTA PRODUCTOS -->
+<div id="vista-productos" style="display:none">
 
 <div class="metricas">
   <div class="metrica"><div class="metrica-label">Sin stock</div><div class="metrica-valor val-rojo" id="m1">—</div></div>
@@ -849,9 +1066,6 @@ HTML_TEMPLATE = """<!DOCTYPE html>
   <div class="metrica"><div class="metrica-label">Bajo ≤14d</div><div class="metrica-valor val-amarillo" id="m3">—</div></div>
   <div class="metrica"><div class="metrica-label">OK &gt;14d</div><div class="metrica-valor val-verde" id="m4">—</div></div>
 </div>
-
-<!-- VISTA PRODUCTOS -->
-<div id="vista-productos">
   <div class="toolbar">
     <span class="toolbar-label">Cocinero:</span>
     <select id="f-cocinero"><option value="">Todos</option><option>CAROLINA</option><option>ADRIANA</option><option>CÉSAR</option><option>JESÚS</option></select>
@@ -872,6 +1086,29 @@ HTML_TEMPLATE = """<!DOCTYPE html>
   <div class="container">
     <div id="productos"></div>
     <div class="no-res" id="no-res" style="display:none">No se encontraron productos.</div>
+  </div>
+</div>
+
+</div>
+
+<!-- VISTA RANKING -->
+<div id="vista-ranking" style="display:none">
+  <div class="toolbar">
+    <span class="toolbar-label">Mes:</span>
+    <select id="r-mes"><option value="">Todos los meses</option></select>
+  </div>
+  <div style="padding:12px 16px">
+    <table class="rank-table">
+      <thead><tr>
+        <th style="width:28px">#</th>
+        <th>Producto</th>
+        <th style="text-align:right;color:#3B6D11">Vitacura</th>
+        <th style="text-align:right;color:#185FA5">Pataguas</th>
+        <th style="text-align:right">Total</th>
+        <th style="width:140px"></th>
+      </tr></thead>
+      <tbody id="tabla-ranking"></tbody>
+    </table>
   </div>
 </div>
 
@@ -930,11 +1167,17 @@ HTML_TEMPLATE = """<!DOCTYPE html>
         <button class="btn btn-primary" onclick="imprimirDespacho()">🖨 Imprimir</button>
       </div>
     </div>
+    <div style="display:flex;gap:16px;padding:8px 0 4px;font-size:12px;color:#555;flex-wrap:wrap">
+      <span><span style="display:inline-block;width:12px;height:12px;background:#27AE60;border-radius:3px;margin-right:5px;vertical-align:middle"></span>Despacho completo</span>
+      <span><span style="display:inline-block;width:12px;height:12px;background:#E67E22;border-radius:3px;margin-right:5px;vertical-align:middle"></span>Despacho parcial</span>
+      <span><span style="display:inline-block;width:12px;height:12px;background:#aaa;border-radius:3px;margin-right:5px;vertical-align:middle"></span>Sin stock — producir primero</span>
+    </div>
   </div>
   <div style="padding:12px 20px">
     <table class="guia-table">
       <thead><tr>
-        <th>Producto</th><th style="text-align:right">Stock PAT</th>
+        <th>Producto</th><th style="text-align:right">Stock VIT</th>
+        <th style="text-align:right">Stock PAT</th>
         <th style="text-align:right">Días PAT</th><th style="text-align:right">Necesita</th>
         <th style="text-align:right">Despachar</th>
       </tr></thead>
