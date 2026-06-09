@@ -24,7 +24,13 @@ jobs:
       - name: Instalar dependencias
         run: pip install pandas openpyxl requests numpy
 
-      # ── PASO 1: Generar dashboard + velocidades.json ──────────
+      # ── PASO 1: Actualizar historial con datos nuevos de Bsale ──
+      - name: Actualizar historial
+        env:
+          BSALE_TOKEN: ${{ secrets.BSALE_TOKEN }}
+        run: python excel_a_historial.py
+
+      # ── PASO 2: Generar dashboard + velocidades.json ──────────
       - name: Generar dashboard
         env:
           BSALE_TOKEN: ${{ secrets.BSALE_TOKEN }}
