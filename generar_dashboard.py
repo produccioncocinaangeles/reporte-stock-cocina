@@ -926,74 +926,64 @@ function renderGuiaProduccion(){
   document.getElementById('resumen-produccion').textContent = prods.length+' productos · para '+dias+' días';
 }
 
+// Clasifica el despacho de un producto en uno de 4 estados claros:
+//  completo → Vitacura cubre los días pedidos en Pataguas
+//  parcial  → manda lo que puede sin dejar Vitacura en cero
+//  producir → Pataguas lo necesita pero Vitacura no tiene stock para enviar
+//  ok       → Pataguas ya tiene suficiente
+function estadoDespacho(p, dias){
+  var necesita = Math.max(0, Math.ceil(p.vel_pat*dias) - p.pat);
+  var reserva  = Math.ceil(p.vel_vit * (p.tiempo_repo||7));   // lo que Vitacura guarda para sí
+  var disp     = Math.max(0, p.vit - reserva);
+  var desp     = Math.min(necesita, disp);
+  var estado;
+  if(necesita===0)        estado='ok';
+  else if(desp<=0)        estado='producir';
+  else if(desp>=necesita) estado='completo';
+  else                    estado='parcial';
+  return {estado:estado, necesita:necesita, desp:desp};
+}
+
 function renderGuiaDespacho(){
   const dias = parseInt(document.getElementById('d-dias').value)||7;
   document.getElementById('d-dias-label').textContent = dias+' días';
 
-  // Solo productos cuyo stock en Pataguas NO alcanza para los días seleccionados
-  var prods = DATA.filter(function(p){
-    return p.vel_pat>0 && (Math.ceil(p.vel_pat*dias) - p.pat) > 0;
-  });
+  // Se muestran TODOS los productos que se venden en Pataguas; los que no
+  // necesitan nada salen marcados como "OK" para que la guía se explique sola.
+  var prods = DATA.filter(function(p){return p.vel_pat>0;});
+  var PRIO = {completo:0, parcial:1, producir:2, ok:3};
   prods.sort(function(a,b){
-    var nec_a = Math.max(0, Math.ceil(a.vel_pat*dias) - a.pat);
-    var nec_b = Math.max(0, Math.ceil(b.vel_pat*dias) - b.pat);
-    var disp_a = Math.max(0, a.vit - Math.ceil(a.vel_vit*(a.tiempo_repo||7)));
-    var disp_b = Math.max(0, b.vit - Math.ceil(b.vel_vit*(b.tiempo_repo||7)));
-    var desp_a = Math.min(nec_a, disp_a);
-    var desp_b = Math.min(nec_b, disp_b);
-    // Orden: completo → parcial → sin stock → OK
-    var completo_a = desp_a>0 && desp_a>=nec_a;
-    var completo_b = desp_b>0 && desp_b>=nec_b;
-    var parcial_a  = desp_a>0 && desp_a<nec_a;
-    var parcial_b  = desp_b>0 && desp_b<nec_b;
-    var sinstk_a   = nec_a>0 && desp_a===0;
-    var sinstk_b   = nec_b>0 && desp_b===0;
-    var prio_a = completo_a ? 0 : parcial_a ? 1 : (sinstk_a || a.vit===0) ? 2 : 3;
-    var prio_b = completo_b ? 0 : parcial_b ? 1 : (sinstk_b || b.vit===0) ? 2 : 3;
-    if(prio_a !== prio_b) return prio_a - prio_b;
-    // Dentro de cada grupo, ordenar por días restantes en Pataguas
+    var ea = estadoDespacho(a,dias).estado, eb = estadoDespacho(b,dias).estado;
+    if(PRIO[ea]!==PRIO[eb]) return PRIO[ea]-PRIO[eb];
     var da = a.pat>0&&a.vel_pat>0 ? a.pat/a.vel_pat : 999;
     var db = b.pat>0&&b.vel_pat>0 ? b.pat/b.vel_pat : 999;
     return da-db;
   });
 
-  var despachar = 0;
+  var despachar = 0, producir = 0;
   var filas = prods.map(function(p){
-    var nec          = Math.ceil(p.vel_pat * dias);
-    var necesita_pat = Math.max(0, nec - p.pat);
-
-    // Reserva mínima que Vitacura necesita para sí misma (vel_vit × tiempo de reposición)
-    var reserva_vit  = Math.ceil(p.vel_vit * (p.tiempo_repo || 7));
-    var disponible   = Math.max(0, p.vit - reserva_vit);
-    var desp         = Math.min(necesita_pat, disponible);
-
-    var sin_stock_vit = p.vit === 0;
-    var dpt  = p.pat>0&&p.vel_pat>0 ? Math.round(p.pat/p.vel_pat)+'d' : 'sin stock';
-    var urg  = desp>0 && (p.pat===0||(p.pat/p.vel_pat)<3);
-    var bloqueado = necesita_pat>0 && desp===0 && !sin_stock_vit;
-
-    if(desp>0) despachar++;
-
-    var completo = desp > 0 && desp >= necesita_pat;
-    var parcial  = desp > 0 && desp < necesita_pat;
-    var estado_desp;
-    if(sin_stock_vit)  estado_desp = '<span style="color:#aaa;font-weight:600">Sin stock</span>';
-    else if(bloqueado) estado_desp = '<span style="color:#aaa;font-weight:600">Sin stock</span>';
-    else if(completo)  estado_desp = '<span style="color:#27AE60;font-weight:700">+'+desp+'</span>';
-    else if(parcial)   estado_desp = '<span style="color:#E67E22;font-weight:700">+'+desp+'</span>';
-    else               estado_desp = '<span style="color:#27AE60;font-weight:700">OK</span>';
-
+    var e = estadoDespacho(p, dias);
+    if(e.estado==='completo'||e.estado==='parcial') despachar++;
+    if(e.estado==='producir') producir++;
+    var dpt = p.pat>0&&p.vel_pat>0 ? Math.round(p.pat/p.vel_pat)+'d' : (p.pat===0?'0d':'—');
+    var urg = e.estado!=='ok' && (p.pat===0 || (p.pat/p.vel_pat)<3);
+    var cell;
+    if(e.estado==='ok')            cell='<span style="color:#27AE60;font-weight:700">OK</span>';
+    else if(e.estado==='completo') cell='<span style="color:#27AE60;font-weight:700">+'+e.desp+'</span>';
+    else if(e.estado==='parcial')  cell='<span style="color:#E67E22;font-weight:700">+'+e.desp+'</span>';
+    else                           cell='<span style="color:#999;font-weight:700">'+e.necesita+'</span>';
     return '<tr'+(urg?' class="urgente"':'')+'>'
       +'<td style="font-weight:'+(urg?700:400)+'">'+p.nombre+'</td>'
       +'<td style="text-align:right;color:'+(p.vit===0?'#E74C3C':'#333')+'">'+p.vit+'</td>'
       +'<td style="text-align:right;color:#185FA5">'+p.pat+'</td>'
       +'<td style="text-align:right;color:#888">'+dpt+'</td>'
-      +'<td style="text-align:right;font-size:13px">'+estado_desp+'</td>'
+      +'<td style="text-align:right;font-size:13px">'+cell+'</td>'
       +'</tr>';
   }).join('');
 
   document.getElementById('tabla-despacho').innerHTML = filas||'<tr><td colspan="5" style="text-align:center;color:#aaa;padding:20px">Sin productos</td></tr>';
-  document.getElementById('resumen-despacho').textContent = despachar+' productos a despachar · '+dias+' días de cobertura';
+  document.getElementById('resumen-despacho').textContent =
+    despachar+' a despachar · '+producir+' a producir · '+dias+' días';
 }
 
 function setDiasProd(d, btn){
@@ -1256,10 +1246,11 @@ HTML_TEMPLATE = """<!DOCTYPE html>
         <button class="btn btn-primary" onclick="imprimirDespacho()">🖨 Imprimir</button>
       </div>
     </div>
-    <div style="display:flex;gap:16px;padding:8px 0 4px;font-size:12px;color:#555;flex-wrap:wrap">
-      <span><span style="display:inline-block;width:12px;height:12px;background:#27AE60;border-radius:3px;margin-right:5px;vertical-align:middle"></span>Despacho completo</span>
-      <span><span style="display:inline-block;width:12px;height:12px;background:#E67E22;border-radius:3px;margin-right:5px;vertical-align:middle"></span>Despacho parcial</span>
-      <span><span style="display:inline-block;width:12px;height:12px;background:#aaa;border-radius:3px;margin-right:5px;vertical-align:middle"></span>Sin stock — producir primero</span>
+    <div style="display:flex;gap:18px;padding:8px 0 4px;font-size:12px;color:#555;flex-wrap:wrap">
+      <span><span style="display:inline-block;width:12px;height:12px;background:#27AE60;border-radius:3px;margin-right:5px;vertical-align:middle"></span><b style="color:#27AE60">+N</b> Despacho completo — Vitacura cubre los días pedidos en Pataguas</span>
+      <span><span style="display:inline-block;width:12px;height:12px;background:#E67E22;border-radius:3px;margin-right:5px;vertical-align:middle"></span><b style="color:#E67E22">+N</b> Despacho parcial — manda lo posible sin dejar Vitacura en cero</span>
+      <span><span style="display:inline-block;width:12px;height:12px;background:#999;border-radius:3px;margin-right:5px;vertical-align:middle"></span><b style="color:#999">N</b> Producir — falta en Pataguas pero Vitacura no tiene stock</span>
+      <span><b style="color:#27AE60">OK</b> — Pataguas tiene suficiente, no hace falta despachar</span>
     </div>
   </div>
   <div style="padding:12px 20px">
