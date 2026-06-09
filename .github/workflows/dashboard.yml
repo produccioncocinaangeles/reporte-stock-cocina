@@ -24,13 +24,12 @@ jobs:
       - name: Instalar dependencias
         run: pip install pandas openpyxl requests numpy
 
-      # ── PASO 1: Actualizar historial con datos nuevos de Bsale ──
-      - name: Actualizar historial
-        env:
-          BSALE_TOKEN: ${{ secrets.BSALE_TOKEN }}
-        run: python excel_a_historial.py
+      # NOTA: el historial.json versionado en el repo es la fuente de verdad.
+      # No se reconstruye en cada corrida (eso causaba que GitHub difiriera del
+      # clon). Para actualizar ventas/despachos: correr excel_a_historial.py
+      # localmente y commitear el historial.json actualizado.
 
-      # ── PASO 2: Generar dashboard + velocidades.json ──────────
+      # ── Generar dashboard + velocidades.json (usa historial.json del repo) ──
       - name: Generar dashboard
         env:
           BSALE_TOKEN: ${{ secrets.BSALE_TOKEN }}
