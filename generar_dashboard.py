@@ -181,6 +181,12 @@ def periodos_sin_stock(stock_d):
 def moda(lst):
     return Counter(lst).most_common(1)[0][0] if lst else 0
 
+def mediana(lst):
+    if not lst: return 0
+    s = sorted(lst); n = len(s)
+    m = s[n//2] if n % 2 else (s[n//2 - 1] + s[n//2]) / 2
+    return max(1, round(m))
+
 def velocidad(df_sku, stock_d):
     # Ventana: 3 meses completos anteriores al mes en curso (~90 días).
     # Más reactiva a productos que cambian de ritmo (crecen o caen) que un
@@ -335,7 +341,10 @@ def procesar():
         per_v = periodos_sin_stock(sd_v)
         per_p = periodos_sin_stock(sd_p)
         durs  = [p['dias'] for p in per_v if p['dias'] <= 30]
-        trepo = moda(durs) if durs else (moda([p['dias'] for p in per_v]) if per_v else 7)
+        base  = durs if durs else [p['dias'] for p in per_v]
+        # Mediana de las duraciones de quiebre (más representativa que la moda,
+        # que con duraciones únicas devolvía un valor casi al azar).
+        trepo = mediana(base) if base else 7
         trepo = min(trepo, 7)  # máximo 7 días para evitar que casos atípicos bloqueen despachos
 
         # Velocidades
@@ -598,9 +607,12 @@ function buildAnalisis(p){
 
   // Demanda real
   h += '<div class="insight"><b>📊 Demanda real del período</b><br>'
-    + 'Vitacura: <b>'+p.total_vit+' und</b> en '+p.dias_stock_vit+' días con stock → <b>'+p.vel_vit.toFixed(3)+' und/día</b><br>'
-    + 'Pataguas: <b>'+p.total_pat+' und</b> en '+p.dias_stock_pat+' días con stock → <b>'+p.vel_pat.toFixed(3)+' und/día</b><br>'
-    + 'Total: <b>'+vt.toFixed(3)+' und/día</b> ('+(vt*30).toFixed(1)+' und/mes estimado)</div>';
+    + '<span style="color:#777;font-size:11px;line-height:1.5">Se mide con los días que el producto <b>sí tuvo stock</b>. '
+    + 'Los días agotados no se cuentan: ahí no se vendió por falta de producto, no de demanda. '
+    + 'Así el ritmo refleja lo que de verdad se vende cuando hay disponible.</span><br><br>'
+    + 'Vitacura: <b>'+p.total_vit+' und</b> vendidas en '+p.dias_stock_vit+' días con stock → <b>'+p.vel_vit.toFixed(3)+' und/día</b><br>'
+    + 'Pataguas: <b>'+p.total_pat+' und</b> vendidas en '+p.dias_stock_pat+' días con stock → <b>'+p.vel_pat.toFixed(3)+' und/día</b><br>'
+    + 'Ritmo total: <b>'+vt.toFixed(3)+' und/día</b> → ≈<b>'+(vt*30).toFixed(0)+' und/mes</b> si nunca falta stock</div>';
 
   // Períodos sin stock Vitacura
   const per = p.periodos_sin_stock_vit||[];
@@ -624,7 +636,7 @@ function buildAnalisis(p){
   if(vt>0){
     h += '<div class="insight-ok"><b>✅ Recomendaciones</b><br>'
       + 'Punto de reorden: cuando queden <b>'+p.pto_reorden+' und</b> → producir de inmediato<br>'
-      + 'Consumo estimado 30 días: <b>'+p.lote_sugerido+' und</b><br>'
+      + 'Consumo estimado 30 días: <b>'+p.lote_sugerido+' und</b> <span style="color:#777;font-size:11px">(a tu ritmo real; ya descuenta los días sin stock)</span><br>'
       + 'Despacho sugerido Pataguas: <b>'+p.despacho_sug+' und</b></div>';
   }
 
