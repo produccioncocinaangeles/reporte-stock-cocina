@@ -783,8 +783,47 @@ function mostrarProductos(){ switchVista('vista-productos','nav-productos'); }
 function mostrarGuias(){ switchVista('vista-guias','nav-guias', function(){ renderGuiaProduccion(); renderGuiaDespacho(); }); }
 function mostrarRanking(){ switchVista('vista-ranking','nav-ranking', renderRanking); }
 
+// ── Alertas de cuadratura de stock ─────────────────────────
+function nombreSku(sku){
+  var p = DATA.find(function(x){return x.sku===sku;});
+  return p ? p.nombre : sku;
+}
+function renderAlertas(){
+  var el = document.getElementById('res-alertas');
+  if(!el) return;
+  if(!ALERTAS || ((ALERTAS.entradas||[]).length===0 && (ALERTAS.salidas||[]).length===0)){
+    el.innerHTML = ''; return;
+  }
+  var h = '';
+  if((ALERTAS.salidas||[]).length>0){
+    var items = ALERTAS.salidas.map(function(a){
+      return '<div class="res-item"><span class="res-item-nombre">'+nombreSku(a.sku)
+        +' <span style="color:#888;font-size:11px">('+(a.oficina==='VIT'?'Vitacura':'Pataguas')+')</span></span>'
+        +'<span style="color:#E67E22;font-weight:700">-'+Math.round(a.cantidad)+' und</span></div>';
+    }).join('');
+    h += '<div style="margin:16px 16px 0;background:#FFF7EE;border:1px solid #F0CFA8;border-radius:10px;padding:14px 18px">'
+      +'<div style="font-weight:700;font-size:13px;color:#B9650F;margin-bottom:6px">⚠️ Salidas sin explicación — '+(ALERTAS.fecha||'')+'</div>'
+      +'<div style="font-size:12px;color:#8a6a45;margin-bottom:8px">El stock bajó sin ventas ni guías que lo expliquen. '
+      +'Puede ser consumo interno o merma; si no lo reconoces, revisa la tarjeta de existencia del producto en Bsale.</div>'
+      +items+'</div>';
+  }
+  if((ALERTAS.entradas||[]).length>0){
+    var items2 = ALERTAS.entradas.map(function(a){
+      return '<div class="res-item"><span class="res-item-nombre">'+nombreSku(a.sku)
+        +' <span style="color:#888;font-size:11px">('+(a.oficina==='VIT'?'Vitacura':'Pataguas')+')</span></span>'
+        +'<span style="color:#27AE60;font-weight:700">+'+Math.round(a.cantidad)+' und</span></div>';
+    }).join('');
+    h += '<div style="margin:16px 16px 0;background:#F2FAF4;border:1px solid #BFE3C8;border-radius:10px;padding:14px 18px">'
+      +'<div style="font-weight:700;font-size:13px;color:#1E8449;margin-bottom:6px">📦 Recepciones detectadas — '+(ALERTAS.fecha||'')+'</div>'
+      +'<div style="font-size:12px;color:#5a7a62;margin-bottom:8px">El stock subió: se registraron como producción del día. Normal si hubo recepción.</div>'
+      +items2+'</div>';
+  }
+  el.innerHTML = h;
+}
+
 // ── Resumen ejecutivo ──────────────────────────────────────
 function renderResumen(){
+  renderAlertas();
   var urgentes  = DATA.filter(function(p){return p.estado==='sin_stock'||p.estado==='critico';});
   var bajos     = DATA.filter(function(p){return p.estado==='bajo';});
   var totalVit  = DATA.reduce(function(s,p){return s+p.vit;},0);
@@ -1141,6 +1180,7 @@ HTML_TEMPLATE = """<!DOCTYPE html>
 
 <!-- VISTA RESUMEN -->
 <div id="vista-resumen">
+  <div id="res-alertas"></div>
   <div id="res-stats"></div>
   <div class="res-grid" id="res-grid"></div>
 </div>
@@ -1278,6 +1318,7 @@ HTML_TEMPLATE = """<!DOCTYPE html>
 
 <script>
 const DATA = DATA_PLACEHOLDER;
+const ALERTAS = ALERTAS_PLACEHOLDER;
 JS_PLACEHOLDER
 </script>
 </body>
@@ -1285,10 +1326,17 @@ JS_PLACEHOLDER
 
 def generar_html(datos, fecha_str):
     data_json = json.dumps(datos, ensure_ascii=False)
+    # Alertas de cuadratura del día (las escribe actualizar_diario.py)
+    archivo_alertas = os.path.join(CARPETA, 'alertas_stock.json')
+    if os.path.exists(archivo_alertas):
+        alertas_json = json.dumps(json.load(open(archivo_alertas, encoding='utf-8-sig')), ensure_ascii=False)
+    else:
+        alertas_json = 'null'
     js_final  = JS.replace('FECHA_HOY_PLACEHOLDER', fecha_str)
     html = HTML_TEMPLATE
     html = html.replace('CSS_PLACEHOLDER',         CSS)
     html = html.replace('DATA_PLACEHOLDER',        data_json)
+    html = html.replace('ALERTAS_PLACEHOLDER',     alertas_json)
     html = html.replace('JS_PLACEHOLDER',          js_final)
     html = html.replace('FECHA_HOY_PLACEHOLDER',   fecha_str)
     return html
