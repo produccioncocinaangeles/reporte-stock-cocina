@@ -99,7 +99,8 @@ def leer_json(oficina):
         cache = json.load(f)
     movs = sorted(
         [m for m in cache['movimientos'] if m['oficina'] == oficina],
-        key=lambda m: m['fecha']
+        # mismo día: entradas (produccion) antes que salidas, para no toparse con el cero
+        key=lambda m: (m['fecha'], m['tipo'] != 'produccion')
     )
     # Calcular stock acumulado por SKU (entradas - salidas, mínimo 0)
     stock_acum = {}

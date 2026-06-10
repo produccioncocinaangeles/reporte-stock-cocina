@@ -15,7 +15,7 @@
 # Tras cada corrida, nuestro stock reconstruido == stock real de Bsale.
 # Si la API no responde o no hay token, NO modifica nada.
 import json, os, time, sys
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 import requests
 
 from generar_dashboard import NOMBRES, bsale_stock, CARPETA, BSALE_TOKEN
@@ -56,7 +56,10 @@ def descargar_movimientos(desde, hasta):
                 'emissiondaterange': f'[{ts(desde)},{ts(hasta)}]',
             })
             for doc in docs:
-                fecha = datetime.fromtimestamp(doc['emissionDate']).strftime('%Y-%m-%d')
+                # Bsale entrega emissionDate como medianoche UTC del día de emisión.
+                # Convertir en hora local (Chile, UTC-4) retrocede la fecha un día,
+                # por eso se interpreta SIEMPRE en UTC.
+                fecha = datetime.fromtimestamp(doc['emissionDate'], tz=timezone.utc).strftime('%Y-%m-%d')
                 dets  = get_all(f"https://api.bsale.cl/v1/documents/{doc['id']}/details.json")
                 for det in dets:
                     sku = str(det.get('variant', {}).get('code', '')).strip().upper()
@@ -69,11 +72,12 @@ def descargar_movimientos(desde, hasta):
 
 def reconstruir_stock(movs):
     # Réplica exacta de leer_json() del dashboard: por oficina, movimientos
-    # ordenados por fecha, stock nunca negativo.
+    # ordenados por fecha (mismo día: entradas antes que salidas), stock nunca negativo.
     stock = {}
     for oficina in ('VIT', 'PAT'):
         acum = {}
-        for m in sorted([x for x in movs if x['oficina'] == oficina], key=lambda x: x['fecha']):
+        for m in sorted([x for x in movs if x['oficina'] == oficina],
+                        key=lambda x: (x['fecha'], x['tipo'] != 'produccion')):
             ent = m['cantidad'] if m['tipo'] == 'produccion' else 0
             sal = m['cantidad'] if m['tipo'] in ('venta', 'despacho', 'consumo') else 0
             acum[m['sku']] = max(0, acum.get(m['sku'], 0) + ent - sal)
@@ -96,6 +100,8 @@ def main():
     movs  = cache['movimientos']
     conocidos = {(m['doc_id'], m['sku'], m['oficina'], m['tipo'])
                  for m in movs if m.get('doc_id')}
+    # Documentos reemplazados por datos manuales (correcciones): no re-agregar
+    conocidos |= {tuple(k) for k in cache.get('docs_ignorar', [])}
 
     # ── 1. Ventas y guías nuevas desde la API ──
     ultima = max(m['fecha'] for m in movs)
