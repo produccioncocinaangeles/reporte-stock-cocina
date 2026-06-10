@@ -1,31 +1,5 @@
 {
   "fecha": "2026-06-10",
-  "entradas": [
-    {
-      "sku": "EC",
-      "oficina": "PAT",
-      "cantidad": 1.0
-    },
-    {
-      "sku": "SA",
-      "oficina": "VIT",
-      "cantidad": 28.0
-    },
-    {
-      "sku": "SA",
-      "oficina": "PAT",
-      "cantidad": 9.0
-    },
-    {
-      "sku": "BAP",
-      "oficina": "VIT",
-      "cantidad": 4.0
-    },
-    {
-      "sku": "BAP",
-      "oficina": "PAT",
-      "cantidad": 2.0
-    }
-  ],
+  "entradas": [],
   "salidas": []
 }
