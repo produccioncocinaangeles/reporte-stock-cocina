@@ -196,7 +196,6 @@ def velocidad(df_sku, stock_d):
     UMBRAL_DIAS = 7
     mes_actual  = pd.Period(FECHA_HOY, 'M')
     fecha_hist  = (mes_actual - 3).start_time
-    fecha_60    = FECHA_HOY - pd.Timedelta(days=60)
 
     mask_v = (df_sku['Salida'] > 0) & (~df_sku['Movimiento de salida'].str.contains(
         'GUÍA DE DESPACHO|Guía de Despacho|Consumo', na=False))
@@ -225,13 +224,11 @@ def velocidad(df_sku, stock_d):
         total_d = sum(dias for _, dias in meses_validos)
         vel = round(total_v / total_d, 4) if total_d > 0 else 0.0
     else:
-        vel = 0.0
+        total_v, total_d, vel = 0, 0, 0.0
 
-    # Stats para display: últimos 60 días reales
-    df_60   = df_sku[mask_v & (df_sku['Fecha'] >= fecha_60)]
-    total   = int(df_60['Salida'].sum())
-    con_stk = sum(1 for d, v in stock_d.items() if v > 0 and d >= fecha_60)
-    return vel, total, con_stk
+    # Para display: los MISMOS números que producen la velocidad
+    # (ventas y días con stock de los meses válidos), así el análisis cuadra.
+    return vel, int(total_v), int(total_d)
 
 def lotes(df_sku):
     ent = df_sku[df_sku['Entrada'] > 0].sort_values('Fecha')
