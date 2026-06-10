@@ -24,12 +24,24 @@ jobs:
       - name: Instalar dependencias
         run: pip install pandas openpyxl requests numpy
 
-      # NOTA: el historial.json versionado en el repo es la fuente de verdad.
-      # No se reconstruye en cada corrida (eso causaba que GitHub difiriera del
-      # clon). Para actualizar ventas/despachos: correr excel_a_historial.py
-      # localmente y commitear el historial.json actualizado.
+      # ── PASO 1: Actualización diaria del historial ─────────────
+      # Agrega ventas y guías nuevas (API) y deduce recepciones/consumos
+      # comparando el stock real con la foto del día anterior.
+      # El historial actualizado se guarda en el repo (única fuente de verdad).
+      - name: Actualizar historial diario
+        env:
+          BSALE_TOKEN: ${{ secrets.BSALE_TOKEN }}
+          TZ: America/Santiago
+        run: python actualizar_diario.py
 
-      # ── Generar dashboard + velocidades.json (usa historial.json del repo) ──
+      - name: Guardar historial y foto de stock en el repo
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add historial.json stock_snapshot.json
+          git diff --staged --quiet || (git commit -m "Actualizacion diaria: ventas, guias y recepciones inferidas" && git push)
+
+      # ── PASO 2: Generar dashboard + velocidades.json ───────────
       - name: Generar dashboard
         env:
           BSALE_TOKEN: ${{ secrets.BSALE_TOKEN }}
