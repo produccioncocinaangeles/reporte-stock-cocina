@@ -1,5 +1,31 @@
 {
-  "fecha": "2026-06-10",
-  "entradas": [],
+  "fecha": "2026-06-11",
+  "entradas": [
+    {
+      "sku": "CLC",
+      "oficina": "PAT",
+      "cantidad": 2.0
+    },
+    {
+      "sku": "MCJ",
+      "oficina": "PAT",
+      "cantidad": 3.0
+    },
+    {
+      "sku": "RC",
+      "oficina": "VIT",
+      "cantidad": 12.0
+    },
+    {
+      "sku": "LCM",
+      "oficina": "PAT",
+      "cantidad": 4.0
+    },
+    {
+      "sku": "PC",
+      "oficina": "VIT",
+      "cantidad": 8.0
+    }
+  ],
   "salidas": []
 }
