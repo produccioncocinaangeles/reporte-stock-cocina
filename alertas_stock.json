@@ -3,28 +3,18 @@
   "entradas": [
     {
       "sku": "CLC",
-      "oficina": "PAT",
-      "cantidad": 2.0
+      "oficina": "VIT",
+      "cantidad": 8.0
     },
     {
-      "sku": "MCJ",
-      "oficina": "PAT",
-      "cantidad": 3.0
-    },
-    {
-      "sku": "RC",
+      "sku": "RS",
       "oficina": "VIT",
       "cantidad": 12.0
     },
     {
-      "sku": "LCM",
-      "oficina": "PAT",
-      "cantidad": 4.0
-    },
-    {
-      "sku": "PC",
+      "sku": "AS",
       "oficina": "VIT",
-      "cantidad": 8.0
+      "cantidad": 14.0
     }
   ],
   "salidas": []

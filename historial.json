@@ -1,5 +1,5 @@
 {
-  "ultimo_update": "2026-06-11T08:39:46",
+  "ultimo_update": "2026-06-11T15:26:48",
   "movimientos": [
     {
       "fecha": "2026-01-15",
@@ -39321,6 +39321,89 @@
       "oficina": "VIT",
       "tipo": "produccion",
       "cantidad": 8.0,
+      "doc_id": 0,
+      "inferido": true
+    },
+    {
+      "fecha": "2026-06-11",
+      "sku": "PC",
+      "oficina": "VIT",
+      "tipo": "venta",
+      "cantidad": 1.0,
+      "doc_id": 20218
+    },
+    {
+      "fecha": "2026-06-11",
+      "sku": "TLS",
+      "oficina": "VIT",
+      "tipo": "venta",
+      "cantidad": 1.0,
+      "doc_id": 20218
+    },
+    {
+      "fecha": "2026-06-11",
+      "sku": "PV",
+      "oficina": "VIT",
+      "tipo": "venta",
+      "cantidad": 1.0,
+      "doc_id": 20218
+    },
+    {
+      "fecha": "2026-06-11",
+      "sku": "TCF",
+      "oficina": "PAT",
+      "tipo": "venta",
+      "cantidad": 1.0,
+      "doc_id": 20214
+    },
+    {
+      "fecha": "2026-06-11",
+      "sku": "PP",
+      "oficina": "PAT",
+      "tipo": "venta",
+      "cantidad": 2.0,
+      "doc_id": 20215
+    },
+    {
+      "fecha": "2026-06-11",
+      "sku": "PP",
+      "oficina": "PAT",
+      "tipo": "venta",
+      "cantidad": 1.0,
+      "doc_id": 20216
+    },
+    {
+      "fecha": "2026-06-11",
+      "sku": "BADIAC",
+      "oficina": "PAT",
+      "tipo": "venta",
+      "cantidad": 2.0,
+      "doc_id": 20217
+    },
+    {
+      "fecha": "2026-06-11",
+      "sku": "CLC",
+      "oficina": "VIT",
+      "tipo": "produccion",
+      "cantidad": 8.0,
+      "doc_id": 0,
+      "inferido": true
+    },
+    {
+      "fecha": "2026-06-11",
+      "sku": "RS",
+      "oficina": "VIT",
+      "tipo": "produccion",
+      "cantidad": 12.0,
+      "doc_id": 0,
+      "inferido": true
+    },
+    {
+      "fecha": "2026-06-11",
+      "sku": "AS",
+      "oficina": "VIT",
+      "tipo": "produccion",
+      "cantidad": 14.0,
       "doc_id": 0,
       "inferido": true
     }
