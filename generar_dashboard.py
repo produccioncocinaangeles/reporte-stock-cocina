@@ -456,7 +456,7 @@ input[type=text]{width:200px}
 .tabs{display:flex;border-bottom:1px solid #eee;background:#fafafa}
 .tab{font-size:11px;font-weight:500;padding:9px 16px;border:none;background:none;color:#aaa;cursor:pointer;font-family:inherit;border-bottom:2px solid transparent}
 .tab.active{color:#1A1A1A;border-bottom-color:#1A1A1A;font-weight:600}
-.tab-body{display:none;padding:14px}
+.tab-body{display:none;padding:14px;overflow-x:auto}
 .tab-body.active{display:block}
 .movs-table{width:100%;border-collapse:collapse;font-size:12px}
 .movs-table th{text-align:left;color:#aaa;padding:6px 10px;border-bottom:1px solid #eee;font-size:10px;text-transform:uppercase;letter-spacing:0.05em;font-weight:600}
@@ -515,6 +515,17 @@ input[type=text]{width:200px}
 .rank-num{color:#ddd;font-weight:700;font-size:12px;width:28px}
 .rank-bar{display:inline-block;height:6px;background:#5DCAA5;border-radius:3px;vertical-align:middle;margin-left:8px}
 .rank-zero{color:#ccc}
+
+/* ── Móvil ───────────────────────────────────────────────── */
+@media (max-width: 640px){
+  /* tabla de movimientos: ocultar Documento para que Cant. y Stock quepan */
+  .movs-table th:nth-child(3),
+  .movs-table td:nth-child(3){display:none}
+  .movs-table th,.movs-table td{padding:6px 6px;font-size:11px}
+  .tab-body{padding:10px 8px}
+  .header{flex-wrap:wrap;gap:8px}
+  .res-grid{grid-template-columns:1fr}
+}
 """
 
 JS = """
