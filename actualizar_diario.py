@@ -18,6 +18,15 @@ import json, os, time, sys
 from datetime import datetime, timedelta, timezone
 import requests
 
+# GitHub Actions corre en hora UTC: a las 19:00 de Chile ya son las 23:00 UTC,
+# y con el retraso habitual del plan gratuito la corrida cae en el día siguiente
+# UTC, marcando despachos/recepciones con fecha de mañana. Fijamos hora chilena.
+try:
+    from zoneinfo import ZoneInfo
+    TZ_CHILE = ZoneInfo('America/Santiago')
+except Exception:
+    TZ_CHILE = None  # sin base de datos de zonas horarias: usa hora local
+
 from generar_dashboard import NOMBRES, bsale_stock, CARPETA, BSALE_TOKEN
 
 ARCHIVO_HISTORIAL = os.path.join(CARPETA, 'historial.json')
@@ -33,9 +42,20 @@ def get_all(url, params=None):
     items, offset = [], 0
     while True:
         p = {**(params or {}), 'limit': 50, 'offset': offset}
-        r = requests.get(url, headers=HEADERS, params=p, timeout=30)
-        r.raise_for_status()
-        data  = r.json()
+        data = None
+        for intento in range(3):
+            try:
+                r = requests.get(url, headers=HEADERS, params=p, timeout=30)
+                r.raise_for_status()
+                data = r.json()
+                break
+            except Exception as e:
+                print(f"  get_all intento {intento+1}/3: {e}")
+                if intento < 2:
+                    print("  Reintentando en 30 s...")
+                    time.sleep(30)
+        if data is None:
+            raise Exception(f"get_all: no se pudo obtener {url} después de 3 intentos")
         batch = data.get('items', [])
         items.extend(batch)
         if not data.get('next') or len(batch) < 50:
@@ -86,8 +106,8 @@ def reconstruir_stock(movs):
     return stock
 
 def main():
-    hoy = datetime.now()
-    print(f"Actualización diaria — {hoy:%Y-%m-%d %H:%M}")
+    hoy = datetime.now(TZ_CHILE)
+    print(f"Actualización diaria — {hoy:%Y-%m-%d %H:%M} (hora Chile)")
 
     # ── Stock real (si falla, abortamos sin tocar nada) ──
     stock_real = bsale_stock()
