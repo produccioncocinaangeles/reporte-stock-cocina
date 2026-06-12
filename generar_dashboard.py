@@ -568,6 +568,9 @@ select,input[type=text],input[type=number]{font-size:13px;font-weight:500;paddin
 .movs-scroll thead th{position:sticky;top:0;background:#fff;z-index:1}
 .btn-vermas{display:block;width:100%;margin-top:8px;padding:9px;font-size:12px;font-weight:700;font-family:inherit;color:#275300;background:#F0FDF4;border:1px solid #b8f389;border-radius:8px;cursor:pointer}
 .btn-vermas:hover{background:#dcfce7}
+.movs-filtros{display:flex;gap:6px;margin-bottom:8px}
+.movs-filter-btn{font-size:11px;font-weight:700;padding:4px 12px;border-radius:20px;border:1px solid #c2c9b7;background:#f8f9fa;color:#555;cursor:pointer;font-family:inherit}
+.movs-filter-btn.activo{background:#275300;color:#fff;border-color:#275300}
 
 /* ── Bottom nav ──────────────────────────────────────────── */
 .bottom-nav{display:none;position:fixed;bottom:0;left:0;right:0;height:64px;background:#fff;border-top:1px solid #c2c9b7;z-index:100;align-items:center;justify-content:space-around;box-shadow:0 -2px 8px rgba(0,0,0,0.06)}
@@ -673,10 +676,12 @@ function buildMovs(movs, idx, completo){
       ? '<span class="tienda-vit">Vitacura</span>'
       : '<span class="tienda-pat">Pataguas</span>';
     const cantCls = m.signo==='+' ? 'cant-pos' : 'cant-neg';
-    return '<tr><td style="color:#888">'+m.fecha+'</td><td>'+tipoBadge(m.tipo)+'</td>'
+    const stockColor = m.tienda==='Vitacura' ? '#275300' : '#1960a6';
+    const rowBg = m.stock===0 ? 'background:rgba(186,26,26,0.07);' : '';
+    return '<tr data-tienda="'+m.tienda+'" style="'+rowBg+'"><td style="color:#888">'+m.fecha+'</td><td>'+tipoBadge(m.tipo)+'</td>'
       +'<td style="color:#666;font-size:11px">'+m.documento+'</td><td>'+tienda+'</td>'
       +'<td class="'+cantCls+'" style="text-align:right">'+m.signo+m.cantidad+'</td>'
-      +'<td style="text-align:right;font-weight:600">'+m.stock+'</td></tr>';
+      +'<td style="text-align:right;font-weight:600;color:'+stockColor+'">'+m.stock+'</td></tr>';
   }).join('');
   var boton = '';
   if(ocultos > 0){
@@ -684,13 +689,25 @@ function buildMovs(movs, idx, completo){
   } else if(completo && movs.length > 0){
     boton = '<div style="font-size:11px;color:#aaa;padding:8px 0;text-align:center">Historial completo · '+movs.length+' movimientos</div>';
   }
-  return '<div class="movs-scroll"><table class="movs-table"><thead><tr>'
+  const filtros = '<div class="movs-filtros">'
+    +'<button class="movs-filter-btn activo" onclick="filtrarMovs('+idx+',&apos;Todas&apos;,this)">Todas</button>'
+    +'<button class="movs-filter-btn" onclick="filtrarMovs('+idx+',&apos;Vitacura&apos;,this)">Vitacura</button>'
+    +'<button class="movs-filter-btn" onclick="filtrarMovs('+idx+',&apos;Pataguas&apos;,this)">Pataguas</button>'
+    +'</div>';
+  return filtros+'<div class="movs-scroll"><table class="movs-table"><thead><tr>'
     +'<th>Fecha</th><th>Tipo</th><th>Documento</th><th>Tienda</th>'
     +'<th style="text-align:right">Cant.</th><th style="text-align:right">Stock</th>'
     +'</tr></thead><tbody>'+rows+'</tbody></table></div>'+boton;
 }
 function verMovsCompletos(i){
   document.getElementById('tab-'+i+'-mov').innerHTML = buildMovs(DATA[i].movs, i, true);
+}
+function filtrarMovs(idx, tienda, btn){
+  document.querySelectorAll('#tab-'+idx+'-mov .movs-filter-btn').forEach(function(b){ b.classList.remove('activo'); });
+  btn.classList.add('activo');
+  document.querySelectorAll('#tab-'+idx+'-mov tr[data-tienda]').forEach(function(r){
+    r.style.display = (tienda==='Todas' || r.dataset.tienda===tienda) ? '' : 'none';
+  });
 }
 
 // ── Análisis ───────────────────────────────────────────────
