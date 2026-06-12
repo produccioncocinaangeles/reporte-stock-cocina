@@ -446,6 +446,7 @@ select,input[type=text],input[type=number]{font-size:13px;font-weight:500;paddin
 .search-wrap{position:relative}
 .search-wrap .search-ico{position:absolute;left:14px;top:50%;transform:translateY(-50%);color:#727969;font-size:15px;pointer-events:none}
 .search-wrap input{width:100%;height:44px;padding:0 40px 0 40px;font-size:14px;border:1px solid #c2c9b7;border-radius:10px;background:#fff}
+@media (min-width:641px){.search-wrap input{height:52px;font-size:16px;border-radius:12px}.search-wrap .search-ico{font-size:18px}.search-wrap .search-clear{width:32px;height:32px;font-size:15px}}
 .search-wrap input:focus{outline:none;border-color:#275300}
 .search-wrap .search-clear{position:absolute;right:8px;top:50%;transform:translateY(-50%);width:28px;height:28px;border:none;border-radius:50%;background:#e4e7dd;color:#444;font-size:13px;line-height:1;cursor:pointer;display:none;align-items:center;justify-content:center}
 .search-wrap .search-clear:active{background:#c2c9b7}
