@@ -43,6 +43,12 @@ produce) y **Las Pataguas** (recibe despachos). Los datos vienen de la API de
   paleta verde `#275300`, azul `#1960a6`, rojo `#ba1a1a`, bordes `#c2c9b7`;
   chips de filtro, tarjetas con stock en 2 columnas, barra de cobertura con
   gradiente y aguja, navegación inferior en móvil.
+- **Tabla de movimientos — filtro por tienda** (11-jun-2026, commit b74a70b):
+  botones Todas / Vitacura / Pataguas encima de la tabla. Stock coloreado en
+  verde `#275300` para Vitacura y azul `#1960a6` para Pataguas. Filas con
+  stock = 0 destacadas con fondo rojo suave para ver quiebres de un vistazo.
+  Razón: la columna Stock mezclaba dos secuencias independientes y confundía
+  al auditar los días sin stock que reporta el análisis.
 
 ## Forma de trabajo del usuario
 
@@ -58,13 +64,23 @@ produce) y **Las Pataguas** (recibe despachos). Los datos vienen de la API de
 
 ## Estado al 11-jun-2026
 
-Subido a producción (commit 2440c39): rediseño móvil + reintentos de API +
-fecha en hora de Chile.
+Subido a producción (commit b74a70b): filtro por tienda en tabla de movimientos
++ colores de stock por tienda + fondo rojo en quiebres de stock.
+
+Commits anteriores del día: rediseño móvil + reintentos de API + fecha en hora
+de Chile (commit 2440c39).
 
 **Pendiente de verificar:**
 - Que el dashboard publicado se vea bien en el teléfono tras la corrida nocturna.
 - Que las fechas de despachos/recepciones salgan correctas los próximos días
   (antes salían con fecha del día siguiente cuando GitHub se retrasaba).
+
+## Proyecto futuro en este dashboard
+
+- **Pestaña de movimientos con buscador**: nueva pestaña separada con buscador
+  de producto y tabla de movimientos mostrando solo los últimos 3 meses.
+  Razón: 2 años de historial mezclado es difícil de analizar; esta vista será
+  para auditoría rápida por producto.
 
 ## Proyecto futuro
 
