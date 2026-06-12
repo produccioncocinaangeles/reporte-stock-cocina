@@ -1,5 +1,5 @@
 {
-  "ultimo_update": "2026-06-11T15:26:48",
+  "ultimo_update": "2026-06-12T07:55:35",
   "movimientos": [
     {
       "fecha": "2026-01-15",
@@ -39406,6 +39406,62 @@
       "cantidad": 14.0,
       "doc_id": 0,
       "inferido": true
+    },
+    {
+      "fecha": "2026-06-11",
+      "sku": "TA",
+      "oficina": "PAT",
+      "tipo": "venta",
+      "cantidad": 1.0,
+      "doc_id": 20219
+    },
+    {
+      "fecha": "2026-06-11",
+      "sku": "TF",
+      "oficina": "PAT",
+      "tipo": "venta",
+      "cantidad": 1.0,
+      "doc_id": 20219
+    },
+    {
+      "fecha": "2026-06-11",
+      "sku": "CF",
+      "oficina": "PAT",
+      "tipo": "venta",
+      "cantidad": 2.0,
+      "doc_id": 20219
+    },
+    {
+      "fecha": "2026-06-11",
+      "sku": "CL",
+      "oficina": "PAT",
+      "tipo": "venta",
+      "cantidad": 1.0,
+      "doc_id": 20219
+    },
+    {
+      "fecha": "2026-06-11",
+      "sku": "PCP",
+      "oficina": "PAT",
+      "tipo": "venta",
+      "cantidad": 1.0,
+      "doc_id": 20219
+    },
+    {
+      "fecha": "2026-06-11",
+      "sku": "CSA",
+      "oficina": "PAT",
+      "tipo": "venta",
+      "cantidad": 1.0,
+      "doc_id": 20220
+    },
+    {
+      "fecha": "2026-06-11",
+      "sku": "RS",
+      "oficina": "PAT",
+      "tipo": "venta",
+      "cantidad": 2.0,
+      "doc_id": 20221
     }
   ],
   "docs_ignorar": [
