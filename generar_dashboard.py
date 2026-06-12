@@ -445,8 +445,10 @@ body{font-family:'Inter',-apple-system,BlinkMacSystemFont,sans-serif;background:
 select,input[type=text],input[type=number]{font-size:13px;font-weight:500;padding:6px 10px;border:1px solid #c2c9b7;border-radius:8px;background:#fff;color:#191c1d;font-family:inherit}
 .search-wrap{position:relative}
 .search-wrap .search-ico{position:absolute;left:14px;top:50%;transform:translateY(-50%);color:#727969;font-size:15px;pointer-events:none}
-.search-wrap input{width:100%;height:44px;padding:0 14px 0 40px;font-size:14px;border:1px solid #c2c9b7;border-radius:10px;background:#fff}
+.search-wrap input{width:100%;height:44px;padding:0 40px 0 40px;font-size:14px;border:1px solid #c2c9b7;border-radius:10px;background:#fff}
 .search-wrap input:focus{outline:none;border-color:#275300}
+.search-wrap .search-clear{position:absolute;right:8px;top:50%;transform:translateY(-50%);width:28px;height:28px;border:none;border-radius:50%;background:#e4e7dd;color:#444;font-size:13px;line-height:1;cursor:pointer;display:none;align-items:center;justify-content:center}
+.search-wrap .search-clear:active{background:#c2c9b7}
 .chips{display:flex;gap:8px;overflow-x:auto;padding-bottom:8px;-ms-overflow-style:none;scrollbar-width:none}
 .chips::-webkit-scrollbar{display:none}
 .chip{display:inline-flex;align-items:center;gap:6px;padding:8px 16px;border-radius:20px;border:none;background:#e7e8e9;color:#42493b;font-size:12px;font-weight:700;font-family:inherit;cursor:pointer;white-space:nowrap;letter-spacing:0.03em;transition:all 0.15s}
@@ -871,14 +873,15 @@ function setChipEstado(btn){
   btn.classList.add('chip-active');
   filtrar();
 }
+function norm(s){return s.toLowerCase().normalize('NFD').replace(/[\\u0300-\\u036f]/g,'');}
 function filtrar(){
   const coc = document.getElementById('f-cocinero').value;
   const est = FILTRO_ESTADO;
-  const bus = document.getElementById('f-buscar').value.toLowerCase();
+  const bus = norm(document.getElementById('f-buscar').value);
   const fil = DATA.filter(function(p){
     if(coc && p.cocinero!==coc) return false;
     if(est && p.estado!==est)   return false;
-    if(bus && !p.nombre.toLowerCase().includes(bus) && !p.sku.toLowerCase().includes(bus)) return false;
+    if(bus && !norm(p.nombre).includes(bus) && !norm(p.sku).includes(bus)) return false;
     return true;
   });
   renderCards(fil);
@@ -1274,7 +1277,18 @@ function imprimirDespacho(){
 
 // ── Init ───────────────────────────────────────────────────
 document.getElementById('f-cocinero').addEventListener('change', filtrar);
-document.getElementById('f-buscar').addEventListener('input', filtrar);
+var fBuscar = document.getElementById('f-buscar');
+var fClear  = document.getElementById('f-buscar-clear');
+fBuscar.addEventListener('input', function(){
+  fClear.style.display = fBuscar.value ? 'flex' : 'none';
+  filtrar();
+});
+fClear.addEventListener('click', function(){
+  fBuscar.value = '';
+  fClear.style.display = 'none';
+  filtrar();
+  fBuscar.focus();
+});
 document.getElementById('r-mes').addEventListener('change', renderRanking);
 renderCards(DATA);
 updateMetricas();
@@ -1338,6 +1352,7 @@ HTML_TEMPLATE = """<!DOCTYPE html>
     <div class="search-wrap">
       <span class="search-ico">🔍</span>
       <input type="text" id="f-buscar" placeholder="Buscar producto o SKU...">
+      <button type="button" id="f-buscar-clear" class="search-clear" aria-label="Borrar búsqueda">✕</button>
     </div>
     <div class="chips" id="chips-estado">
       <button class="chip chip-active" data-estado="" onclick="setChipEstado(this)">Todos</button>
