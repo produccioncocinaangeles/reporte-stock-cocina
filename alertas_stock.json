@@ -1,11 +1,5 @@
 {
   "fecha": "2026-06-15",
   "entradas": [],
-  "salidas": [
-    {
-      "sku": "CAMAC",
-      "oficina": "PAT",
-      "cantidad": 1.0
-    }
-  ]
+  "salidas": []
 }

@@ -1,5 +1,5 @@
 {
-  "ultimo_update": "2026-06-15T07:29:28",
+  "ultimo_update": "2026-06-15T13:34:50",
   "movimientos": [
     {
       "fecha": "2026-01-15",
@@ -40862,6 +40862,62 @@
       "cantidad": 1.0,
       "doc_id": 0,
       "inferido": true
+    },
+    {
+      "fecha": "2026-06-15",
+      "sku": "CLC",
+      "oficina": "VIT",
+      "tipo": "venta",
+      "cantidad": 2.0,
+      "doc_id": 20292
+    },
+    {
+      "fecha": "2026-06-15",
+      "sku": "DLC",
+      "oficina": "VIT",
+      "tipo": "venta",
+      "cantidad": 1.0,
+      "doc_id": 20292
+    },
+    {
+      "fecha": "2026-06-15",
+      "sku": "CJ",
+      "oficina": "VIT",
+      "tipo": "venta",
+      "cantidad": 1.0,
+      "doc_id": 20294
+    },
+    {
+      "fecha": "2026-06-15",
+      "sku": "CLC",
+      "oficina": "VIT",
+      "tipo": "venta",
+      "cantidad": 1.0,
+      "doc_id": 20294
+    },
+    {
+      "fecha": "2026-06-15",
+      "sku": "LCM",
+      "oficina": "PAT",
+      "tipo": "venta",
+      "cantidad": 1.0,
+      "doc_id": 20293
+    },
+    {
+      "fecha": "2026-06-15",
+      "sku": "BADIAC",
+      "oficina": "PAT",
+      "tipo": "venta",
+      "cantidad": 1.0,
+      "doc_id": 20295
+    },
+    {
+      "fecha": "2026-06-15",
+      "sku": "ZEITUN",
+      "oficina": "PAT",
+      "tipo": "venta",
+      "cantidad": 1.0,
+      "doc_id": 20296
     }
   ],
   "docs_ignorar": [
