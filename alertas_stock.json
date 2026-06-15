@@ -1,20 +1,9 @@
 {
-  "fecha": "2026-06-14",
-  "entradas": [
-    {
-      "sku": "PC",
-      "oficina": "VIT",
-      "cantidad": 4.0
-    },
-    {
-      "sku": "SSA",
-      "oficina": "VIT",
-      "cantidad": 5.0
-    }
-  ],
+  "fecha": "2026-06-15",
+  "entradas": [],
   "salidas": [
     {
-      "sku": "PCP",
+      "sku": "CAMAC",
       "oficina": "PAT",
       "cantidad": 1.0
     }
