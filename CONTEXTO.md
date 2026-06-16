@@ -1,8 +1,7 @@
 # Contexto del proyecto — Reporte de Stock La Cocina
 
-> Este archivo resume el estado y las decisiones del proyecto para que cualquier
-> sesión de Claude (en cualquier PC) pueda retomar el trabajo. Mantenerlo
-> actualizado cuando haya cambios importantes.
+> Este archivo es el puente entre sesiones y entre PCs. Mantenerlo actualizado
+> cuando haya cambios importantes. Leerlo siempre al inicio de una sesión nueva.
 
 ## Qué es esto
 
@@ -15,72 +14,106 @@ produce) y **Las Pataguas** (recibe despachos). Los datos vienen de la API de
 - `historial.json` es la única fuente de verdad de todos los movimientos
   (ventas, producción, despachos, consumos).
 
-## Cómo funciona
+---
+
+## Estructura de carpetas (siempre trabajar desde Google Drive)
+
+| Carpeta | Ruta | Propósito |
+|---------|------|-----------|
+| **Producción** | `G:\Mi unidad\repo-temp\` | Repo con git. Push a GitHub = activa Actions = actualiza dashboard publicado. **NUNCA pushear sin aprobación explícita del usuario.** |
+| **Pruebas** | `G:\Mi unidad\reporte-stock-PRUEBAS\` | Copia sin git. Aquí se desarrolla y prueba todo. Cuando está listo, se copia a repo-temp y se sube. |
+
+> OneDrive (`C:\Users\alamo\OneDrive\Escritorio\`) ya no se usa. Todo va en Google Drive.
+
+---
+
+## Cómo funciona el sistema
 
 1. **GitHub Actions** corre `actualizar_diario.py` todos los días a las 19:00
-   hora de Chile (el plan gratuito lo retrasa 1–3 h sin patrón — es normal).
+   hora de Chile (el plan gratuito lo retrasa 1–3 h — es normal).
 2. El script descarga ventas/guías nuevas de Bsale, infiere producción y
    consumos comparando contra el stock real, y actualiza `historial.json`.
-3. `generar_dashboard.py` genera `dashboard.html` (CSS/JS/HTML embebidos como
-   strings de Python) y se publica en gh-pages.
+3. `generar_dashboard.py` genera `dashboard.html` (CSS + JS + HTML embebidos
+   como strings de Python) y se publica en gh-pages.
+
+---
 
 ## Decisiones importantes (no re-discutir sin motivo)
 
-- **Hora de Chile siempre** (`zoneinfo America/Santiago`) en ambos scripts:
-  GitHub corre en UTC y las corridas retrasadas marcaban fechas del día
-  siguiente. Corregido 11-jun-2026.
-- **Reintentos de API**: `bsale_stock()` y `get_all()` intentan 3 veces con
-  30 s de espera; si fallan los 3, abortan SIN tocar datos.
-- **CAMAC y BAR son productos de ocasión** (Navidad / Día de la Madre):
-  no evaluarlos por velocidad de venta ni alertar por baja rotación.
-- **Zapallar (3ª sucursal) cerró a mediados de enero 2026**: sus despachos
-  históricos no son anomalías.
-- **Guía de despacho**: verde `#27AE60` = despacho completo, naranja `#E67E22`
-  = parcial, gris = hay que producir (Vitacura sin stock disponible),
-  OK = Pataguas ya cubierta. Si Vitacura está sin stock, todo cae en gris:
-  es el comportamiento correcto.
-- **Diseño móvil** (jun-2026, basado en proyecto Stitch 5695411200869491903):
-  paleta verde `#275300`, azul `#1960a6`, rojo `#ba1a1a`, bordes `#c2c9b7`;
-  chips de filtro, tarjetas con stock en 2 columnas, barra de cobertura con
-  gradiente y aguja, navegación inferior en móvil.
-- **Buscador de productos ignora tildes y eñes** (12-jun-2026): la función
-  `norm()` normaliza el texto antes de comparar, así "salmon" encuentra SALMÓN
-  y "lasana" encuentra LASAÑA. Aplica al nombre y al SKU. Además se agregó un
-  botón ✕ dentro del buscador que aparece al escribir y borra el campo con un
-  toque.
-- **Tabla de movimientos — filtro por tienda** (11-jun-2026, commit b74a70b):
-  botones Todas / Vitacura / Pataguas encima de la tabla. Stock coloreado en
-  verde `#275300` para Vitacura y azul `#1960a6` para Pataguas. Filas con
-  stock = 0 destacadas con fondo rojo suave para ver quiebres de un vistazo.
-  Razón: la columna Stock mezclaba dos secuencias independientes y confundía
-  al auditar los días sin stock que reporta el análisis.
+**Datos:**
+- `historial.json` — lista de movimientos con `{fecha, sku, oficina, tipo, cantidad, doc_id}`. Tipos: `venta`, `produccion`, `despacho`, `consumo`.
+- Ventas reales = `tipo == 'venta'` (equivale a `Movimiento de salida == 'BOLETA'` en la API).
+- **Zapallar (3ª sucursal) cerró a mediados de enero 2026**: sus despachos históricos no son anomalías.
+- **CAMAC y BAR** son productos de ocasión (Navidad / Día de la Madre): no evaluar por velocidad de venta.
 
-## Forma de trabajo del usuario
+**Técnico — generar_dashboard.py:**
+- El HTML se genera con placeholders (`CSS_PLACEHOLDER`, `DATA_PLACEHOLDER`, `ANA_DATA_PLACEHOLDER`, `JS_PLACEHOLDER`, `FECHA_HOY_PLACEHOLDER`).
+- `ANA_DATA_PLACEHOLDER` debe reemplazarse ANTES que `DATA_PLACEHOLDER` (es substring del otro).
+- Dentro de strings `"""..."""` de Python, `\'` se procesa como `'` (no como `\'`). Para onclick en JS usar atributos `data-*` en vez de parámetros entre comillas simples.
+- **Hora de Chile siempre** (`zoneinfo America/Santiago`): GitHub corre en UTC y las corridas retrasadas marcaban el día siguiente. Corregido 11-jun-2026.
+- **Reintentos de API**: 3 intentos con 30 s de espera; si fallan los 3, abortan sin tocar datos.
+- **Buscador de productos ignora tildes y eñes** (12-jun-2026): la función `norm()` normaliza texto antes de comparar, así "salmon" encuentra SALMÓN y "lasana" encuentra LASAÑA. Aplica al nombre y al SKU. Botón ✕ dentro del buscador borra el campo con un toque.
+- **Tabla de movimientos — filtro por tienda** (11-jun-2026, commit b74a70b): botones Todas / Vitacura / Pataguas. Stock coloreado verde `#275300` para Vitacura, azul `#1960a6` para Pataguas. Filas con stock = 0 en fondo rojo suave.
 
-- Comunicación **siempre en español**. No es programador: explicar el porqué
-  de las cosas en lenguaje simple antes de ejecutar.
-- **Cambios riesgosos se prueban primero en un clon local** (carpeta
-  `reporte-stock-PRUEBAS`, copia sin git) y **NO se sube nada a GitHub sin
-  su aprobación explícita** ("listo súbelo" / "ok subamos").
-- Validar cálculos mostrando el impacto en todos los productos antes de
-  darlos por buenos.
-- Flujo entre PCs: GitHub es la fuente de verdad; `git pull` antes de
-  trabajar, push (con aprobación) al terminar.
+**Diseño (jun-2026, basado en proyecto Stitch 5695411200869491903):**
+- Paleta: verde `#275300`, azul `#1960a6`, rojo `#ba1a1a`, bordes `#c2c9b7`.
+- Navegación: tabs superiores + barra inferior móvil.
+- Vistas: Resumen, Productos, Guías, Ranking, **Análisis**.
 
-## Estado al 12-jun-2026
+**Guía de despacho:**
+- Verde `#27AE60` = despacho completo, naranja `#E67E22` = parcial, gris = hay que producir, OK = Pataguas ya cubierta. Si Vitacura está sin stock, todo cae en gris: es el comportamiento correcto.
 
-Subido a producción: buscador de productos ignora tildes/eñes + botón ✕ para
-borrar rápido (pestaña Productos).
+---
 
-Commits anteriores: filtro por tienda en tabla de movimientos (b74a70b);
-rediseño móvil + reintentos de API + fecha en hora de Chile (2440c39).
+## Tab Análisis (desarrollado jun-2026, en pruebas — aún no está en producción)
 
-## Proyecto futuro en este dashboard
+Pestaña completa de análisis de ventas mensuales. Estado actual en `reporte-stock-PRUEBAS`:
 
-- **Pestaña de movimientos con buscador**: nueva pestaña separada con buscador
-  de producto y tabla de movimientos mostrando solo los últimos 3 meses.
-  Razón: 2 años de historial mezclado es difícil de analizar; esta vista será
-  para auditoría rápida por producto.
+**Qué hace:**
+- Chips de selección de mes (últimos 6 meses).
+- **Alerta temprana**: compara el ritmo actual (primeros N días) contra los mismos N días de meses anteriores comparables (excluye meses con festividades en ese período). Si va -30% o más → banner rojo. Si -10% a -30% → amarillo. Si bien → verde.
+- Diagnóstico: unidades al día, proyección al cierre (ponderada por patrón de día de semana), contexto del mes (vacaciones, feriados, festividades).
+- Métricas: unidades vendidas, días con quiebre, días especiales, semanas activas.
+- Comparativa de meses (barras).
+- Distribución por día de la semana (barras, Vie/Sáb resaltados).
+- Calendario visual con tooltip al hover: feriados (azul), festividades (verde), vacaciones (amarillo).
+- Tabla de productos ordenable.
+
+**Datos clave en ANA_DATA:**
+- `por_mes[mes].por_dia` — lista de 7 valores (% por día de semana Lun-Dom).
+- `por_mes[mes].por_dia_num` — dict `{dia_del_mes: unidades}` (1-31). Usar este para comparación de ritmo (NO `por_dia`).
+- `por_mes[mes].vacaciones` — lista de `{dia, nombre}` (ya NO es lista de enteros).
+- Calendarios MINEDUC 2026: verano 1-ene al 3-mar, invierno 22-jun al 3-jul. No hay receso de otoño en 2026 en régimen semestral.
+
+**Lo que falta definir (pendiente de conversación):**
+- Qué gráficos mantener, cuáles quitar o agregar.
+- Análisis por día del mes (patrón de cobro fin de mes + fin de semana) — idea explorada pero se necesitan más meses para confirmar patrón.
+
+---
+
+## Forma de trabajo
+
+- Comunicación **siempre en español**.
+- El usuario no es programador: explicar el porqué en lenguaje simple antes de ejecutar.
+- **Nunca pushear a GitHub sin aprobación explícita** ("listo súbelo" / "ok subamos"). Cada push activa Actions que envía emails.
+- Cambios riesgosos → probar en `reporte-stock-PRUEBAS` primero.
+- Validar cálculos mostrando impacto en todos los productos antes de dar por buenos.
+- Al iniciar sesión en PC 2: `git pull` en `repo-temp` para tener lo último de producción.
+
+---
+
+## Estado al 16-jun-2026
+
+**En producción (repo-temp / gh-pages):**
+- Diseño móvil + reintentos de API + hora de Chile (commit 2440c39, 11-jun).
+- Filtro por tienda en tabla de movimientos (commit b74a70b, 11-jun).
+- Buscador ignora tildes/eñes + botón ✕ (12-jun).
+
+**En pruebas (reporte-stock-PRUEBAS):** tab Análisis completo con alerta temprana, calendario con tooltips, contexto del mes, comparativa de meses. Pendiente aprobación para subir a producción.
+
+**Migración:** carpeta de trabajo movida de OneDrive a Google Drive (`G:\Mi unidad\`) para acceso desde ambos PCs.
+
+---
 
 ## Proyecto futuro
 
