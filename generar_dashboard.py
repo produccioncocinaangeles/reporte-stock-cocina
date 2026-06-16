@@ -411,14 +411,231 @@ def procesar():
     resultados.sort(key=lambda x: (orden[x['estado']], x['dias_prod'] if x['dias_prod'] is not None else 9999))
     return resultados
 
+# ─── ANÁLISIS DE VENTAS ───────────────────────────────────────
+FERIADOS_CHILE = {
+    '2024-01-01':'Año Nuevo','2024-03-29':'Viernes Santo','2024-03-30':'Sábado Santo',
+    '2024-05-01':'Día del Trabajo','2024-05-21':'Glorias Navales',
+    '2024-06-20':'Pueblo Mapuche','2024-06-29':'San Pedro y San Pablo',
+    '2024-07-16':'Virgen del Carmen','2024-08-15':'Asunción de la Virgen',
+    '2024-09-18':'Independencia','2024-09-19':'Glorias del Ejército',
+    '2024-10-12':'Encuentro dos Mundos','2024-10-31':'Iglesias Evangélicas',
+    '2024-11-01':'Todos los Santos','2024-12-08':'Inmaculada Concepción',
+    '2024-12-25':'Navidad',
+    '2025-01-01':'Año Nuevo','2025-04-18':'Viernes Santo','2025-04-19':'Sábado Santo',
+    '2025-05-01':'Día del Trabajo','2025-05-21':'Glorias Navales',
+    '2025-06-20':'Pueblo Mapuche','2025-06-29':'San Pedro y San Pablo',
+    '2025-07-16':'Virgen del Carmen','2025-08-15':'Asunción de la Virgen',
+    '2025-09-18':'Independencia','2025-09-19':'Glorias del Ejército',
+    '2025-10-12':'Encuentro dos Mundos','2025-10-31':'Iglesias Evangélicas',
+    '2025-11-01':'Todos los Santos','2025-11-17':'Elecciones Presidenciales',
+    '2025-12-08':'Inmaculada Concepción','2025-12-25':'Navidad',
+    '2026-01-01':'Año Nuevo','2026-04-03':'Viernes Santo','2026-04-04':'Sábado Santo',
+    '2026-05-01':'Día del Trabajo','2026-05-21':'Glorias Navales',
+    '2026-06-20':'Pueblo Mapuche','2026-06-29':'San Pedro y San Pablo',
+    '2026-07-16':'Virgen del Carmen','2026-08-15':'Asunción de la Virgen',
+    '2026-09-18':'Independencia','2026-09-19':'Glorias del Ejército',
+    '2026-10-12':'Encuentro dos Mundos','2026-10-31':'Iglesias Evangélicas',
+    '2026-11-01':'Todos los Santos','2026-12-08':'Inmaculada Concepción',
+    '2026-12-25':'Navidad',
+}
+VACACIONES_CHILE = [
+    ('2024-01-01','2024-03-03','Vacaciones de verano'),
+    ('2024-04-29','2024-05-05','Vacaciones de otoño'),
+    ('2024-07-08','2024-07-21','Vacaciones de invierno'),
+    ('2025-01-01','2025-03-02','Vacaciones de verano'),
+    ('2025-04-25','2025-05-04','Vacaciones de otoño'),
+    ('2025-07-07','2025-07-20','Vacaciones de invierno'),
+    ('2026-01-01','2026-03-03','Vacaciones de verano'),
+    ('2026-06-22','2026-07-03','Vacaciones de invierno'),
+]
+# Fechas comerciales relevantes (no feriados oficiales)
+FESTIVIDADES_CHILE = {
+    '2024-02-14': 'San Valentín',
+    '2024-05-12': 'Día de las Madres',
+    '2024-06-16': 'Día del Padre',
+    '2024-12-24': 'Nochebuena',
+    '2025-02-14': 'San Valentín',
+    '2025-05-11': 'Día de las Madres',
+    '2025-06-15': 'Día del Padre',
+    '2025-12-24': 'Nochebuena',
+    '2026-02-14': 'San Valentín',
+    '2026-05-10': 'Día de las Madres',
+    '2026-06-21': 'Día del Padre',
+    '2026-12-24': 'Nochebuena',
+}
+
+def calcular_analisis():
+    if not os.path.exists(ARCHIVO_JSON):
+        return {'meses': [], 'por_mes': {}, 'promedio_mensual': 0,
+                'por_dia_historico': [0.0]*7, 'totales_mensuales': {}}
+    try:
+        vit = leer_json('VIT')
+        pat = leer_json('PAT')
+    except Exception as e:
+        print(f'  calcular_analisis error: {e}')
+        return {'meses': [], 'por_mes': {}, 'promedio_mensual': 0,
+                'por_dia_historico': [0.0]*7, 'totales_mensuales': {}}
+
+    def es_venta(df):
+        return (df['Salida'] > 0) & (df['Movimiento de salida'] == 'BOLETA')
+
+    ventas = pd.concat([
+        vit[es_venta(vit)][['Fecha', 'SKU', 'Salida']],
+        pat[es_venta(pat)][['Fecha', 'SKU', 'Salida']],
+    ])
+    ventas = ventas[ventas['SKU'].isin(NOMBRES.keys())].copy()
+
+    if len(ventas) == 0:
+        return {'meses': [], 'por_mes': {}, 'promedio_mensual': 0,
+                'por_dia_historico': [0.0]*7, 'totales_mensuales': {}}
+
+    ventas['mes']     = ventas['Fecha'].dt.to_period('M').astype(str)
+    ventas['dia_sem'] = ventas['Fecha'].dt.dayofweek          # 0=Lun, 6=Dom
+    ventas['sem_mes'] = ((ventas['Fecha'].dt.day - 1) // 7).clip(upper=4)
+    ventas['dia_num'] = ventas['Fecha'].dt.day                # 1-31
+
+    # Stock diario VIT para detectar quiebres
+    stock_vit = vit[['Fecha', 'SKU', 'Stock']].copy()
+    stock_vit['mes'] = stock_vit['Fecha'].dt.to_period('M').astype(str)
+
+    # Totales mensuales por SKU (para sparklines)
+    monthly_sku = ventas.groupby(['mes', 'SKU'])['Salida'].sum().to_dict()
+
+    todos_meses = sorted(ventas['mes'].unique())
+
+    # Incluir mes actual solo si ya transcurrió ≥40% del mes
+    mes_actual_str  = FECHA_HOY.to_period('M').strftime('%Y-%m')
+    dias_mes_actual = pd.Period(mes_actual_str, 'M').days_in_month
+    if FECHA_HOY.day < dias_mes_actual * 0.4:
+        todos_meses = [m for m in todos_meses if m != mes_actual_str]
+
+    meses_disp = todos_meses[-12:]
+
+    totales_mes_dict = {m: int(ventas[ventas['mes'] == m]['Salida'].sum()) for m in todos_meses}
+    vals = list(totales_mes_dict.values())
+    promedio_mensual = int(sum(vals) / len(vals)) if vals else 0
+
+    # Patrón histórico por día de semana
+    por_dia_h = ventas.groupby('dia_sem')['Salida'].sum().to_dict()
+    total_h   = float(sum(por_dia_h.values()))
+    por_dia_historico = [round(float(por_dia_h.get(i, 0)) / total_h * 100, 1) if total_h > 0 else 0.0 for i in range(7)]
+
+    vac_ts = [(pd.Timestamp(vi), pd.Timestamp(vf), vn) for vi, vf, vn in VACACIONES_CHILE]
+
+    por_mes_res = {}
+    for mes in meses_disp:
+        df_m     = ventas[ventas['mes'] == mes]
+        total_m  = int(df_m['Salida'].sum())
+        if total_m == 0:
+            continue
+
+        pd_dict  = df_m.groupby('dia_sem')['Salida'].sum().to_dict()
+        por_dia  = [round(float(pd_dict.get(i, 0)) / total_m * 100, 1) for i in range(7)]
+
+        ps_dict  = df_m.groupby('sem_mes')['Salida'].sum().to_dict()
+        por_semana = [int(ps_dict.get(i, 0)) for i in range(5)]
+
+        dn_dict  = df_m.groupby('dia_num')['Salida'].sum().to_dict()
+        por_dia_num = {int(k): int(v) for k, v in dn_dict.items()}
+
+        periodo     = pd.Period(mes, 'M')
+        dias_n      = periodo.days_in_month
+        inicio_mes  = pd.Timestamp(mes + '-01')
+        feriados_mes, vacaciones_mes, festividades_mes = [], [], []
+        for d_n in range(1, dias_n + 1):
+            fecha_d   = inicio_mes + pd.Timedelta(days=d_n - 1)
+            fecha_str = fecha_d.strftime('%Y-%m-%d')
+            if fecha_str in FERIADOS_CHILE:
+                feriados_mes.append({'dia': d_n, 'nombre': FERIADOS_CHILE[fecha_str]})
+            else:
+                for vi_t, vf_t, vn in vac_ts:
+                    if vi_t <= fecha_d <= vf_t:
+                        vacaciones_mes.append({'dia': d_n, 'nombre': vn})
+                        break
+            if fecha_str in FESTIVIDADES_CHILE:
+                festividades_mes.append({'dia': d_n, 'nombre': FESTIVIDADES_CHILE[fecha_str]})
+
+        # Quiebres: días con stock mínimo = 0 en VIT para este mes
+        sv_mes   = stock_vit[stock_vit['mes'] == mes]
+        quiebres = {}
+        if len(sv_mes) > 0:
+            for sku_q, grp in sv_mes.groupby('SKU'):
+                dias_q = int((grp.groupby('Fecha')['Stock'].min() == 0).sum())
+                if dias_q > 0:
+                    quiebres[sku_q] = dias_q
+
+        por_sku = df_m.groupby('SKU')['Salida'].sum().sort_values(ascending=False)
+        productos = []
+        idx_m = todos_meses.index(mes) if mes in todos_meses else len(todos_meses) - 1
+        spark_meses_list = todos_meses[max(0, idx_m - 5):idx_m + 1]
+
+        for sku_p, tot_sku in por_sku.items():
+            if sku_p not in NOMBRES:
+                continue
+            spark_vals = [int(monthly_sku.get((sm, sku_p), 0)) for sm in spark_meses_list]
+            mx = max(spark_vals) if spark_vals else 1
+            spark_norm = [round(v / mx * 10) if mx > 0 else 0 for v in spark_vals]
+            tend = 'estable'
+            if len(spark_vals) >= 2 and spark_vals[-2] > 0:
+                cambio = (spark_vals[-1] - spark_vals[-2]) / spark_vals[-2]
+                if cambio > 0.15:   tend = 'sube'
+                elif cambio < -0.15: tend = 'baja'
+            productos.append({
+                'sku': sku_p, 'nombre': NOMBRES[sku_p],
+                'total': int(tot_sku),
+                'pct': round(float(tot_sku) / total_m * 100, 1),
+                'dias_quiebre': quiebres.get(sku_p, 0),
+                'spark': spark_norm, 'tendencia': tend,
+            })
+
+        diff_pct = round((total_m - promedio_mensual) / promedio_mensual * 100, 1) if promedio_mensual > 0 else 0.0
+        incompleto = (mes == mes_actual_str)
+        dias_datos = int(FECHA_HOY.day) if incompleto else int(dias_n)
+        if incompleto and dias_datos > 0 and total_m > 0 and sum(por_dia_historico) > 0:
+            # Proyección ponderada: usa el patrón histórico de cada día de semana
+            # para saber qué fracción del mes ya representan los días transcurridos
+            w_elapsed = sum(
+                por_dia_historico[(inicio_mes + pd.Timedelta(days=d - 1)).dayofweek]
+                for d in range(1, dias_datos + 1)
+            )
+            w_total = sum(
+                por_dia_historico[(inicio_mes + pd.Timedelta(days=d - 1)).dayofweek]
+                for d in range(1, dias_n + 1)
+            )
+            proyeccion = int(round(total_m * w_total / w_elapsed)) if w_elapsed > 0 else int(round(total_m / dias_datos * dias_n))
+            diff_proy  = round((proyeccion - promedio_mensual) / promedio_mensual * 100, 1) if promedio_mensual > 0 else 0.0
+        elif incompleto and dias_datos > 0:
+            proyeccion = int(round(total_m / dias_datos * dias_n))
+            diff_proy  = round((proyeccion - promedio_mensual) / promedio_mensual * 100, 1) if promedio_mensual > 0 else 0.0
+        else:
+            proyeccion = None
+            diff_proy  = None
+        por_mes_res[mes] = {
+            'total': total_m, 'diff_pct': diff_pct,
+            'incompleto': incompleto, 'dias_datos': dias_datos,
+            'proyeccion': proyeccion, 'diff_proy': diff_proy,
+            'por_dia': por_dia, 'por_semana': por_semana, 'por_dia_num': por_dia_num,
+            'feriados': feriados_mes, 'vacaciones': vacaciones_mes,
+            'festividades': festividades_mes,
+            'productos': productos,
+        }
+
+    return {
+        'meses': meses_disp,
+        'por_mes': por_mes_res,
+        'promedio_mensual': promedio_mensual,
+        'por_dia_historico': por_dia_historico,
+        'totales_mensuales': {m: totales_mes_dict.get(m, 0) for m in meses_disp},
+    }
+
 # ─── HTML (sin f-string para evitar conflictos con JS) ───────
 CSS = """
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
 *{box-sizing:border-box;margin:0;padding:0}
-body{font-family:'Inter',-apple-system,BlinkMacSystemFont,sans-serif;background:#f8f9fa;color:#191c1d;font-size:14px;max-width:960px;margin:0 auto}
+body{font-family:'Inter',-apple-system,BlinkMacSystemFont,sans-serif;background:#EEF2F7;color:#191c1d;font-size:14px;max-width:960px;margin:0 auto}
 
 /* ── Header ─────────────────────────────────────────────── */
-.header{background:#fff;border-bottom:1px solid #c2c9b7;padding:12px 20px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:100;box-shadow:0 1px 4px rgba(0,0,0,0.04)}
+.header{background:#fff;border-bottom:1px solid #dce2ec;padding:12px 20px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:100;box-shadow:0 2px 10px rgba(0,0,0,0.1)}
 .logo{display:flex;align-items:center;gap:10px}
 .logo-icon{width:30px;height:30px;background:#275300;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0;color:#fff}
 .logo-nombre{font-size:15px;font-weight:700;letter-spacing:-0.03em;color:#275300}
@@ -432,11 +649,15 @@ body{font-family:'Inter',-apple-system,BlinkMacSystemFont,sans-serif;background:
 .fecha{font-size:11px;color:#727969;font-weight:400;white-space:nowrap}
 
 /* ── Métricas ────────────────────────────────────────────── */
-.metricas{display:grid;grid-template-columns:repeat(4,1fr);background:#fff;border-bottom:1px solid #c2c9b7}
-.metrica{padding:14px 18px;border-right:1px solid #c2c9b7}.metrica:last-child{border-right:none}
-.metrica-label{font-size:10px;font-weight:700;color:#727969;text-transform:uppercase;letter-spacing:0.07em;margin-bottom:5px}
-.metrica-valor{font-size:30px;font-weight:700;line-height:1;letter-spacing:-0.02em}
-.metrica-sub{font-size:11px;color:#a0a8a0;margin-top:4px}
+.metricas{display:grid;grid-template-columns:1fr 1fr;gap:10px;padding:16px;background:#EEF2F7}
+.metrica{padding:16px 18px;border-radius:12px}
+.metrica-label{font-size:10px;font-weight:700;color:rgba(255,255,255,0.8);text-transform:uppercase;letter-spacing:0.07em;margin-bottom:6px}
+.metrica-valor{font-size:36px;font-weight:700;line-height:1;letter-spacing:-0.02em;color:#fff}
+.metrica-sub{font-size:11px;color:rgba(255,255,255,0.7);margin-top:4px}
+.metrica.metrica-sin-stock{background:#A32D2D}
+.metrica.metrica-critico{background:#D95A00}
+.metrica.metrica-bajo{background:#D4A000}
+.metrica.metrica-ok{background:#275300}
 .val-rojo{color:#ba1a1a}.val-amarillo{color:#E67E22}.val-verde{color:#275300}
 
 /* ── Toolbar: buscador + chips ───────────────────────────── */
@@ -445,11 +666,8 @@ body{font-family:'Inter',-apple-system,BlinkMacSystemFont,sans-serif;background:
 select,input[type=text],input[type=number]{font-size:13px;font-weight:500;padding:6px 10px;border:1px solid #c2c9b7;border-radius:8px;background:#fff;color:#191c1d;font-family:inherit}
 .search-wrap{position:relative}
 .search-wrap .search-ico{position:absolute;left:14px;top:50%;transform:translateY(-50%);color:#727969;font-size:15px;pointer-events:none}
-.search-wrap input{width:100%;height:44px;padding:0 40px 0 40px;font-size:14px;border:1px solid #c2c9b7;border-radius:10px;background:#fff}
-@media (min-width:641px){.search-wrap input{height:52px;font-size:16px;border-radius:12px}.search-wrap .search-ico{font-size:18px}.search-wrap .search-clear{width:32px;height:32px;font-size:15px}}
+.search-wrap input{width:100%;height:44px;padding:0 14px 0 40px;font-size:14px;border:1px solid #c2c9b7;border-radius:10px;background:#fff}
 .search-wrap input:focus{outline:none;border-color:#275300}
-.search-wrap .search-clear{position:absolute;right:8px;top:50%;transform:translateY(-50%);width:28px;height:28px;border:none;border-radius:50%;background:#e4e7dd;color:#444;font-size:13px;line-height:1;cursor:pointer;display:none;align-items:center;justify-content:center}
-.search-wrap .search-clear:active{background:#c2c9b7}
 .chips{display:flex;gap:8px;overflow-x:auto;padding-bottom:8px;-ms-overflow-style:none;scrollbar-width:none}
 .chips::-webkit-scrollbar{display:none}
 .chip{display:inline-flex;align-items:center;gap:6px;padding:8px 16px;border-radius:20px;border:none;background:#e7e8e9;color:#42493b;font-size:12px;font-weight:700;font-family:inherit;cursor:pointer;white-space:nowrap;letter-spacing:0.03em;transition:all 0.15s}
@@ -465,22 +683,26 @@ select,input[type=text],input[type=number]{font-size:13px;font-weight:500;paddin
 .container{padding:12px 16px}
 
 /* ── Cards ───────────────────────────────────────────────── */
-.card{background:#fff;border:1px solid #c2c9b7;border-radius:8px;margin-bottom:8px;overflow:hidden;transition:box-shadow 0.15s}
-.card:hover{box-shadow:0 4px 16px rgba(0,0,0,0.08)}
-.card.sin_stock{border-left:6px solid #ba1a1a}
-.card.critico{border-left:6px solid #ba1a1a}
-.card.bajo{border-left:6px solid #E67E22}
-.card.ok{border-left:6px solid #275300}
+.card{background:#fff;border:1px solid #e0e4ec;border-radius:12px;margin-bottom:10px;overflow:hidden;transition:box-shadow 0.15s;box-shadow:0 2px 8px rgba(0,0,0,0.06)}
+.card:hover{box-shadow:0 6px 20px rgba(0,0,0,0.11)}
+.card.sin_stock{border-top:4px solid #A32D2D}
+.card.critico{border-top:4px solid #D95A00}
+.card.bajo{border-top:4px solid #D4A000}
+.card.ok{border-top:4px solid #275300}
 .card-top{padding:12px 14px;display:flex;align-items:center;justify-content:space-between;cursor:pointer;user-select:none}
 .card-info{flex:1;min-width:0}
 .card-nombre{font-size:15px;font-weight:700;letter-spacing:-0.01em;line-height:1.3}
 .card-meta{font-size:11px;color:#727969;margin-top:3px;font-weight:400}
 .card-badges{display:flex;align-items:center;gap:8px;flex-shrink:0;margin-left:10px}
-.badge{font-size:11px;font-weight:700;padding:3px 10px;border-radius:20px}
-.badge-estado{font-size:10px;text-transform:uppercase;letter-spacing:0.05em;border-radius:4px;padding:3px 8px}
-.badge-rojo{background:#ffdad6;color:#ba1a1a}
-.badge-amarillo{background:#FAEEDA;color:#854F0B}
-.badge-verde{background:#b8f389;color:#275300}
+.badge{font-size:11px;font-weight:700;padding:4px 12px;border-radius:20px}
+.badge-estado{font-size:10px;text-transform:uppercase;letter-spacing:0.05em;border-radius:20px;padding:4px 12px}
+.badge-rojo{background:#FCEBEB;color:#791F1F}
+.badge-amarillo{background:#FFFBEB;color:#7A5800}
+.badge-verde{background:#EAF3DE;color:#173404}
+.badge-sin-stock{background:#FCEBEB;color:#791F1F}
+.badge-critico{background:#FFF0E6;color:#A83D00}
+.badge-bajo{background:#FFFBEB;color:#7A5800}
+.badge-ok{background:#EAF3DE;color:#173404}
 .badge-dist{background:#FEF3C7;color:#92400E;font-size:10px}
 .chevron{font-size:12px;color:#c2c9b7;margin-left:6px;transition:transform 0.2s}
 .chevron.open{transform:rotate(180deg)}
@@ -505,12 +727,12 @@ select,input[type=text],input[type=number]{font-size:13px;font-weight:500;paddin
 .movs-table tr:hover td{background:#f8f9fa}
 .tipo-badge{display:inline-block;font-size:10px;font-weight:700;padding:2px 8px;border-radius:4px;text-transform:uppercase;letter-spacing:0.03em}
 .tipo-prod{background:#b8f389;color:#275300}
-.tipo-venta{background:#ffdad6;color:#ba1a1a}
+.tipo-venta{background:#FCEBEB;color:#791F1F}
 .tipo-despacho{background:#d4e3ff;color:#1960a6}
 .tipo-consumo{background:#FEF3C7;color:#92400E}
 .tipo-desp-rec{background:#F0FDF4;color:#275300}
-.tienda-vit{font-size:10px;padding:1px 6px;border-radius:3px;background:#b8f389;color:#275300;font-weight:600}
-.tienda-pat{font-size:10px;padding:1px 6px;border-radius:3px;background:#d4e3ff;color:#1960a6;font-weight:600}
+.tienda-vit{font-size:10px;padding:1px 6px;border-radius:3px;background:#EAF3DE;color:#3B6D11;font-weight:600}
+.tienda-pat{font-size:10px;padding:1px 6px;border-radius:3px;background:#E6F1FB;color:#185FA5;font-weight:600}
 .cant-pos{color:#275300;font-weight:700}
 .cant-neg{color:#ba1a1a;font-weight:700}
 
@@ -520,7 +742,7 @@ select,input[type=text],input[type=number]{font-size:13px;font-weight:500;paddin
 .insight-warn{background:#FFFBEB;border:1px solid #FDE68A;border-radius:8px;padding:12px 14px;font-size:12px;color:#92400E;line-height:1.8;margin-bottom:10px}
 .insight-ok{background:#F0FDF4;border:1px solid #b8f389;border-radius:8px;padding:12px 14px;font-size:12px;color:#275300;line-height:1.8;margin-bottom:10px}
 .insight-peligro{background:#fff5f5;border:1px solid #ffdad6;border-radius:8px;padding:12px 14px;font-size:12px;color:#ba1a1a;line-height:1.8;margin-bottom:10px}
-.periodo-chip{display:inline-block;font-size:10px;padding:2px 8px;border-radius:4px;background:#ffdad6;color:#ba1a1a;margin:2px}
+.periodo-chip{display:inline-block;font-size:10px;padding:2px 8px;border-radius:4px;background:#FCEBEB;color:#791F1F;margin:2px}
 .lote-card{background:#fff;border:1px solid #c2c9b7;border-radius:6px;padding:10px 12px;font-size:11px;margin-bottom:6px}
 .mes-table{width:100%;border-collapse:collapse;font-size:12px;margin-top:8px}
 .mes-table th{text-align:left;color:#727969;padding:5px 10px;border-bottom:1px solid #c2c9b7;font-size:10px;text-transform:uppercase;font-weight:700}
@@ -543,7 +765,7 @@ select,input[type=text],input[type=number]{font-size:13px;font-weight:500;paddin
 .guia-table{width:100%;border-collapse:collapse;font-size:12px}
 .guia-table th{text-align:left;color:#727969;padding:8px 10px;border-bottom:2px solid #c2c9b7;font-size:10px;text-transform:uppercase;font-weight:700;letter-spacing:0.05em}
 .guia-table td{padding:8px 10px;border-bottom:1px solid #edeeef}
-.guia-table tr.urgente{background:#fff5f5}
+.guia-table tr.urgente{background:#FCEBEB}
 
 /* ── Resumen ─────────────────────────────────────────────── */
 .res-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;padding:16px}
@@ -571,12 +793,9 @@ select,input[type=text],input[type=number]{font-size:13px;font-weight:500;paddin
 .movs-scroll thead th{position:sticky;top:0;background:#fff;z-index:1}
 .btn-vermas{display:block;width:100%;margin-top:8px;padding:9px;font-size:12px;font-weight:700;font-family:inherit;color:#275300;background:#F0FDF4;border:1px solid #b8f389;border-radius:8px;cursor:pointer}
 .btn-vermas:hover{background:#dcfce7}
-.movs-filtros{display:flex;gap:6px;margin-bottom:8px}
-.movs-filter-btn{font-size:11px;font-weight:700;padding:4px 12px;border-radius:20px;border:1px solid #c2c9b7;background:#f8f9fa;color:#555;cursor:pointer;font-family:inherit}
-.movs-filter-btn.activo{background:#275300;color:#fff;border-color:#275300}
 
 /* ── Bottom nav ──────────────────────────────────────────── */
-.bottom-nav{display:none;position:fixed;bottom:0;left:0;right:0;height:64px;background:#fff;border-top:1px solid #c2c9b7;z-index:100;align-items:center;justify-content:space-around;box-shadow:0 -2px 8px rgba(0,0,0,0.06)}
+.bottom-nav{display:none;position:fixed;bottom:0;left:0;right:0;height:64px;background:#fff;border-top:1px solid #dce2ec;z-index:100;align-items:center;justify-content:space-around;box-shadow:0 -4px 16px rgba(0,0,0,0.12)}
 .bnav-btn{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;padding:6px 12px;border:none;background:none;cursor:pointer;font-family:inherit;font-size:9px;font-weight:700;letter-spacing:0.05em;color:#727969;border-radius:12px;flex:1;text-transform:uppercase;transition:background-color 0.15s,color 0.15s}
 .bnav-btn .bnav-icon{font-size:20px;line-height:1;display:block}
 .bnav-btn.nav-active{background:#b8f389;color:#275300}
@@ -592,11 +811,78 @@ select,input[type=text],input[type=number]{font-size:13px;font-weight:500;paddin
   .tab-body{padding:10px 8px}
   .header{flex-wrap:wrap;gap:8px}
   .res-grid{grid-template-columns:1fr}
-  /* KPIs deslizables estilo Stitch */
-  .metricas{display:flex;overflow-x:auto;gap:10px;padding:12px 16px;background:#f8f9fa;border-bottom:none;-ms-overflow-style:none;scrollbar-width:none}
-  .metricas::-webkit-scrollbar{display:none}
-  .metrica{min-width:118px;background:#fff;border:1px solid #c2c9b7;border-radius:10px;padding:12px 14px;flex-shrink:0}
-  .metrica-valor{font-size:26px}
+  /* KPIs 2×2 en móvil */
+  .metricas{display:grid;grid-template-columns:1fr 1fr;gap:8px;padding:12px;background:#EEF2F7}
+  .metrica{border-radius:10px;padding:12px 14px}
+  .metrica-valor{font-size:28px}
+}
+
+/* ── Pestaña Análisis ─────────────────────────────────────── */
+.ana-chips{display:flex;flex-wrap:wrap;gap:8px;padding:12px 16px 4px;background:#f8f9fa;border-bottom:1px solid #c2c9b7}
+.ana-metricas{display:grid;grid-template-columns:repeat(4,1fr);background:#fff;border-bottom:1px solid #c2c9b7}
+.ana-metricas .metrica{border:none;border-right:1px solid #c2c9b7}
+.ana-metricas .metrica:last-child{border-right:none}
+.ana-section{padding:14px 16px;border-bottom:1px solid #c2c9b7;background:#fff}
+.ana-section-title{font-size:11px;font-weight:700;color:#727969;text-transform:uppercase;letter-spacing:0.07em;margin-bottom:10px}
+.analisis-header{display:flex;align-items:center;gap:10px;margin-bottom:6px;flex-wrap:wrap}
+.analisis-titulo{font-size:17px;font-weight:700;letter-spacing:-0.02em}
+.badge-mes{font-size:12px;font-weight:600;padding:3px 10px;border-radius:20px;background:#FCEBEB;color:#791F1F}
+.badge-mes.ok{background:#eaf3de;color:#275300}
+.analisis-texto{font-size:13px;line-height:1.65;color:#42493b;margin-bottom:10px}
+.alerta-banner{margin:0 0 2px;border-radius:10px;padding:13px 15px;border-left:4px solid}
+.alerta-roja{background:#FCEBEB;border-left-color:#A32D2D}
+.alerta-amarilla{background:#FFF0E6;border-left-color:#D95A00}
+.alerta-verde{background:#f0fdf4;border-left-color:#275300}
+.alerta-titulo{font-size:13px;font-weight:700;margin-bottom:5px}
+.alerta-roja .alerta-titulo{color:#791F1F}
+.alerta-amarilla .alerta-titulo{color:#A83D00}
+.alerta-verde .alerta-titulo{color:#275300}
+.alerta-detalle{font-size:12px;color:#42493b;margin-bottom:3px;line-height:1.5}
+.alerta-comp{font-size:11px;color:#727969;margin-bottom:3px}
+.alerta-pct{font-size:12px;font-weight:700;color:#42493b}
+.ana-contexto{padding:7px 0 9px;font-size:11px;color:#727969;line-height:1.6;border-bottom:1px solid #e8e8e5;margin-bottom:8px}
+.ctx-label{font-weight:700;color:#42493b;margin-right:4px}
+.factores{display:flex;flex-direction:column;gap:5px}
+.factor{display:flex;align-items:flex-start;gap:8px;padding:8px 10px;border-radius:8px;background:#f8f9fa;font-size:12px;line-height:1.5;border:1px solid #e8e8e6}
+.factor-ico{width:22px;height:22px;min-width:22px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;margin-top:1px}
+.factor-text{flex:1;color:#42493b}
+.ico-red{background:#A32D2D;color:#fff}
+.ico-amber{background:#D95A00;color:#fff}
+.ico-green{background:#275300;color:#fff}
+.ico-gray{background:#c2c9b7;color:#42493b}
+.ana-grid{display:grid;grid-template-columns:1fr 1fr;gap:0;border-bottom:1px solid #c2c9b7}
+.ana-card{padding:14px 16px;border-right:1px solid #c2c9b7;border-bottom:1px solid #c2c9b7;background:#fff}
+.ana-card:nth-child(even){border-right:none}
+.ana-card-title{font-size:11px;font-weight:700;color:#727969;text-transform:uppercase;letter-spacing:0.06em;margin-bottom:10px}
+.bar-row{display:flex;align-items:center;gap:8px;margin-bottom:5px}
+.bar-lbl{font-size:11px;color:#727969;width:30px;flex-shrink:0;text-align:right}
+.bar-track{flex:1;height:8px;background:#f0f0ee;border-radius:4px;overflow:hidden}
+.bar-fill{height:100%;border-radius:4px}
+.bar-val{font-size:11px;color:#42493b;width:42px;text-align:right;flex-shrink:0}
+.month-wrap{display:flex;align-items:flex-end;gap:3px;height:86px;margin-bottom:6px}
+.month-col{display:flex;flex-direction:column;align-items:center;gap:2px;flex:1;cursor:pointer}
+.month-bar{border-radius:3px 3px 0 0;min-height:4px;width:100%}
+.month-lab{font-size:9px;color:#727969;white-space:nowrap}
+.cal-header{display:grid;grid-template-columns:repeat(7,1fr);gap:2px;margin-bottom:2px}
+.cal-hdr{font-size:9px;font-weight:700;color:#727969;text-align:center;text-transform:uppercase;padding:1px 0}
+.cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:2px;margin-bottom:8px;overflow:visible}
+.tday{aspect-ratio:1;display:flex;align-items:center;justify-content:center;font-size:10px;border-radius:4px;position:relative;cursor:default}
+.tday[data-tip]:not([data-tip=""]):hover::after{content:attr(data-tip);position:absolute;bottom:calc(100% + 6px);left:50%;transform:translateX(-50%);background:rgba(25,25,25,0.92);color:#fff;padding:4px 9px;border-radius:5px;font-size:10px;white-space:nowrap;z-index:300;pointer-events:none;font-weight:500;letter-spacing:0.02em;box-shadow:0 2px 6px rgba(0,0,0,0.25)}
+.tday.empty{background:transparent}
+.tday.ok{background:#e8e8e5;color:#727969}
+.tday.feriado{background:#1960a6;color:#fff;font-weight:700}
+.tday.festividad{background:#b8f389;color:#275300;font-weight:700}
+.tday.vacacion{background:#ffd166;color:#7a5500;font-weight:500}
+.leyenda-tl{display:flex;gap:10px;flex-wrap:wrap}
+.leg-tl-item{display:flex;align-items:center;gap:4px;font-size:10px;color:#727969}
+.leg-tl-dot{width:10px;height:10px;border-radius:3px;flex-shrink:0}
+.tabla-wrap{padding:10px 14px;overflow-x:auto;background:#fff}
+@media(max-width:640px){
+  .ana-grid{grid-template-columns:1fr}
+  .ana-card{border-right:none}
+  .ana-metricas{grid-template-columns:repeat(2,1fr);font-size:12px}
+  .ana-metricas .metrica:nth-child(2){border-right:none}
+  .month-lab{font-size:8px}
 }
 """
 
@@ -641,7 +927,7 @@ function buildBarra(p){
   else pct = 100;
   pct = Math.min(98, Math.max(2, pct));
   const label = dias < 0 ? 'Sin stock' : dias >= 30 ? '+30 días' : dias+' días';
-  const colorMark = dias <= 3 ? '#ba1a1a' : dias <= 14 ? '#E67E22' : '#275300';
+  const colorMark = dias < 0 ? '#A32D2D' : dias <= 3 ? '#D95A00' : dias <= 14 ? '#D4A000' : '#275300';
   return '<div style="padding:2px 2px 0">'
     + '<div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:5px">'
     +   '<span style="font-size:10px;font-weight:700;color:#727969;text-transform:uppercase;letter-spacing:0.05em">Cobertura estimada</span>'
@@ -679,12 +965,10 @@ function buildMovs(movs, idx, completo){
       ? '<span class="tienda-vit">Vitacura</span>'
       : '<span class="tienda-pat">Pataguas</span>';
     const cantCls = m.signo==='+' ? 'cant-pos' : 'cant-neg';
-    const stockColor = m.tienda==='Vitacura' ? '#275300' : '#1960a6';
-    const rowBg = m.stock===0 ? 'background:rgba(186,26,26,0.07);' : '';
-    return '<tr data-tienda="'+m.tienda+'" style="'+rowBg+'"><td style="color:#888">'+m.fecha+'</td><td>'+tipoBadge(m.tipo)+'</td>'
+    return '<tr><td style="color:#888">'+m.fecha+'</td><td>'+tipoBadge(m.tipo)+'</td>'
       +'<td style="color:#666;font-size:11px">'+m.documento+'</td><td>'+tienda+'</td>'
       +'<td class="'+cantCls+'" style="text-align:right">'+m.signo+m.cantidad+'</td>'
-      +'<td style="text-align:right;font-weight:600;color:'+stockColor+'">'+m.stock+'</td></tr>';
+      +'<td style="text-align:right;font-weight:600">'+m.stock+'</td></tr>';
   }).join('');
   var boton = '';
   if(ocultos > 0){
@@ -692,25 +976,13 @@ function buildMovs(movs, idx, completo){
   } else if(completo && movs.length > 0){
     boton = '<div style="font-size:11px;color:#aaa;padding:8px 0;text-align:center">Historial completo · '+movs.length+' movimientos</div>';
   }
-  const filtros = '<div class="movs-filtros">'
-    +'<button class="movs-filter-btn activo" onclick="filtrarMovs('+idx+',&apos;Todas&apos;,this)">Todas</button>'
-    +'<button class="movs-filter-btn" onclick="filtrarMovs('+idx+',&apos;Vitacura&apos;,this)">Vitacura</button>'
-    +'<button class="movs-filter-btn" onclick="filtrarMovs('+idx+',&apos;Pataguas&apos;,this)">Pataguas</button>'
-    +'</div>';
-  return filtros+'<div class="movs-scroll"><table class="movs-table"><thead><tr>'
+  return '<div class="movs-scroll"><table class="movs-table"><thead><tr>'
     +'<th>Fecha</th><th>Tipo</th><th>Documento</th><th>Tienda</th>'
     +'<th style="text-align:right">Cant.</th><th style="text-align:right">Stock</th>'
     +'</tr></thead><tbody>'+rows+'</tbody></table></div>'+boton;
 }
 function verMovsCompletos(i){
   document.getElementById('tab-'+i+'-mov').innerHTML = buildMovs(DATA[i].movs, i, true);
-}
-function filtrarMovs(idx, tienda, btn){
-  document.querySelectorAll('#tab-'+idx+'-mov .movs-filter-btn').forEach(function(b){ b.classList.remove('activo'); });
-  btn.classList.add('activo');
-  document.querySelectorAll('#tab-'+idx+'-mov tr[data-tienda]').forEach(function(r){
-    r.style.display = (tienda==='Todas' || r.dataset.tienda===tienda) ? '' : 'none';
-  });
 }
 
 // ── Análisis ───────────────────────────────────────────────
@@ -823,7 +1095,7 @@ function renderCards(data){
     const dStr = diasStr(p);
     const bCls = badgeCls(p);
     const alHtml = p.alerta_dist ? '<span class="badge badge-dist">⚠ Distribución</span>' : '';
-    const eCls = (p.estado==='sin_stock'||p.estado==='critico') ? 'badge-rojo' : p.estado==='bajo' ? 'badge-amarillo' : 'badge-verde';
+    const eCls = p.estado==='sin_stock' ? 'badge-sin-stock' : p.estado==='critico' ? 'badge-critico' : p.estado==='bajo' ? 'badge-bajo' : 'badge-ok';
 
     return '<div class="card '+p.estado+'">'
       +'<div class="card-top" onclick="toggleCard('+i+')">'
@@ -874,15 +1146,14 @@ function setChipEstado(btn){
   btn.classList.add('chip-active');
   filtrar();
 }
-function norm(s){return s.toLowerCase().normalize('NFD').replace(/[\\u0300-\\u036f]/g,'');}
 function filtrar(){
   const coc = document.getElementById('f-cocinero').value;
   const est = FILTRO_ESTADO;
-  const bus = norm(document.getElementById('f-buscar').value);
+  const bus = document.getElementById('f-buscar').value.toLowerCase();
   const fil = DATA.filter(function(p){
     if(coc && p.cocinero!==coc) return false;
     if(est && p.estado!==est)   return false;
-    if(bus && !norm(p.nombre).includes(bus) && !norm(p.sku).includes(bus)) return false;
+    if(bus && !p.nombre.toLowerCase().includes(bus) && !p.sku.toLowerCase().includes(bus)) return false;
     return true;
   });
   renderCards(fil);
@@ -897,9 +1168,9 @@ function updateMetricas(data){
 }
 
 // ── Navegación ─────────────────────────────────────────────
-var VISTAS = ['vista-resumen','vista-productos','vista-guias','vista-ranking'];
-var NAVS   = ['nav-resumen','nav-productos','nav-guias','nav-ranking'];
-var BNAVS  = ['bnav-resumen','bnav-productos','bnav-guias','bnav-ranking'];
+var VISTAS = ['vista-resumen','vista-productos','vista-guias','vista-ranking','vista-analisis'];
+var NAVS   = ['nav-resumen','nav-productos','nav-guias','nav-ranking','nav-analisis'];
+var BNAVS  = ['bnav-resumen','bnav-productos','bnav-guias','bnav-ranking','bnav-analisis'];
 function switchVista(vistaId, navId, cb){
   VISTAS.forEach(function(v){document.getElementById(v).style.display='none';});
   NAVS.forEach(function(n){document.getElementById(n).classList.remove('nav-active');});
@@ -915,6 +1186,353 @@ function mostrarResumen(){ switchVista('vista-resumen','nav-resumen', renderResu
 function mostrarProductos(){ switchVista('vista-productos','nav-productos'); }
 function mostrarGuias(){ switchVista('vista-guias','nav-guias', function(){ renderGuiaProduccion(); renderGuiaDespacho(); }); }
 function mostrarRanking(){ switchVista('vista-ranking','nav-ranking', renderRanking); }
+function mostrarAnalisis(){
+  switchVista('vista-analisis','nav-analisis', function(){
+    if(!ANA_MES && ANA_DATA.meses && ANA_DATA.meses.length > 0){
+      ANA_MES = ANA_DATA.meses[ANA_DATA.meses.length - 1];
+    }
+    renderAnalisis();
+  });
+}
+
+// ── Variables de estado de la pestaña Análisis ─────────────
+var ANA_MES  = '';
+var ANA_SORT = 'pct';
+var ANA_DIR  = -1;
+var MNA = ['','Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
+
+function mesLabel(m){
+  var p = m.split('-');
+  return MNA[parseInt(p[1])] + ' ' + p[0];
+}
+
+function seleccionarMesAna(mes){
+  ANA_MES = mes;
+  renderAnalisis();
+}
+
+function renderAnalisis(){
+  renderChipsAna();
+  if(!ANA_MES || !ANA_DATA.por_mes || !ANA_DATA.por_mes[ANA_MES]){
+    document.getElementById('ana-diagnostico').innerHTML = '<div style="padding:24px 16px;color:#999;font-size:13px">Sin datos para el período seleccionado.</div>';
+    document.getElementById('ana-metricas').innerHTML = '';
+    document.getElementById('ana-comparativa').innerHTML = '';
+    document.getElementById('ana-por-semana').innerHTML = '';
+    document.getElementById('ana-por-dia').innerHTML = '';
+    document.getElementById('ana-calendario').innerHTML = '';
+    document.getElementById('ana-tabla').innerHTML = '';
+    return;
+  }
+  var d = ANA_DATA.por_mes[ANA_MES];
+  renderDiagnostico(d);
+  renderMetricasAna(d);
+  renderComparativaMeses();
+  renderPorSemana(d);
+  renderPorDia(d);
+  renderCalendario(d);
+  renderTablaContrib(d);
+}
+
+function renderChipsAna(){
+  var meses = ANA_DATA.meses || [];
+  var html = '';
+  for(var i = meses.length - 1; i >= 0; i--){
+    var m = meses[i];
+    var cls = m === ANA_MES ? 'chip chip-active' : 'chip';
+    html += '<button class="'+cls+'" data-mes="'+m+'" onclick="seleccionarMesAna(this.dataset.mes)">'+mesLabel(m)+'</button>';
+  }
+  document.getElementById('ana-chips').innerHTML = html;
+}
+
+function calcularAlerta(d){
+  var diasN = d.dias_datos;
+  var total = d.total;
+  var meses = ANA_DATA.meses || [];
+  var comparables = [];
+  for(var i=0; i<meses.length; i++){
+    var mes = meses[i];
+    if(mes === ANA_MES) continue;
+    var dm = ANA_DATA.por_mes[mes];
+    if(!dm || dm.incompleto) continue;
+    // Excluir si tiene festividad en los primeros diasN días (infla la comparación)
+    var hasFest = (dm.festividades||[]).some(function(f){ return f.dia <= diasN; });
+    if(hasFest) continue;
+    // Excluir si más del 50% de los primeros diasN días son vacaciones
+    var vacN = (dm.vacaciones||[]).filter(function(v){ return v.dia <= diasN; }).length;
+    if(vacN > diasN * 0.5) continue;
+    // Ventas acumuladas hasta el día diasN usando por_dia_num (ventas por día del mes)
+    var cumN = 0;
+    for(var dia=1; dia<=diasN; dia++) cumN += (dm.por_dia_num[dia]||0);
+    comparables.push({mes: mes, total: Math.round(cumN)});
+  }
+  if(comparables.length === 0) return null;
+  var prom = comparables.reduce(function(s,c){ return s+c.total; },0) / comparables.length;
+  var pct = Math.round((total - prom) / prom * 100);
+  return {pct: pct, prom: Math.round(prom), comparables: comparables};
+}
+
+function renderDiagnostico(d){
+  var total_f = d.total.toLocaleString ? d.total.toLocaleString('es-CL') : d.total;
+  var html = '';
+
+  // ── ALERTA TEMPRANA (solo mes en curso) ──────────────────
+  if(d.incompleto){
+    var alerta = calcularAlerta(d);
+    if(alerta){
+      var acls = alerta.pct <= -30 ? 'alerta-roja' : alerta.pct <= -10 ? 'alerta-amarilla' : 'alerta-verde';
+      var aico = alerta.pct <= -30 ? '⚠️' : alerta.pct <= -10 ? '⚡' : '✓';
+      var atit = alerta.pct <= -30 ? 'Mes por debajo del ritmo de crecimiento'
+               : alerta.pct <= -10 ? 'Mes ligeramente bajo'
+               : 'Mes en buen ritmo';
+      var asig = alerta.pct >= 0 ? '+' : '';
+      var proy_f = d.proyeccion != null ? '~'+(d.proyeccion.toLocaleString?d.proyeccion.toLocaleString('es-CL'):d.proyeccion)+' un.' : '—';
+      var compTxt = alerta.comparables.map(function(c){ return mesLabel(c.mes)+': '+c.total+' un.'; }).join(' · ');
+      html += '<div class="alerta-banner '+acls+'">'
+        +'<div class="alerta-titulo">'+aico+' '+atit+'</div>'
+        +'<div class="alerta-detalle"><strong>'+total_f+' un.</strong> en '+d.dias_datos+' días · proyección al cierre: <strong>'+proy_f+'</strong></div>'
+        +'<div class="alerta-comp">Mismo período en meses anteriores → '+compTxt+'</div>'
+        +'<div class="alerta-pct"><strong>'+asig+alerta.pct+'%</strong> vs ritmo esperado ('+alerta.prom+' un. promedio en mismos días)</div>'
+        +'</div>';
+    }
+  }
+
+  // ── ENCABEZADO ───────────────────────────────────────────
+  var diff = d.diff_pct, diffSign = diff>=0?'+':'';
+  var badgeCls = d.incompleto ? 'badge-mes' : (diff>=0?'badge-mes ok':'badge-mes');
+  var badgeLabel = d.incompleto ? 'Mes en curso · día '+d.dias_datos : diffSign+diff+'% vs meses anteriores';
+
+  // ── INTRO ────────────────────────────────────────────────
+  var intro;
+  if(d.incompleto){
+    var pf = d.proyeccion != null ? (d.proyeccion.toLocaleString?d.proyeccion.toLocaleString('es-CL'):d.proyeccion) : '—';
+    intro = 'Lleva <strong>'+total_f+' unidades</strong> en '+d.dias_datos+' días.'
+      +(d.proyeccion ? ' Proyección al cierre (ponderada por patrón de día de semana): <strong>~'+pf+' un.</strong>' : '');
+  } else {
+    var suf = diff>=0?'sobre':'bajo';
+    intro = 'Cerró con <strong>'+total_f+' unidades</strong> — <strong>'+diffSign+diff+'%</strong> '+suf+' el ritmo de los meses anteriores.';
+  }
+
+  // ── CONTEXTO DEL MES ────────────────────────────────────
+  var ctxPartes = [];
+  if(d.vacaciones && d.vacaciones.length>0){
+    var vacNoms = [];
+    d.vacaciones.forEach(function(v){ if(vacNoms.indexOf(v.nombre)<0) vacNoms.push(v.nombre); });
+    var diasVac = d.vacaciones.length;
+    var vacTxt = diasVac>=14 ? Math.round(diasVac/7)+' sem.' : diasVac+(diasVac===1?' día':' días');
+    ctxPartes.push('📚 '+vacNoms.join(', ')+' ('+vacTxt+')');
+  }
+  if(d.feriados && d.feriados.length>0)
+    ctxPartes.push('🗓 '+d.feriados.map(function(f){return f.nombre;}).join(', '));
+  if(d.festividades && d.festividades.length>0)
+    ctxPartes.push('⭐ '+d.festividades.map(function(f){return f.nombre;}).join(', '));
+  var ctxHtml = ctxPartes.length>0
+    ? '<div class="ana-contexto"><span class="ctx-label">Contexto del mes:</span> '+ctxPartes.join(' · ')+'</div>'
+    : '';
+
+  // ── QUIEBRES DE STOCK ────────────────────────────────────
+  var factHtml = '';
+  var conQ = d.productos.filter(function(p){return p.dias_quiebre>2;});
+  conQ.sort(function(a,b){return b.pct-a.pct;});
+  if(conQ.length>0){
+    factHtml += '<div class="factor"><div class="factor-ico ico-red">↓</div><div class="factor-text"><strong>Quiebre de stock — '+conQ[0].nombre+':</strong> sin stock '+conQ[0].dias_quiebre+' días. Representa el '+conQ[0].pct+'% de las ventas.</div></div>';
+    if(conQ.length>1)
+      factHtml += '<div class="factor"><div class="factor-ico ico-red">↓</div><div class="factor-text"><strong>Quiebres adicionales:</strong> '+conQ.slice(1).map(function(p){return p.nombre;}).join(', ')+'.</div></div>';
+  } else {
+    factHtml = '<div class="factor"><div class="factor-ico ico-green">✓</div><div class="factor-text">Sin quiebres de stock significativos en este período.</div></div>';
+  }
+
+  document.getElementById('ana-diagnostico').innerHTML =
+    '<div class="ana-section">'
+    +html
+    +'<div class="analisis-header">'
+    +'<span class="analisis-titulo">'+mesLabel(ANA_MES)+'</span>'
+    +'<span class="'+badgeCls+'">'+badgeLabel+'</span>'
+    +'</div>'
+    +'<p class="analisis-texto">'+intro+'</p>'
+    +ctxHtml
+    +'<div class="factores">'+factHtml+'</div>'
+    +'</div>';
+}
+
+function renderMetricasAna(d){
+  var totalQ = d.productos.reduce(function(s,p){return s+p.dias_quiebre;},0);
+  var prodsQ = d.productos.filter(function(p){return p.dias_quiebre>0;}).length;
+  var diasEsp = (d.feriados?d.feriados.length:0)+(d.vacaciones?d.vacaciones.length:0);
+  var semsAct = d.por_semana.filter(function(v){return v>0;}).length;
+  var diff = d.diff_pct;
+  var total_f = d.total.toLocaleString ? d.total.toLocaleString('es-CL') : d.total;
+  document.getElementById('ana-metricas').innerHTML =
+    '<div class="metrica"><div class="metrica-label">Unidades vendidas</div>'
+    +'<div class="metrica-valor '+(diff>=0?'val-verde':'val-rojo')+'">'+total_f+'</div>'
+    +'<div class="metrica-sub">'+(diff>=0?'+':'')+diff+'% vs promedio</div></div>'
+    +'<div class="metrica"><div class="metrica-label">Días con quiebre</div>'
+    +'<div class="metrica-valor '+(totalQ>0?'val-rojo':'val-verde')+'">'+totalQ+'</div>'
+    +'<div class="metrica-sub">'+prodsQ+' producto'+(prodsQ!==1?'s':'')+' afectado'+(prodsQ!==1?'s':'')+'</div></div>'
+    +'<div class="metrica"><div class="metrica-label">Días especiales</div>'
+    +'<div class="metrica-valor" style="color:#1960a6">'+diasEsp+'</div>'
+    +'<div class="metrica-sub">feriados + vacaciones</div></div>'
+    +'<div class="metrica"><div class="metrica-label">Semanas activas</div>'
+    +'<div class="metrica-valor">'+semsAct+'</div>'
+    +'<div class="metrica-sub">con ventas registradas</div></div>';
+}
+
+function renderComparativaMeses(){
+  var meses   = ANA_DATA.meses || [];
+  var totales = ANA_DATA.totales_mensuales || {};
+  var vals    = meses.map(function(m){return totales[m]||0;});
+  var maxV    = Math.max.apply(null, vals);
+  if(maxV === 0){ document.getElementById('ana-comparativa').innerHTML=''; return; }
+  var html = '<div class="month-wrap">';
+  for(var i=0;i<meses.length;i++){
+    var m  = meses[i];
+    var v  = totales[m]||0;
+    var h  = maxV>0 ? Math.max(4, Math.round(v/maxV*76)) : 4;
+    var act = m === ANA_MES;
+    var bg  = act ? '#275300' : '#c2c9b7';
+    var lbl = MNA[parseInt(m.split('-')[1])];
+    html += '<div class="month-col" data-mes="'+m+'" onclick="seleccionarMesAna(this.dataset.mes)">'
+      +'<div class="month-bar" style="height:'+h+'px;background:'+bg+'"></div>'
+      +'<span class="month-lab" style="'+(act?'color:#275300;font-weight:600':'')+'">'+(lbl||m)+'</span></div>';
+  }
+  html += '</div><div style="font-size:11px;color:#727969">Promedio: <strong style="color:#191c1d">'+(ANA_DATA.promedio_mensual.toLocaleString?ANA_DATA.promedio_mensual.toLocaleString('es-CL'):ANA_DATA.promedio_mensual)+' un.</strong> · Clic en barra para ver ese mes</div>';
+  document.getElementById('ana-comparativa').innerHTML = html;
+}
+
+function renderPorSemana(d){
+  var max = Math.max.apply(null, d.por_semana);
+  if(max===0){ document.getElementById('ana-por-semana').innerHTML='<p style="color:#999;font-size:12px">Sin datos</p>'; return; }
+  var semsPos = d.por_semana.filter(function(v){return v>0;});
+  var minPos  = semsPos.length>0 ? Math.min.apply(null,semsPos) : 0;
+  var html = '';
+  for(var i=0;i<d.por_semana.length;i++){
+    var v = d.por_semana[i];
+    if(v===0) continue;
+    var pct = Math.round(v/max*100);
+    var bg  = v===max ? '#275300' : (v===minPos && semsPos.length>=3 ? '#ba1a1a' : '#c2c9b7');
+    html += '<div class="bar-row"><span class="bar-lbl">Sem '+(i+1)+'</span>'
+      +'<div class="bar-track"><div class="bar-fill" style="width:'+pct+'%;background:'+bg+'"></div></div>'
+      +'<span class="bar-val">'+v+' un.</span></div>';
+  }
+  document.getElementById('ana-por-semana').innerHTML = html;
+}
+
+function renderPorDia(d){
+  var dias   = ['Lun','Mar','Mié','Jue','Vie','Sáb','Dom'];
+  var colors = ['#c2c9b7','#c2c9b7','#c2c9b7','#c2c9b7','#1960a6','#275300','#1960a6'];
+  var max    = Math.max.apply(null, d.por_dia);
+  var html   = '';
+  for(var i=0;i<7;i++){
+    var v   = d.por_dia[i];
+    var pct = max>0 ? Math.round(v/max*100) : 0;
+    html += '<div class="bar-row"><span class="bar-lbl">'+dias[i]+'</span>'
+      +'<div class="bar-track"><div class="bar-fill" style="width:'+pct+'%;background:'+colors[i]+'"></div></div>'
+      +'<span class="bar-val">'+v+'%</span></div>';
+  }
+  document.getElementById('ana-por-dia').innerHTML = html;
+}
+
+function renderCalendario(d){
+  var p     = ANA_MES.split('-');
+  var yr    = parseInt(p[0]);
+  var mo    = parseInt(p[1]);
+  var nDias = new Date(yr, mo, 0).getDate();
+  var fSet  = {};
+  (d.feriados||[]).forEach(function(f){ fSet[f.dia] = f.nombre; });
+  var vSet  = {};
+  (d.vacaciones||[]).forEach(function(v){ vSet[v.dia] = v.nombre; });
+  var festSet = {};
+  (d.festividades||[]).forEach(function(f){ festSet[f.dia] = f.nombre; });
+
+  var MESES_NOM = ['ene','feb','mar','abr','may','jun','jul','ago','sep','oct','nov','dic'];
+  var moNom = MESES_NOM[mo - 1];
+
+  // getDay(): 0=Dom, 1=Lun, ..., 6=Sáb → convertir a Lun=0 … Dom=6
+  var primerDia = new Date(yr, mo - 1, 1).getDay();
+  var offset    = (primerDia + 6) % 7;  // Lun=0, Dom=6
+
+  var HDRS = ['Lun','Mar','Mié','Jue','Vie','Sáb','Dom'];
+  var html = '<div class="cal-header">';
+  for(var h=0;h<7;h++) html += '<div class="cal-hdr">'+HDRS[h]+'</div>';
+  html += '</div><div class="cal-grid">';
+
+  // Celdas vacías antes del primer día
+  for(var b=0;b<offset;b++) html += '<div class="tday empty"></div>';
+
+  for(var dd=1;dd<=nDias;dd++){
+    var cls = 'tday ok', tip = '';
+    if(fSet[dd]){     cls='tday feriado';   tip=dd+' de '+moNom+' · '+fSet[dd]; }
+    else if(festSet[dd]){ cls='tday festividad'; tip=dd+' de '+moNom+' · '+festSet[dd]; }
+    else if(vSet[dd]){ cls='tday vacacion'; tip=dd+' de '+moNom+' · '+vSet[dd]; }
+    html += '<div class="'+cls+'" data-tip="'+tip+'">'+dd+'</div>';
+  }
+  html += '</div>';
+
+  var hasFest = Object.keys(festSet).length > 0;
+  var hasVac  = Object.keys(vSet).length  > 0;
+  html += '<div class="leyenda-tl">'
+    +'<div class="leg-tl-item"><div class="leg-tl-dot" style="background:#e8e8e5;border:1px solid #c2c9b7"></div>Normal</div>'
+    +'<div class="leg-tl-item"><div class="leg-tl-dot" style="background:#1960a6"></div>Feriado</div>'
+    +(hasFest?'<div class="leg-tl-item"><div class="leg-tl-dot" style="background:#b8f389;border:1px solid #3b6d11"></div>Festividad</div>':'')
+    +(hasVac?'<div class="leg-tl-item"><div class="leg-tl-dot" style="background:#ffd166"></div>Vacaciones</div>':'')
+    +'</div>';
+  document.getElementById('ana-calendario').innerHTML = html;
+}
+
+function sortTablaAna(col){
+  ANA_DIR = ANA_SORT === col ? -ANA_DIR : -1;
+  ANA_SORT = col;
+  renderTablaContrib(ANA_DATA.por_mes[ANA_MES]);
+}
+
+function renderTablaContrib(d){
+  var prods = d.productos.slice();
+  var tendVal = {'sube':2,'estable':1,'baja':0};
+  prods.sort(function(a,b){
+    var va, vb;
+    if(ANA_SORT==='nombre') return ANA_DIR*(a.nombre>b.nombre?1:a.nombre<b.nombre?-1:0);
+    if(ANA_SORT==='total'){ va=a.total; vb=b.total; }
+    else if(ANA_SORT==='quiebre'){ va=a.dias_quiebre; vb=b.dias_quiebre; }
+    else if(ANA_SORT==='tendencia'){ va=tendVal[a.tendencia]||0; vb=tendVal[b.tendencia]||0; }
+    else { va=a.pct; vb=b.pct; }
+    return ANA_DIR*(va-vb);
+  });
+  var arw = function(col){ return ANA_SORT===col ? (ANA_DIR===-1?' ↓':' ↑') : ' ↕'; };
+  var html = '<table class="rank-table"><thead><tr>'
+    +'<th data-col="nombre" onclick="sortTablaAna(this.dataset.col)" style="cursor:pointer;user-select:none">Producto'+arw('nombre')+'</th>'
+    +'<th data-col="pct" onclick="sortTablaAna(this.dataset.col)" style="cursor:pointer;user-select:none;text-align:right">% Total'+arw('pct')+'</th>'
+    +'<th data-col="total" onclick="sortTablaAna(this.dataset.col)" style="cursor:pointer;user-select:none;text-align:right">Unidades'+arw('total')+'</th>'
+    +'<th data-col="quiebre" onclick="sortTablaAna(this.dataset.col)" style="cursor:pointer;user-select:none;text-align:right">Quiebre'+arw('quiebre')+'</th>'
+    +'<th style="min-width:60px">Últ.6 meses</th>'
+    +'<th data-col="tendencia" onclick="sortTablaAna(this.dataset.col)" style="cursor:pointer;user-select:none">Tendencia'+arw('tendencia')+'</th>'
+    +'</tr></thead><tbody>';
+  for(var i=0;i<prods.length;i++){
+    var p = prods[i];
+    var spark = '<div style="display:flex;align-items:flex-end;gap:2px;height:18px">';
+    for(var j=0;j<p.spark.length;j++){
+      var sh = Math.max(2, Math.round((p.spark[j]||0)/10*16));
+      var sbg = j===p.spark.length-1 ? '#275300' : '#c2c9b7';
+      spark += '<div style="width:5px;height:'+sh+'px;border-radius:1px;background:'+sbg+'"></div>';
+    }
+    spark += '</div>';
+    var qColor = p.dias_quiebre>3?'#ba1a1a':p.dias_quiebre>0?'#E67E22':'#727969';
+    var qText  = p.dias_quiebre>0 ? p.dias_quiebre+' d.' : '—';
+    var tBadge = p.tendencia==='sube'
+      ? '<span style="font-size:10px;padding:2px 8px;background:#eaf3de;color:#275300;border-radius:10px;font-weight:600">Sube ↑</span>'
+      : p.tendencia==='baja'
+      ? '<span style="font-size:10px;padding:2px 8px;background:#fce8e8;color:#ba1a1a;border-radius:10px;font-weight:600">Baja ↓</span>'
+      : '<span style="font-size:10px;padding:2px 8px;background:#f0f0ee;border-radius:10px;color:#727969">Estable</span>';
+    html += '<tr>'
+      +'<td>'+p.nombre+'<span style="color:#aaa;font-size:10px;margin-left:4px">'+p.sku+'</span></td>'
+      +'<td style="text-align:right;font-weight:500">'+p.pct+'%</td>'
+      +'<td style="text-align:right">'+p.total+'</td>'
+      +'<td style="text-align:right;color:'+qColor+';font-weight:'+(p.dias_quiebre>2?'600':'400')+'">'+qText+'</td>'
+      +'<td>'+spark+'</td>'
+      +'<td>'+tBadge+'</td>'
+      +'</tr>';
+  }
+  html += '</tbody></table>';
+  document.getElementById('ana-tabla').innerHTML = html;
+}
 
 // ── Alertas de cuadratura de stock ─────────────────────────
 function nombreSku(sku){
@@ -1278,18 +1896,7 @@ function imprimirDespacho(){
 
 // ── Init ───────────────────────────────────────────────────
 document.getElementById('f-cocinero').addEventListener('change', filtrar);
-var fBuscar = document.getElementById('f-buscar');
-var fClear  = document.getElementById('f-buscar-clear');
-fBuscar.addEventListener('input', function(){
-  fClear.style.display = fBuscar.value ? 'flex' : 'none';
-  filtrar();
-});
-fClear.addEventListener('click', function(){
-  fBuscar.value = '';
-  fClear.style.display = 'none';
-  filtrar();
-  fBuscar.focus();
-});
+document.getElementById('f-buscar').addEventListener('input', filtrar);
 document.getElementById('r-mes').addEventListener('change', renderRanking);
 renderCards(DATA);
 updateMetricas();
@@ -1321,6 +1928,7 @@ HTML_TEMPLATE = """<!DOCTYPE html>
       <button class="btn" id="nav-productos" onclick="mostrarProductos()">Productos</button>
       <button class="btn" id="nav-guias" onclick="mostrarGuias()">Guías</button>
       <button class="btn" id="nav-ranking" onclick="mostrarRanking()">Ranking</button>
+      <button class="btn" id="nav-analisis" onclick="mostrarAnalisis()">Análisis</button>
     </div>
     <span class="fecha">FECHA_HOY_PLACEHOLDER</span>
   </div>
@@ -1331,6 +1939,7 @@ HTML_TEMPLATE = """<!DOCTYPE html>
   <button class="bnav-btn" id="bnav-productos" onclick="mostrarProductos()"><span class="bnav-icon">📦</span>Productos</button>
   <button class="bnav-btn" id="bnav-guias" onclick="mostrarGuias()"><span class="bnav-icon">📋</span>Guías</button>
   <button class="bnav-btn" id="bnav-ranking" onclick="mostrarRanking()"><span class="bnav-icon">📈</span>Ranking</button>
+  <button class="bnav-btn" id="bnav-analisis" onclick="mostrarAnalisis()"><span class="bnav-icon">📉</span>Análisis</button>
 </nav>
 
 <!-- VISTA RESUMEN -->
@@ -1344,16 +1953,15 @@ HTML_TEMPLATE = """<!DOCTYPE html>
 <div id="vista-productos" style="display:none">
 
 <div class="metricas">
-  <div class="metrica"><div class="metrica-label">Sin stock</div><div class="metrica-valor val-rojo" id="m1">—</div></div>
-  <div class="metrica"><div class="metrica-label">Crítico ≤3d</div><div class="metrica-valor val-rojo" id="m2">—</div></div>
-  <div class="metrica"><div class="metrica-label">Bajo ≤14d</div><div class="metrica-valor val-amarillo" id="m3">—</div></div>
-  <div class="metrica"><div class="metrica-label">OK &gt;14d</div><div class="metrica-valor val-verde" id="m4">—</div></div>
+  <div class="metrica metrica-sin-stock"><div class="metrica-label">Sin stock</div><div class="metrica-valor" id="m1">—</div></div>
+  <div class="metrica metrica-critico"><div class="metrica-label">Crítico ≤3d</div><div class="metrica-valor" id="m2">—</div></div>
+  <div class="metrica metrica-bajo"><div class="metrica-label">Bajo ≤14d</div><div class="metrica-valor" id="m3">—</div></div>
+  <div class="metrica metrica-ok"><div class="metrica-label">OK &gt;14d</div><div class="metrica-valor" id="m4">—</div></div>
 </div>
   <div class="toolbar">
     <div class="search-wrap">
       <span class="search-ico">🔍</span>
       <input type="text" id="f-buscar" placeholder="Buscar producto o SKU...">
-      <button type="button" id="f-buscar-clear" class="search-clear" aria-label="Borrar búsqueda">✕</button>
     </div>
     <div class="chips" id="chips-estado">
       <button class="chip chip-active" data-estado="" onclick="setChipEstado(this)">Todos</button>
@@ -1365,11 +1973,11 @@ HTML_TEMPLATE = """<!DOCTYPE html>
     </div>
   </div>
   <div class="leyenda">
-    <div class="leg"><div class="leg-dot" style="background:#E74C3C"></div>Sin stock</div>
-    <div class="leg"><div class="leg-dot" style="background:#E67E22"></div>Crítico</div>
-    <div class="leg"><div class="leg-dot" style="background:#F39C12"></div>Bajo stock</div>
-    <div class="leg"><div class="leg-dot" style="background:#27AE60"></div>OK</div>
-    <div class="leg" style="margin-left:16px"><div class="leg-dot" style="background:#EAF3DE;border:1px solid #639922"></div>Vitacura</div>
+    <div class="leg"><div class="leg-dot" style="background:#A32D2D"></div>Sin stock</div>
+    <div class="leg"><div class="leg-dot" style="background:#D95A00"></div>Crítico</div>
+    <div class="leg"><div class="leg-dot" style="background:#D4A000"></div>Bajo stock</div>
+    <div class="leg"><div class="leg-dot" style="background:#275300"></div>OK</div>
+    <div class="leg" style="margin-left:16px"><div class="leg-dot" style="background:#EAF3DE;border:1px solid #3B6D11"></div>Vitacura</div>
     <div class="leg"><div class="leg-dot" style="background:#E6F1FB;border:1px solid #185FA5"></div>Pataguas</div>
   </div>
   <div class="container">
@@ -1477,16 +2085,57 @@ HTML_TEMPLATE = """<!DOCTYPE html>
 
 </div>
 
+<!-- VISTA ANÁLISIS -->
+<div id="vista-analisis" style="display:none">
+
+<div class="ana-chips" id="ana-chips"></div>
+
+<div id="ana-diagnostico"></div>
+
+<div class="ana-metricas" id="ana-metricas">
+  <div class="metrica"><div class="metrica-label">Cargando…</div></div>
+</div>
+
+<div class="ana-grid">
+  <div class="ana-card">
+    <div class="ana-card-title">Comparativa mensual</div>
+    <div id="ana-comparativa"></div>
+  </div>
+  <div class="ana-card">
+    <div class="ana-card-title">Por semana del mes</div>
+    <div id="ana-por-semana"></div>
+  </div>
+  <div class="ana-card">
+    <div class="ana-card-title">Por día de la semana</div>
+    <div id="ana-por-dia"></div>
+  </div>
+  <div class="ana-card">
+    <div class="ana-card-title">Días del mes</div>
+    <div id="ana-calendario"></div>
+  </div>
+</div>
+
+<div class="ana-section">
+  <div class="ana-section-title">Contribución por producto</div>
+  <div class="tabla-wrap">
+    <div id="ana-tabla"></div>
+  </div>
+</div>
+
+</div>
+
 <script>
 const DATA = DATA_PLACEHOLDER;
 const ALERTAS = ALERTAS_PLACEHOLDER;
+const ANA_DATA = ANA_DATA_PLACEHOLDER;
 JS_PLACEHOLDER
 </script>
 </body>
 </html>"""
 
-def generar_html(datos, fecha_str):
-    data_json = json.dumps(datos, ensure_ascii=False)
+def generar_html(datos, fecha_str, analisis=None):
+    data_json    = json.dumps(datos, ensure_ascii=False)
+    analisis_json = json.dumps(analisis or {}, ensure_ascii=False)
     # Alertas de cuadratura del día (las escribe actualizar_diario.py)
     archivo_alertas = os.path.join(CARPETA, 'alertas_stock.json')
     if os.path.exists(archivo_alertas):
@@ -1496,6 +2145,7 @@ def generar_html(datos, fecha_str):
     js_final  = JS.replace('FECHA_HOY_PLACEHOLDER', fecha_str)
     html = HTML_TEMPLATE
     html = html.replace('CSS_PLACEHOLDER',         CSS)
+    html = html.replace('ANA_DATA_PLACEHOLDER',    analisis_json)  # antes de DATA_PLACEHOLDER
     html = html.replace('DATA_PLACEHOLDER',        data_json)
     html = html.replace('ALERTAS_PLACEHOLDER',     alertas_json)
     html = html.replace('JS_PLACEHOLDER',          js_final)
@@ -1508,8 +2158,11 @@ if __name__ == '__main__':
     print('La Cocina — Generador de Dashboard')
     print('='*50)
     datos = procesar()
+    print('\nCalculando datos de análisis...')
+    analisis = calcular_analisis()
+    print(f'  Meses disponibles: {len(analisis.get("meses", []))}')
     print(f'\nGenerando HTML con {len(datos)} productos...')
-    html = generar_html(datos, FECHA_STR)
+    html = generar_html(datos, FECHA_STR, analisis)
     with open(ARCHIVO_HTML, 'w', encoding='utf-8') as f:
         f.write(html)
     print(f'Dashboard: {ARCHIVO_HTML}')
