@@ -1,21 +1,5 @@
 {
   "fecha": "2026-06-17",
-  "entradas": [
-    {
-      "sku": "CJ",
-      "oficina": "VIT",
-      "cantidad": 2.0
-    },
-    {
-      "sku": "TLS",
-      "oficina": "VIT",
-      "cantidad": 4.0
-    },
-    {
-      "sku": "RA",
-      "oficina": "VIT",
-      "cantidad": 1.0
-    }
-  ],
+  "entradas": [],
   "salidas": []
 }
