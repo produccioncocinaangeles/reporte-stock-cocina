@@ -1921,7 +1921,7 @@ HTML_TEMPLATE = """<!DOCTYPE html>
       <button class="btn" id="nav-productos" onclick="mostrarProductos()">Productos</button>
       <button class="btn" id="nav-guias" onclick="mostrarGuias()">Guías</button>
       <button class="btn" id="nav-ranking" onclick="mostrarRanking()">Ranking</button>
-      <button class="btn" id="nav-analisis" onclick="mostrarAnalisis()">Análisis</button>
+      <button class="btn" id="nav-analisis" onclick="mostrarAnalisis()" style="display:none">Análisis</button>
     </div>
     <span class="fecha">FECHA_HOY_PLACEHOLDER</span>
   </div>
@@ -1932,7 +1932,7 @@ HTML_TEMPLATE = """<!DOCTYPE html>
   <button class="bnav-btn" id="bnav-productos" onclick="mostrarProductos()"><span class="bnav-icon">📦</span>Productos</button>
   <button class="bnav-btn" id="bnav-guias" onclick="mostrarGuias()"><span class="bnav-icon">📋</span>Guías</button>
   <button class="bnav-btn" id="bnav-ranking" onclick="mostrarRanking()"><span class="bnav-icon">📈</span>Ranking</button>
-  <button class="bnav-btn" id="bnav-analisis" onclick="mostrarAnalisis()"><span class="bnav-icon">📉</span>Análisis</button>
+  <button class="bnav-btn" id="bnav-analisis" onclick="mostrarAnalisis()" style="display:none"><span class="bnav-icon">📉</span>Análisis</button>
 </nav>
 
 <!-- VISTA RESUMEN -->
