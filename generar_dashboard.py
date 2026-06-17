@@ -632,10 +632,10 @@ def calcular_analisis():
 CSS = """
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
 *{box-sizing:border-box;margin:0;padding:0}
-body{font-family:'Inter',-apple-system,BlinkMacSystemFont,sans-serif;background:#EEF2F7;color:#191c1d;font-size:14px;max-width:960px;margin:0 auto}
+body{font-family:'Inter',-apple-system,BlinkMacSystemFont,sans-serif;background:#f8f9fa;color:#191c1d;font-size:14px;max-width:960px;margin:0 auto}
 
 /* ── Header ─────────────────────────────────────────────── */
-.header{background:#fff;border-bottom:1px solid #dce2ec;padding:12px 20px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:100;box-shadow:0 2px 10px rgba(0,0,0,0.1)}
+.header{background:#fff;border-bottom:1px solid #c2c9b7;padding:12px 20px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:100;box-shadow:0 1px 4px rgba(0,0,0,0.04)}
 .logo{display:flex;align-items:center;gap:10px}
 .logo-icon{width:30px;height:30px;background:#275300;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0;color:#fff}
 .logo-nombre{font-size:15px;font-weight:700;letter-spacing:-0.03em;color:#275300}
@@ -649,15 +649,11 @@ body{font-family:'Inter',-apple-system,BlinkMacSystemFont,sans-serif;background:
 .fecha{font-size:11px;color:#727969;font-weight:400;white-space:nowrap}
 
 /* ── Métricas ────────────────────────────────────────────── */
-.metricas{display:grid;grid-template-columns:1fr 1fr;gap:10px;padding:16px;background:#EEF2F7}
-.metrica{padding:16px 18px;border-radius:12px}
-.metrica-label{font-size:10px;font-weight:700;color:rgba(255,255,255,0.8);text-transform:uppercase;letter-spacing:0.07em;margin-bottom:6px}
-.metrica-valor{font-size:36px;font-weight:700;line-height:1;letter-spacing:-0.02em;color:#fff}
-.metrica-sub{font-size:11px;color:rgba(255,255,255,0.7);margin-top:4px}
-.metrica.metrica-sin-stock{background:#A32D2D}
-.metrica.metrica-critico{background:#D95A00}
-.metrica.metrica-bajo{background:#D4A000}
-.metrica.metrica-ok{background:#275300}
+.metricas{display:grid;grid-template-columns:repeat(4,1fr);background:#fff;border-bottom:1px solid #c2c9b7}
+.metrica{padding:14px 18px;border-right:1px solid #c2c9b7}.metrica:last-child{border-right:none}
+.metrica-label{font-size:10px;font-weight:700;color:#727969;text-transform:uppercase;letter-spacing:0.07em;margin-bottom:5px}
+.metrica-valor{font-size:30px;font-weight:700;line-height:1;letter-spacing:-0.02em}
+.metrica-sub{font-size:11px;color:#a0a8a0;margin-top:4px}
 .val-rojo{color:#ba1a1a}.val-amarillo{color:#E67E22}.val-verde{color:#275300}
 
 /* ── Toolbar: buscador + chips ───────────────────────────── */
@@ -683,26 +679,22 @@ select,input[type=text],input[type=number]{font-size:13px;font-weight:500;paddin
 .container{padding:12px 16px}
 
 /* ── Cards ───────────────────────────────────────────────── */
-.card{background:#fff;border:1px solid #e0e4ec;border-radius:12px;margin-bottom:10px;overflow:hidden;transition:box-shadow 0.15s;box-shadow:0 2px 8px rgba(0,0,0,0.06)}
-.card:hover{box-shadow:0 6px 20px rgba(0,0,0,0.11)}
-.card.sin_stock{border-top:4px solid #A32D2D}
-.card.critico{border-top:4px solid #D95A00}
-.card.bajo{border-top:4px solid #D4A000}
-.card.ok{border-top:4px solid #275300}
+.card{background:#fff;border:1px solid #c2c9b7;border-radius:8px;margin-bottom:8px;overflow:hidden;transition:box-shadow 0.15s}
+.card:hover{box-shadow:0 4px 16px rgba(0,0,0,0.08)}
+.card.sin_stock{border-left:6px solid #ba1a1a}
+.card.critico{border-left:6px solid #ba1a1a}
+.card.bajo{border-left:6px solid #E67E22}
+.card.ok{border-left:6px solid #275300}
 .card-top{padding:12px 14px;display:flex;align-items:center;justify-content:space-between;cursor:pointer;user-select:none}
 .card-info{flex:1;min-width:0}
 .card-nombre{font-size:15px;font-weight:700;letter-spacing:-0.01em;line-height:1.3}
 .card-meta{font-size:11px;color:#727969;margin-top:3px;font-weight:400}
 .card-badges{display:flex;align-items:center;gap:8px;flex-shrink:0;margin-left:10px}
-.badge{font-size:11px;font-weight:700;padding:4px 12px;border-radius:20px}
-.badge-estado{font-size:10px;text-transform:uppercase;letter-spacing:0.05em;border-radius:20px;padding:4px 12px}
-.badge-rojo{background:#FCEBEB;color:#791F1F}
-.badge-amarillo{background:#FFFBEB;color:#7A5800}
-.badge-verde{background:#EAF3DE;color:#173404}
-.badge-sin-stock{background:#FCEBEB;color:#791F1F}
-.badge-critico{background:#FFF0E6;color:#A83D00}
-.badge-bajo{background:#FFFBEB;color:#7A5800}
-.badge-ok{background:#EAF3DE;color:#173404}
+.badge{font-size:11px;font-weight:700;padding:3px 10px;border-radius:20px}
+.badge-estado{font-size:10px;text-transform:uppercase;letter-spacing:0.05em;border-radius:4px;padding:3px 8px}
+.badge-rojo{background:#ffdad6;color:#ba1a1a}
+.badge-amarillo{background:#FAEEDA;color:#854F0B}
+.badge-verde{background:#b8f389;color:#275300}
 .badge-dist{background:#FEF3C7;color:#92400E;font-size:10px}
 .chevron{font-size:12px;color:#c2c9b7;margin-left:6px;transition:transform 0.2s}
 .chevron.open{transform:rotate(180deg)}
@@ -727,12 +719,12 @@ select,input[type=text],input[type=number]{font-size:13px;font-weight:500;paddin
 .movs-table tr:hover td{background:#f8f9fa}
 .tipo-badge{display:inline-block;font-size:10px;font-weight:700;padding:2px 8px;border-radius:4px;text-transform:uppercase;letter-spacing:0.03em}
 .tipo-prod{background:#b8f389;color:#275300}
-.tipo-venta{background:#FCEBEB;color:#791F1F}
+.tipo-venta{background:#ffdad6;color:#ba1a1a}
 .tipo-despacho{background:#d4e3ff;color:#1960a6}
 .tipo-consumo{background:#FEF3C7;color:#92400E}
 .tipo-desp-rec{background:#F0FDF4;color:#275300}
-.tienda-vit{font-size:10px;padding:1px 6px;border-radius:3px;background:#EAF3DE;color:#3B6D11;font-weight:600}
-.tienda-pat{font-size:10px;padding:1px 6px;border-radius:3px;background:#E6F1FB;color:#185FA5;font-weight:600}
+.tienda-vit{font-size:10px;padding:1px 6px;border-radius:3px;background:#b8f389;color:#275300;font-weight:600}
+.tienda-pat{font-size:10px;padding:1px 6px;border-radius:3px;background:#d4e3ff;color:#1960a6;font-weight:600}
 .cant-pos{color:#275300;font-weight:700}
 .cant-neg{color:#ba1a1a;font-weight:700}
 
@@ -742,7 +734,7 @@ select,input[type=text],input[type=number]{font-size:13px;font-weight:500;paddin
 .insight-warn{background:#FFFBEB;border:1px solid #FDE68A;border-radius:8px;padding:12px 14px;font-size:12px;color:#92400E;line-height:1.8;margin-bottom:10px}
 .insight-ok{background:#F0FDF4;border:1px solid #b8f389;border-radius:8px;padding:12px 14px;font-size:12px;color:#275300;line-height:1.8;margin-bottom:10px}
 .insight-peligro{background:#fff5f5;border:1px solid #ffdad6;border-radius:8px;padding:12px 14px;font-size:12px;color:#ba1a1a;line-height:1.8;margin-bottom:10px}
-.periodo-chip{display:inline-block;font-size:10px;padding:2px 8px;border-radius:4px;background:#FCEBEB;color:#791F1F;margin:2px}
+.periodo-chip{display:inline-block;font-size:10px;padding:2px 8px;border-radius:4px;background:#ffdad6;color:#ba1a1a;margin:2px}
 .lote-card{background:#fff;border:1px solid #c2c9b7;border-radius:6px;padding:10px 12px;font-size:11px;margin-bottom:6px}
 .mes-table{width:100%;border-collapse:collapse;font-size:12px;margin-top:8px}
 .mes-table th{text-align:left;color:#727969;padding:5px 10px;border-bottom:1px solid #c2c9b7;font-size:10px;text-transform:uppercase;font-weight:700}
@@ -765,7 +757,7 @@ select,input[type=text],input[type=number]{font-size:13px;font-weight:500;paddin
 .guia-table{width:100%;border-collapse:collapse;font-size:12px}
 .guia-table th{text-align:left;color:#727969;padding:8px 10px;border-bottom:2px solid #c2c9b7;font-size:10px;text-transform:uppercase;font-weight:700;letter-spacing:0.05em}
 .guia-table td{padding:8px 10px;border-bottom:1px solid #edeeef}
-.guia-table tr.urgente{background:#FCEBEB}
+.guia-table tr.urgente{background:#fff5f5}
 
 /* ── Resumen ─────────────────────────────────────────────── */
 .res-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;padding:16px}
@@ -795,7 +787,7 @@ select,input[type=text],input[type=number]{font-size:13px;font-weight:500;paddin
 .btn-vermas:hover{background:#dcfce7}
 
 /* ── Bottom nav ──────────────────────────────────────────── */
-.bottom-nav{display:none;position:fixed;bottom:0;left:0;right:0;height:64px;background:#fff;border-top:1px solid #dce2ec;z-index:100;align-items:center;justify-content:space-around;box-shadow:0 -4px 16px rgba(0,0,0,0.12)}
+.bottom-nav{display:none;position:fixed;bottom:0;left:0;right:0;height:64px;background:#fff;border-top:1px solid #c2c9b7;z-index:100;align-items:center;justify-content:space-around;box-shadow:0 -2px 8px rgba(0,0,0,0.06)}
 .bnav-btn{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;padding:6px 12px;border:none;background:none;cursor:pointer;font-family:inherit;font-size:9px;font-weight:700;letter-spacing:0.05em;color:#727969;border-radius:12px;flex:1;text-transform:uppercase;transition:background-color 0.15s,color 0.15s}
 .bnav-btn .bnav-icon{font-size:20px;line-height:1;display:block}
 .bnav-btn.nav-active{background:#b8f389;color:#275300}
@@ -811,10 +803,11 @@ select,input[type=text],input[type=number]{font-size:13px;font-weight:500;paddin
   .tab-body{padding:10px 8px}
   .header{flex-wrap:wrap;gap:8px}
   .res-grid{grid-template-columns:1fr}
-  /* KPIs 2×2 en móvil */
-  .metricas{display:grid;grid-template-columns:1fr 1fr;gap:8px;padding:12px;background:#EEF2F7}
-  .metrica{border-radius:10px;padding:12px 14px}
-  .metrica-valor{font-size:28px}
+  /* KPIs deslizables estilo Stitch */
+  .metricas{display:flex;overflow-x:auto;gap:10px;padding:12px 16px;background:#f8f9fa;border-bottom:none;-ms-overflow-style:none;scrollbar-width:none}
+  .metricas::-webkit-scrollbar{display:none}
+  .metrica{min-width:118px;background:#fff;border:1px solid #c2c9b7;border-radius:10px;padding:12px 14px;flex-shrink:0}
+  .metrica-valor{font-size:26px}
 }
 
 /* ── Pestaña Análisis ─────────────────────────────────────── */
@@ -826,16 +819,16 @@ select,input[type=text],input[type=number]{font-size:13px;font-weight:500;paddin
 .ana-section-title{font-size:11px;font-weight:700;color:#727969;text-transform:uppercase;letter-spacing:0.07em;margin-bottom:10px}
 .analisis-header{display:flex;align-items:center;gap:10px;margin-bottom:6px;flex-wrap:wrap}
 .analisis-titulo{font-size:17px;font-weight:700;letter-spacing:-0.02em}
-.badge-mes{font-size:12px;font-weight:600;padding:3px 10px;border-radius:20px;background:#FCEBEB;color:#791F1F}
+.badge-mes{font-size:12px;font-weight:600;padding:3px 10px;border-radius:20px;background:#fce8e8;color:#ba1a1a}
 .badge-mes.ok{background:#eaf3de;color:#275300}
 .analisis-texto{font-size:13px;line-height:1.65;color:#42493b;margin-bottom:10px}
 .alerta-banner{margin:0 0 2px;border-radius:10px;padding:13px 15px;border-left:4px solid}
-.alerta-roja{background:#FCEBEB;border-left-color:#A32D2D}
-.alerta-amarilla{background:#FFF0E6;border-left-color:#D95A00}
+.alerta-roja{background:#fff5f5;border-left-color:#ba1a1a}
+.alerta-amarilla{background:#fffbf0;border-left-color:#E67E22}
 .alerta-verde{background:#f0fdf4;border-left-color:#275300}
 .alerta-titulo{font-size:13px;font-weight:700;margin-bottom:5px}
-.alerta-roja .alerta-titulo{color:#791F1F}
-.alerta-amarilla .alerta-titulo{color:#A83D00}
+.alerta-roja .alerta-titulo{color:#ba1a1a}
+.alerta-amarilla .alerta-titulo{color:#b45309}
 .alerta-verde .alerta-titulo{color:#275300}
 .alerta-detalle{font-size:12px;color:#42493b;margin-bottom:3px;line-height:1.5}
 .alerta-comp{font-size:11px;color:#727969;margin-bottom:3px}
@@ -846,8 +839,8 @@ select,input[type=text],input[type=number]{font-size:13px;font-weight:500;paddin
 .factor{display:flex;align-items:flex-start;gap:8px;padding:8px 10px;border-radius:8px;background:#f8f9fa;font-size:12px;line-height:1.5;border:1px solid #e8e8e6}
 .factor-ico{width:22px;height:22px;min-width:22px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;margin-top:1px}
 .factor-text{flex:1;color:#42493b}
-.ico-red{background:#A32D2D;color:#fff}
-.ico-amber{background:#D95A00;color:#fff}
+.ico-red{background:#ba1a1a;color:#fff}
+.ico-amber{background:#E67E22;color:#fff}
 .ico-green{background:#275300;color:#fff}
 .ico-gray{background:#c2c9b7;color:#42493b}
 .ana-grid{display:grid;grid-template-columns:1fr 1fr;gap:0;border-bottom:1px solid #c2c9b7}
@@ -927,7 +920,7 @@ function buildBarra(p){
   else pct = 100;
   pct = Math.min(98, Math.max(2, pct));
   const label = dias < 0 ? 'Sin stock' : dias >= 30 ? '+30 días' : dias+' días';
-  const colorMark = dias < 0 ? '#A32D2D' : dias <= 3 ? '#D95A00' : dias <= 14 ? '#D4A000' : '#275300';
+  const colorMark = dias <= 3 ? '#ba1a1a' : dias <= 14 ? '#E67E22' : '#275300';
   return '<div style="padding:2px 2px 0">'
     + '<div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:5px">'
     +   '<span style="font-size:10px;font-weight:700;color:#727969;text-transform:uppercase;letter-spacing:0.05em">Cobertura estimada</span>'
@@ -1095,7 +1088,7 @@ function renderCards(data){
     const dStr = diasStr(p);
     const bCls = badgeCls(p);
     const alHtml = p.alerta_dist ? '<span class="badge badge-dist">⚠ Distribución</span>' : '';
-    const eCls = p.estado==='sin_stock' ? 'badge-sin-stock' : p.estado==='critico' ? 'badge-critico' : p.estado==='bajo' ? 'badge-bajo' : 'badge-ok';
+    const eCls = (p.estado==='sin_stock'||p.estado==='critico') ? 'badge-rojo' : p.estado==='bajo' ? 'badge-amarillo' : 'badge-verde';
 
     return '<div class="card '+p.estado+'">'
       +'<div class="card-top" onclick="toggleCard('+i+')">'
@@ -1953,10 +1946,10 @@ HTML_TEMPLATE = """<!DOCTYPE html>
 <div id="vista-productos" style="display:none">
 
 <div class="metricas">
-  <div class="metrica metrica-sin-stock"><div class="metrica-label">Sin stock</div><div class="metrica-valor" id="m1">—</div></div>
-  <div class="metrica metrica-critico"><div class="metrica-label">Crítico ≤3d</div><div class="metrica-valor" id="m2">—</div></div>
-  <div class="metrica metrica-bajo"><div class="metrica-label">Bajo ≤14d</div><div class="metrica-valor" id="m3">—</div></div>
-  <div class="metrica metrica-ok"><div class="metrica-label">OK &gt;14d</div><div class="metrica-valor" id="m4">—</div></div>
+  <div class="metrica"><div class="metrica-label">Sin stock</div><div class="metrica-valor val-rojo" id="m1">—</div></div>
+  <div class="metrica"><div class="metrica-label">Crítico ≤3d</div><div class="metrica-valor val-rojo" id="m2">—</div></div>
+  <div class="metrica"><div class="metrica-label">Bajo ≤14d</div><div class="metrica-valor val-amarillo" id="m3">—</div></div>
+  <div class="metrica"><div class="metrica-label">OK &gt;14d</div><div class="metrica-valor val-verde" id="m4">—</div></div>
 </div>
   <div class="toolbar">
     <div class="search-wrap">
@@ -1973,11 +1966,11 @@ HTML_TEMPLATE = """<!DOCTYPE html>
     </div>
   </div>
   <div class="leyenda">
-    <div class="leg"><div class="leg-dot" style="background:#A32D2D"></div>Sin stock</div>
-    <div class="leg"><div class="leg-dot" style="background:#D95A00"></div>Crítico</div>
-    <div class="leg"><div class="leg-dot" style="background:#D4A000"></div>Bajo stock</div>
-    <div class="leg"><div class="leg-dot" style="background:#275300"></div>OK</div>
-    <div class="leg" style="margin-left:16px"><div class="leg-dot" style="background:#EAF3DE;border:1px solid #3B6D11"></div>Vitacura</div>
+    <div class="leg"><div class="leg-dot" style="background:#E74C3C"></div>Sin stock</div>
+    <div class="leg"><div class="leg-dot" style="background:#E67E22"></div>Crítico</div>
+    <div class="leg"><div class="leg-dot" style="background:#F39C12"></div>Bajo stock</div>
+    <div class="leg"><div class="leg-dot" style="background:#27AE60"></div>OK</div>
+    <div class="leg" style="margin-left:16px"><div class="leg-dot" style="background:#EAF3DE;border:1px solid #639922"></div>Vitacura</div>
     <div class="leg"><div class="leg-dot" style="background:#E6F1FB;border:1px solid #185FA5"></div>Pataguas</div>
   </div>
   <div class="container">
