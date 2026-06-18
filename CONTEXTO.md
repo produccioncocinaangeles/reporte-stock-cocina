@@ -102,14 +102,21 @@ Pestaña completa de análisis de ventas mensuales. Estado actual en `reporte-st
 
 ---
 
-## Estado al 16-jun-2026
+## Estado al 18-jun-2026
 
 **En producción (repo-temp / gh-pages):**
 - Diseño móvil + reintentos de API + hora de Chile (commit 2440c39, 11-jun).
 - Filtro por tienda en tabla de movimientos (commit b74a70b, 11-jun).
 - Buscador ignora tildes/eñes + botón ✕ (12-jun).
+- **Tab Análisis completo** (18-jun): alerta temprana, diagnóstico, métricas, comparativa mensual con unidades por barra, mapa de calor de ventas por día del mes, tabla de productos con proyección al cierre del mes y tendencia corregida para mes incompleto.
 
-**En pruebas (reporte-stock-PRUEBAS):** tab Análisis completo con alerta temprana, calendario con tooltips, contexto del mes, comparativa de meses. Pendiente aprobación para subir a producción.
+**Cambios clave en tab Análisis (18-jun):**
+- Ranking eliminado; navegación: Resumen, Productos, Guías, Análisis.
+- Tabla de productos: columna "Proyec. mes" (extrapolación lineal del ritmo actual, siempre ≥ ventas ya registradas). Sin columna "vs Prom." — era confusa.
+- Tendencia ("Sube/Baja/Estable") corregida: para el mes en curso compara la proyección, no el parcial, vs el mes anterior.
+- Mapa de calor: reemplaza los gráficos de barras "por semana del mes" y "por día de semana". Verde más oscuro = más ventas ese día. Días especiales marcados con punto de color.
+- Buscador restaurado: ignora tildes/eñes, botón ✕ para borrar.
+- `actualizar_local.bat` + `token.txt` en .gitignore (script de actualización local).
 
 **Migración:** carpeta de trabajo movida de OneDrive a Google Drive (`G:\Mi unidad\`) para acceso desde ambos PCs.
 

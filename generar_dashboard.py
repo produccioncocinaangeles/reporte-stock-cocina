@@ -469,6 +469,10 @@ def calcular_analisis():
         return {'meses': [], 'por_mes': {}, 'promedio_mensual': 0,
                 'por_dia_historico': [0.0]*7, 'totales_mensuales': {}}
     try:
+        with open(ARCHIVO_JSON, encoding='utf-8') as _f:
+            _cache = json.load(_f)
+        _ultimo_str = _cache.get('ultimo_update', FECHA_HOY.isoformat())
+        _ultimo_ts  = pd.Timestamp(_ultimo_str).normalize().tz_localize(None)
         vit = leer_json('VIT')
         pat = leer_json('PAT')
     except Exception as e:
@@ -569,6 +573,10 @@ def calcular_analisis():
         idx_m = todos_meses.index(mes) if mes in todos_meses else len(todos_meses) - 1
         spark_meses_list = todos_meses[max(0, idx_m - 5):idx_m + 1]
 
+        es_incompleto   = (mes == mes_actual_str)
+        dias_n_mes      = pd.Period(mes, 'M').days_in_month
+        dias_datos_est  = int(df_m['dia_num'].max()) if es_incompleto and len(df_m) > 0 else dias_n_mes
+
         for sku_p, tot_sku in por_sku.items():
             if sku_p not in NOMBRES:
                 continue
@@ -577,7 +585,8 @@ def calcular_analisis():
             spark_norm = [round(v / mx * 10) if mx > 0 else 0 for v in spark_vals]
             tend = 'estable'
             if len(spark_vals) >= 2 and spark_vals[-2] > 0:
-                cambio = (spark_vals[-1] - spark_vals[-2]) / spark_vals[-2]
+                val_tend = int(round(spark_vals[-1] * dias_n_mes / dias_datos_est)) if es_incompleto and dias_datos_est > 0 else spark_vals[-1]
+                cambio = (val_tend - spark_vals[-2]) / spark_vals[-2]
                 if cambio > 0.15:   tend = 'sube'
                 elif cambio < -0.15: tend = 'baja'
             productos.append({
@@ -590,7 +599,13 @@ def calcular_analisis():
 
         diff_pct = round((total_m - promedio_mensual) / promedio_mensual * 100, 1) if promedio_mensual > 0 else 0.0
         incompleto = (mes == mes_actual_str)
-        dias_datos = int(FECHA_HOY.day) if incompleto else int(dias_n)
+        if incompleto:
+            last_day = int(df_m['dia_num'].max()) if len(df_m) > 0 else int(FECHA_HOY.day)
+            dias_datos = last_day
+            df_m_cut   = df_m[df_m['dia_num'] <= dias_datos]
+            total_m    = int(df_m_cut['Salida'].sum())
+        else:
+            dias_datos = int(dias_n)
         if incompleto and dias_datos > 0 and total_m > 0 and sum(por_dia_historico) > 0:
             # Proyección ponderada: usa el patrón histórico de cada día de semana
             # para saber qué fracción del mes ya representan los días transcurridos
@@ -612,7 +627,7 @@ def calcular_analisis():
             diff_proy  = None
         por_mes_res[mes] = {
             'total': total_m, 'diff_pct': diff_pct,
-            'incompleto': incompleto, 'dias_datos': dias_datos,
+            'incompleto': incompleto, 'dias_datos': dias_datos, 'dias_mes': int(dias_n),
             'proyeccion': proyeccion, 'diff_proy': diff_proy,
             'por_dia': por_dia, 'por_semana': por_semana, 'por_dia_num': por_dia_num,
             'feriados': feriados_mes, 'vacaciones': vacaciones_mes,
@@ -620,12 +635,22 @@ def calcular_analisis():
             'productos': productos,
         }
 
+    # Promedio mensual por SKU — últimos 3 meses completos con ventas
+    meses_completos = [m for m in meses_disp if m != mes_actual_str]
+    meses_prom = meses_completos[-3:] if len(meses_completos) >= 3 else meses_completos
+    promedios_sku = {}
+    for sku in NOMBRES.keys():
+        vals = [int(monthly_sku.get((m, sku), 0)) for m in meses_prom if monthly_sku.get((m, sku), 0) > 0]
+        if vals:
+            promedios_sku[sku] = round(sum(vals) / len(vals))
+
     return {
         'meses': meses_disp,
         'por_mes': por_mes_res,
         'promedio_mensual': promedio_mensual,
         'por_dia_historico': por_dia_historico,
         'totales_mensuales': {m: totales_mes_dict.get(m, 0) for m in meses_disp},
+        'promedios_sku': promedios_sku,
     }
 
 # ─── HTML (sin f-string para evitar conflictos con JS) ───────
@@ -664,6 +689,8 @@ select,input[type=text],input[type=number]{font-size:13px;font-weight:500;paddin
 .search-wrap .search-ico{position:absolute;left:14px;top:50%;transform:translateY(-50%);color:#727969;font-size:15px;pointer-events:none}
 .search-wrap input{width:100%;height:44px;padding:0 14px 0 40px;font-size:14px;border:1px solid #c2c9b7;border-radius:10px;background:#fff}
 .search-wrap input:focus{outline:none;border-color:#275300}
+.search-clear{position:absolute;right:10px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;color:#727969;font-size:16px;width:28px;height:28px;display:flex;align-items:center;justify-content:center;border-radius:50%}
+.search-clear:hover{background:#f0f0ee;color:#333}
 .chips{display:flex;gap:8px;overflow-x:auto;padding-bottom:8px;-ms-overflow-style:none;scrollbar-width:none}
 .chips::-webkit-scrollbar{display:none}
 .chip{display:inline-flex;align-items:center;gap:6px;padding:8px 16px;border-radius:20px;border:none;background:#e7e8e9;color:#42493b;font-size:12px;font-weight:700;font-family:inherit;cursor:pointer;white-space:nowrap;letter-spacing:0.03em;transition:all 0.15s}
@@ -852,21 +879,25 @@ select,input[type=text],input[type=number]{font-size:13px;font-weight:500;paddin
 .bar-track{flex:1;height:8px;background:#f0f0ee;border-radius:4px;overflow:hidden}
 .bar-fill{height:100%;border-radius:4px}
 .bar-val{font-size:11px;color:#42493b;width:42px;text-align:right;flex-shrink:0}
-.month-wrap{display:flex;align-items:flex-end;gap:3px;height:86px;margin-bottom:6px}
-.month-col{display:flex;flex-direction:column;align-items:center;gap:2px;flex:1;cursor:pointer}
+.month-wrap{display:flex;align-items:flex-end;gap:6px;height:100px;margin-bottom:6px}
+.month-col{display:flex;flex-direction:column;align-items:center;gap:2px;flex:1;cursor:pointer;position:relative}
+.month-val{font-size:10px;font-weight:600;color:#727969;text-align:center;position:absolute;bottom:calc(100% - 20px);white-space:nowrap}
 .month-bar{border-radius:3px 3px 0 0;min-height:4px;width:100%}
 .month-lab{font-size:9px;color:#727969;white-space:nowrap}
 .cal-header{display:grid;grid-template-columns:repeat(7,1fr);gap:2px;margin-bottom:2px}
 .cal-hdr{font-size:9px;font-weight:700;color:#727969;text-align:center;text-transform:uppercase;padding:1px 0}
 .cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:2px;margin-bottom:8px;overflow:visible}
-.tday{aspect-ratio:1;display:flex;align-items:center;justify-content:center;font-size:10px;border-radius:4px;position:relative;cursor:default}
+.tday{height:52px;display:flex;flex-direction:column;align-items:center;justify-content:center;border-radius:4px;position:relative;cursor:default;padding:2px}
 .tday[data-tip]:not([data-tip=""]):hover::after{content:attr(data-tip);position:absolute;bottom:calc(100% + 6px);left:50%;transform:translateX(-50%);background:rgba(25,25,25,0.92);color:#fff;padding:4px 9px;border-radius:5px;font-size:10px;white-space:nowrap;z-index:300;pointer-events:none;font-weight:500;letter-spacing:0.02em;box-shadow:0 2px 6px rgba(0,0,0,0.25)}
 .tday.empty{background:transparent}
-.tday.ok{background:#e8e8e5;color:#727969}
-.tday.feriado{background:#1960a6;color:#fff;font-weight:700}
-.tday.festividad{background:#b8f389;color:#275300;font-weight:700}
-.tday.vacacion{background:#ffd166;color:#7a5500;font-weight:500}
+.tday-num{font-size:8px;line-height:1;opacity:0.65;align-self:flex-end;padding-right:1px}
+.tday-val{font-size:11px;font-weight:700;line-height:1.1}
+.tday-dot{width:5px;height:5px;border-radius:50%;position:absolute;top:3px;left:3px}
+.tday-dot.feriado-dot{background:#1960a6}
+.tday-dot.festividad-dot{background:#275300}
+.tday-dot.vacacion-dot{background:#e6a800}
 .leyenda-tl{display:flex;gap:10px;flex-wrap:wrap}
+.ana-card-wide{grid-column:1/-1}
 .leg-tl-item{display:flex;align-items:center;gap:4px;font-size:10px;color:#727969}
 .leg-tl-dot{width:10px;height:10px;border-radius:3px;flex-shrink:0}
 .tabla-wrap{padding:10px 14px;overflow-x:auto;background:#fff}
@@ -1139,14 +1170,15 @@ function setChipEstado(btn){
   btn.classList.add('chip-active');
   filtrar();
 }
+function norm(s){return s.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'');}
 function filtrar(){
   const coc = document.getElementById('f-cocinero').value;
   const est = FILTRO_ESTADO;
-  const bus = document.getElementById('f-buscar').value.toLowerCase();
+  const bus = norm(document.getElementById('f-buscar').value);
   const fil = DATA.filter(function(p){
     if(coc && p.cocinero!==coc) return false;
     if(est && p.estado!==est)   return false;
-    if(bus && !p.nombre.toLowerCase().includes(bus) && !p.sku.toLowerCase().includes(bus)) return false;
+    if(bus && !norm(p.nombre).includes(bus) && !norm(p.sku).includes(bus)) return false;
     return true;
   });
   renderCards(fil);
@@ -1161,9 +1193,9 @@ function updateMetricas(data){
 }
 
 // ── Navegación ─────────────────────────────────────────────
-var VISTAS = ['vista-resumen','vista-productos','vista-guias','vista-ranking','vista-analisis'];
-var NAVS   = ['nav-resumen','nav-productos','nav-guias','nav-ranking','nav-analisis'];
-var BNAVS  = ['bnav-resumen','bnav-productos','bnav-guias','bnav-ranking','bnav-analisis'];
+var VISTAS = ['vista-resumen','vista-productos','vista-guias','vista-analisis'];
+var NAVS   = ['nav-resumen','nav-productos','nav-guias','nav-analisis'];
+var BNAVS  = ['bnav-resumen','bnav-productos','bnav-guias','bnav-analisis'];
 function switchVista(vistaId, navId, cb){
   VISTAS.forEach(function(v){document.getElementById(v).style.display='none';});
   NAVS.forEach(function(n){document.getElementById(n).classList.remove('nav-active');});
@@ -1198,6 +1230,11 @@ function mesLabel(m){
   var p = m.split('-');
   return MNA[parseInt(p[1])] + ' ' + p[0];
 }
+function fechaES(iso){
+  if(!iso) return '';
+  var p = iso.split('-');
+  return parseInt(p[2],10)+' '+MNA[parseInt(p[1],10)]+' '+p[0];
+}
 
 function seleccionarMesAna(mes){
   ANA_MES = mes;
@@ -1210,8 +1247,6 @@ function renderAnalisis(){
     document.getElementById('ana-diagnostico').innerHTML = '<div style="padding:24px 16px;color:#999;font-size:13px">Sin datos para el período seleccionado.</div>';
     document.getElementById('ana-metricas').innerHTML = '';
     document.getElementById('ana-comparativa').innerHTML = '';
-    document.getElementById('ana-por-semana').innerHTML = '';
-    document.getElementById('ana-por-dia').innerHTML = '';
     document.getElementById('ana-calendario').innerHTML = '';
     document.getElementById('ana-tabla').innerHTML = '';
     return;
@@ -1220,8 +1255,6 @@ function renderAnalisis(){
   renderDiagnostico(d);
   renderMetricasAna(d);
   renderComparativaMeses();
-  renderPorSemana(d);
-  renderPorDia(d);
   renderCalendario(d);
   renderTablaContrib(d);
 }
@@ -1379,11 +1412,12 @@ function renderComparativaMeses(){
   for(var i=0;i<meses.length;i++){
     var m  = meses[i];
     var v  = totales[m]||0;
-    var h  = maxV>0 ? Math.max(4, Math.round(v/maxV*76)) : 4;
+    var h  = maxV>0 ? Math.max(4, Math.round(v/maxV*90)) : 4;
     var act = m === ANA_MES;
     var bg  = act ? '#275300' : '#c2c9b7';
     var lbl = MNA[parseInt(m.split('-')[1])];
     html += '<div class="month-col" data-mes="'+m+'" onclick="seleccionarMesAna(this.dataset.mes)">'
+      +'<span class="month-val" style="bottom:'+h+'px;'+(act?'color:#275300':'')+'">'+v+'</span>'
       +'<div class="month-bar" style="height:'+h+'px;background:'+bg+'"></div>'
       +'<span class="month-lab" style="'+(act?'color:#275300;font-weight:600':'')+'">'+(lbl||m)+'</span></div>';
   }
@@ -1391,37 +1425,18 @@ function renderComparativaMeses(){
   document.getElementById('ana-comparativa').innerHTML = html;
 }
 
-function renderPorSemana(d){
-  var max = Math.max.apply(null, d.por_semana);
-  if(max===0){ document.getElementById('ana-por-semana').innerHTML='<p style="color:#999;font-size:12px">Sin datos</p>'; return; }
-  var semsPos = d.por_semana.filter(function(v){return v>0;});
-  var minPos  = semsPos.length>0 ? Math.min.apply(null,semsPos) : 0;
-  var html = '';
-  for(var i=0;i<d.por_semana.length;i++){
-    var v = d.por_semana[i];
-    if(v===0) continue;
-    var pct = Math.round(v/max*100);
-    var bg  = v===max ? '#275300' : (v===minPos && semsPos.length>=3 ? '#ba1a1a' : '#c2c9b7');
-    html += '<div class="bar-row"><span class="bar-lbl">Sem '+(i+1)+'</span>'
-      +'<div class="bar-track"><div class="bar-fill" style="width:'+pct+'%;background:'+bg+'"></div></div>'
-      +'<span class="bar-val">'+v+' un.</span></div>';
-  }
-  document.getElementById('ana-por-semana').innerHTML = html;
+function heatColor(v, max){
+  if(max===0||v===0) return '#e8e8e5';
+  var t = v/max;
+  if(t<0.2)  return '#d4edda';
+  if(t<0.4)  return '#a3d4af';
+  if(t<0.6)  return '#5aaa78';
+  if(t<0.8)  return '#3b7a55';
+  return '#275300';
 }
-
-function renderPorDia(d){
-  var dias   = ['Lun','Mar','Mié','Jue','Vie','Sáb','Dom'];
-  var colors = ['#c2c9b7','#c2c9b7','#c2c9b7','#c2c9b7','#1960a6','#275300','#1960a6'];
-  var max    = Math.max.apply(null, d.por_dia);
-  var html   = '';
-  for(var i=0;i<7;i++){
-    var v   = d.por_dia[i];
-    var pct = max>0 ? Math.round(v/max*100) : 0;
-    html += '<div class="bar-row"><span class="bar-lbl">'+dias[i]+'</span>'
-      +'<div class="bar-track"><div class="bar-fill" style="width:'+pct+'%;background:'+colors[i]+'"></div></div>'
-      +'<span class="bar-val">'+v+'%</span></div>';
-  }
-  document.getElementById('ana-por-dia').innerHTML = html;
+function heatText(v, max){
+  if(max===0||v===0) return '#b0b0a8';
+  return v/max >= 0.5 ? '#fff' : '#1a3a20';
 }
 
 function renderCalendario(d){
@@ -1436,37 +1451,53 @@ function renderCalendario(d){
   var festSet = {};
   (d.festividades||[]).forEach(function(f){ festSet[f.dia] = f.nombre; });
 
+  var pdn  = d.por_dia_num || {};
+  var vals = Object.values(pdn).map(Number);
+  var maxV = vals.length > 0 ? Math.max.apply(null, vals) : 0;
+
   var MESES_NOM = ['ene','feb','mar','abr','may','jun','jul','ago','sep','oct','nov','dic'];
   var moNom = MESES_NOM[mo - 1];
 
-  // getDay(): 0=Dom, 1=Lun, ..., 6=Sáb → convertir a Lun=0 … Dom=6
   var primerDia = new Date(yr, mo - 1, 1).getDay();
-  var offset    = (primerDia + 6) % 7;  // Lun=0, Dom=6
+  var offset    = (primerDia + 6) % 7;
 
   var HDRS = ['Lun','Mar','Mié','Jue','Vie','Sáb','Dom'];
   var html = '<div class="cal-header">';
   for(var h=0;h<7;h++) html += '<div class="cal-hdr">'+HDRS[h]+'</div>';
   html += '</div><div class="cal-grid">';
 
-  // Celdas vacías antes del primer día
   for(var b=0;b<offset;b++) html += '<div class="tday empty"></div>';
 
   for(var dd=1;dd<=nDias;dd++){
-    var cls = 'tday ok', tip = '';
-    if(fSet[dd]){     cls='tday feriado';   tip=dd+' de '+moNom+' · '+fSet[dd]; }
-    else if(festSet[dd]){ cls='tday festividad'; tip=dd+' de '+moNom+' · '+festSet[dd]; }
-    else if(vSet[dd]){ cls='tday vacacion'; tip=dd+' de '+moNom+' · '+vSet[dd]; }
-    html += '<div class="'+cls+'" data-tip="'+tip+'">'+dd+'</div>';
+    var unidades = pdn[dd] || 0;
+    var bg   = heatColor(unidades, maxV);
+    var tc   = heatText(unidades, maxV);
+    var tip  = dd+' '+moNom;
+    if(unidades>0) tip += ' · '+unidades+' un.';
+    var dots = '';
+    if(fSet[dd])    { tip += ' · '+fSet[dd];    dots += '<span class="tday-dot feriado-dot"></span>'; }
+    if(festSet[dd]) { tip += ' · '+festSet[dd]; dots += '<span class="tday-dot festividad-dot"></span>'; }
+    if(vSet[dd])    { tip += ' · '+vSet[dd];    dots += '<span class="tday-dot vacacion-dot"></span>'; }
+    var valHtml = unidades>0
+      ? '<span class="tday-val" style="color:'+tc+'">'+unidades+'</span>'
+      : '<span class="tday-num" style="color:'+tc+';opacity:0.4;font-size:9px">'+dd+'</span>';
+    html += '<div class="tday" style="background:'+bg+'" data-tip="'+tip+'">'
+      +dots
+      +(unidades>0?'<span class="tday-num" style="color:'+tc+'">'+dd+'</span>':'')
+      +valHtml
+      +'</div>';
   }
   html += '</div>';
 
   var hasFest = Object.keys(festSet).length > 0;
-  var hasVac  = Object.keys(vSet).length  > 0;
-  html += '<div class="leyenda-tl">'
-    +'<div class="leg-tl-item"><div class="leg-tl-dot" style="background:#e8e8e5;border:1px solid #c2c9b7"></div>Normal</div>'
-    +'<div class="leg-tl-item"><div class="leg-tl-dot" style="background:#1960a6"></div>Feriado</div>'
-    +(hasFest?'<div class="leg-tl-item"><div class="leg-tl-dot" style="background:#b8f389;border:1px solid #3b6d11"></div>Festividad</div>':'')
-    +(hasVac?'<div class="leg-tl-item"><div class="leg-tl-dot" style="background:#ffd166"></div>Vacaciones</div>':'')
+  var hasVac  = Object.keys(vSet).length > 0;
+  html += '<div class="leyenda-tl" style="margin-top:8px">'
+    +'<div class="leg-tl-item"><div class="leg-tl-dot" style="background:#e8e8e5;border:1px solid #c2c9b7"></div>Sin ventas</div>'
+    +'<div class="leg-tl-item"><div class="leg-tl-dot" style="background:#a3d4af"></div>Pocas</div>'
+    +'<div class="leg-tl-item"><div class="leg-tl-dot" style="background:#275300"></div>Máximo</div>'
+    +(fSet&&Object.keys(fSet).length?'<div class="leg-tl-item"><span class="tday-dot feriado-dot" style="position:static;display:inline-block;margin-right:2px"></span>Feriado</div>':'')
+    +(hasFest?'<div class="leg-tl-item"><span class="tday-dot festividad-dot" style="position:static;display:inline-block;margin-right:2px"></span>Festividad</div>':'')
+    +(hasVac?'<div class="leg-tl-item"><span class="tday-dot vacacion-dot" style="position:static;display:inline-block;margin-right:2px"></span>Vacaciones</div>':'')
     +'</div>';
   document.getElementById('ana-calendario').innerHTML = html;
 }
@@ -1490,12 +1521,13 @@ function renderTablaContrib(d){
     return ANA_DIR*(va-vb);
   });
   var arw = function(col){ return ANA_SORT===col ? (ANA_DIR===-1?' ↓':' ↑') : ' ↕'; };
+  var incompleto = d.incompleto;
+  var promedios  = ANA_DATA.promedios_sku || {};
   var html = '<table class="rank-table"><thead><tr>'
     +'<th data-col="nombre" onclick="sortTablaAna(this.dataset.col)" style="cursor:pointer;user-select:none">Producto'+arw('nombre')+'</th>'
-    +'<th data-col="pct" onclick="sortTablaAna(this.dataset.col)" style="cursor:pointer;user-select:none;text-align:right">% Total'+arw('pct')+'</th>'
     +'<th data-col="total" onclick="sortTablaAna(this.dataset.col)" style="cursor:pointer;user-select:none;text-align:right">Unidades'+arw('total')+'</th>'
+    +(incompleto ? '<th style="text-align:right">Proyec. mes</th>' : '')
     +'<th data-col="quiebre" onclick="sortTablaAna(this.dataset.col)" style="cursor:pointer;user-select:none;text-align:right">Quiebre'+arw('quiebre')+'</th>'
-    +'<th style="min-width:60px">Últ.6 meses</th>'
     +'<th data-col="tendencia" onclick="sortTablaAna(this.dataset.col)" style="cursor:pointer;user-select:none">Tendencia'+arw('tendencia')+'</th>'
     +'</tr></thead><tbody>';
   for(var i=0;i<prods.length;i++){
@@ -1514,12 +1546,16 @@ function renderTablaContrib(d){
       : p.tendencia==='baja'
       ? '<span style="font-size:10px;padding:2px 8px;background:#fce8e8;color:#ba1a1a;border-radius:10px;font-weight:600">Baja ↓</span>'
       : '<span style="font-size:10px;padding:2px 8px;background:#f0f0ee;border-radius:10px;color:#727969">Estable</span>';
+    var proyTd = '';
+    if(incompleto && d.dias_datos > 0){
+      var proy = Math.max(p.total, Math.round(p.total * d.dias_mes / d.dias_datos));
+      proyTd = '<td style="text-align:right"><span style="color:#727969">'+proy+' un.</span></td>';
+    }
     html += '<tr>'
       +'<td>'+p.nombre+'<span style="color:#aaa;font-size:10px;margin-left:4px">'+p.sku+'</span></td>'
-      +'<td style="text-align:right;font-weight:500">'+p.pct+'%</td>'
       +'<td style="text-align:right">'+p.total+'</td>'
+      +(incompleto ? proyTd : '')
       +'<td style="text-align:right;color:'+qColor+';font-weight:'+(p.dias_quiebre>2?'600':'400')+'">'+qText+'</td>'
-      +'<td>'+spark+'</td>'
       +'<td>'+tBadge+'</td>'
       +'</tr>';
   }
@@ -1558,7 +1594,7 @@ function renderAlertas(){
         +'<span style="color:#27AE60;font-weight:700">+'+Math.round(a.cantidad)+' und</span></div>';
     }).join('');
     h += '<div style="margin:16px 16px 0;background:#F2FAF4;border:1px solid #BFE3C8;border-radius:10px;padding:14px 18px">'
-      +'<div style="font-weight:700;font-size:13px;color:#1E8449;margin-bottom:6px">📦 Recepciones detectadas — '+(ALERTAS.fecha||'')+'</div>'
+      +'<div style="font-weight:700;font-size:13px;color:#1E8449;margin-bottom:6px">📦 Recepciones detectadas — '+fechaES(ALERTAS.fecha||'')+'</div>'
       +'<div style="font-size:12px;color:#5a7a62;margin-bottom:8px">El stock subió: se registraron como producción del día. Normal si hubo recepción.</div>'
       +items2+'</div>';
   }
@@ -1889,7 +1925,18 @@ function imprimirDespacho(){
 
 // ── Init ───────────────────────────────────────────────────
 document.getElementById('f-cocinero').addEventListener('change', filtrar);
-document.getElementById('f-buscar').addEventListener('input', filtrar);
+var fBuscar = document.getElementById('f-buscar');
+var fClear  = document.getElementById('f-buscar-clear');
+fBuscar.addEventListener('input', function(){
+  fClear.style.display = fBuscar.value ? 'flex' : 'none';
+  filtrar();
+});
+fClear.addEventListener('click', function(){
+  fBuscar.value = '';
+  fClear.style.display = 'none';
+  filtrar();
+  fBuscar.focus();
+});
 document.getElementById('r-mes').addEventListener('change', renderRanking);
 renderCards(DATA);
 updateMetricas();
@@ -1920,10 +1967,9 @@ HTML_TEMPLATE = """<!DOCTYPE html>
       <button class="btn nav-active" id="nav-resumen" onclick="mostrarResumen()">Resumen</button>
       <button class="btn" id="nav-productos" onclick="mostrarProductos()">Productos</button>
       <button class="btn" id="nav-guias" onclick="mostrarGuias()">Guías</button>
-      <button class="btn" id="nav-ranking" onclick="mostrarRanking()">Ranking</button>
-      <button class="btn" id="nav-analisis" onclick="mostrarAnalisis()" style="display:none">Análisis</button>
+      <button class="btn" id="nav-analisis" onclick="mostrarAnalisis()">Análisis</button>
     </div>
-    <span class="fecha">FECHA_HOY_PLACEHOLDER</span>
+    <span class="fecha">Últ. act.: ULTIMO_UPDATE_PLACEHOLDER</span>
   </div>
 </div>
 
@@ -1931,8 +1977,7 @@ HTML_TEMPLATE = """<!DOCTYPE html>
   <button class="bnav-btn nav-active" id="bnav-resumen" onclick="mostrarResumen()"><span class="bnav-icon">📊</span>Resumen</button>
   <button class="bnav-btn" id="bnav-productos" onclick="mostrarProductos()"><span class="bnav-icon">📦</span>Productos</button>
   <button class="bnav-btn" id="bnav-guias" onclick="mostrarGuias()"><span class="bnav-icon">📋</span>Guías</button>
-  <button class="bnav-btn" id="bnav-ranking" onclick="mostrarRanking()"><span class="bnav-icon">📈</span>Ranking</button>
-  <button class="bnav-btn" id="bnav-analisis" onclick="mostrarAnalisis()" style="display:none"><span class="bnav-icon">📉</span>Análisis</button>
+  <button class="bnav-btn" id="bnav-analisis" onclick="mostrarAnalisis()"><span class="bnav-icon">📉</span>Análisis</button>
 </nav>
 
 <!-- VISTA RESUMEN -->
@@ -1955,6 +2000,7 @@ HTML_TEMPLATE = """<!DOCTYPE html>
     <div class="search-wrap">
       <span class="search-ico">🔍</span>
       <input type="text" id="f-buscar" placeholder="Buscar producto o SKU...">
+      <button type="button" id="f-buscar-clear" class="search-clear" aria-label="Borrar búsqueda" style="display:none">✕</button>
     </div>
     <div class="chips" id="chips-estado">
       <button class="chip chip-active" data-estado="" onclick="setChipEstado(this)">Todos</button>
@@ -2090,20 +2136,12 @@ HTML_TEMPLATE = """<!DOCTYPE html>
 </div>
 
 <div class="ana-grid">
-  <div class="ana-card">
+  <div class="ana-card ana-card-wide">
     <div class="ana-card-title">Comparativa mensual</div>
     <div id="ana-comparativa"></div>
   </div>
-  <div class="ana-card">
-    <div class="ana-card-title">Por semana del mes</div>
-    <div id="ana-por-semana"></div>
-  </div>
-  <div class="ana-card">
-    <div class="ana-card-title">Por día de la semana</div>
-    <div id="ana-por-dia"></div>
-  </div>
-  <div class="ana-card">
-    <div class="ana-card-title">Días del mes</div>
+  <div class="ana-card ana-card-wide">
+    <div class="ana-card-title">Ventas por día del mes</div>
     <div id="ana-calendario"></div>
   </div>
 </div>
@@ -2126,7 +2164,7 @@ JS_PLACEHOLDER
 </body>
 </html>"""
 
-def generar_html(datos, fecha_str, analisis=None):
+def generar_html(datos, fecha_str, analisis=None, ultimo_update_str=None):
     data_json    = json.dumps(datos, ensure_ascii=False)
     analisis_json = json.dumps(analisis or {}, ensure_ascii=False)
     # Alertas de cuadratura del día (las escribe actualizar_diario.py)
@@ -2137,12 +2175,13 @@ def generar_html(datos, fecha_str, analisis=None):
         alertas_json = 'null'
     js_final  = JS.replace('FECHA_HOY_PLACEHOLDER', fecha_str)
     html = HTML_TEMPLATE
-    html = html.replace('CSS_PLACEHOLDER',         CSS)
-    html = html.replace('ANA_DATA_PLACEHOLDER',    analisis_json)  # antes de DATA_PLACEHOLDER
-    html = html.replace('DATA_PLACEHOLDER',        data_json)
-    html = html.replace('ALERTAS_PLACEHOLDER',     alertas_json)
-    html = html.replace('JS_PLACEHOLDER',          js_final)
-    html = html.replace('FECHA_HOY_PLACEHOLDER',   fecha_str)
+    html = html.replace('CSS_PLACEHOLDER',            CSS)
+    html = html.replace('ANA_DATA_PLACEHOLDER',       analisis_json)  # antes de DATA_PLACEHOLDER
+    html = html.replace('DATA_PLACEHOLDER',           data_json)
+    html = html.replace('ALERTAS_PLACEHOLDER',        alertas_json)
+    html = html.replace('JS_PLACEHOLDER',             js_final)
+    html = html.replace('FECHA_HOY_PLACEHOLDER',      fecha_str)
+    html = html.replace('ULTIMO_UPDATE_PLACEHOLDER',  ultimo_update_str or fecha_str)
     return html
 
 # ─── MAIN ────────────────────────────────────────────────────
@@ -2154,8 +2193,17 @@ if __name__ == '__main__':
     print('\nCalculando datos de análisis...')
     analisis = calcular_analisis()
     print(f'  Meses disponibles: {len(analisis.get("meses", []))}')
+    # Leer ultimo_update del historial para mostrar en el header
+    MESES_ES = ['ene','feb','mar','abr','may','jun','jul','ago','sep','oct','nov','dic']
+    try:
+        with open(ARCHIVO_JSON, encoding='utf-8') as _f:
+            _uu = json.load(_f).get('ultimo_update', '')
+        _uu_ts = pd.Timestamp(_uu)
+        ultimo_update_str = f'{_uu_ts.day} {MESES_ES[_uu_ts.month-1]} · {_uu_ts.strftime("%H:%M")}'
+    except Exception:
+        ultimo_update_str = FECHA_STR
     print(f'\nGenerando HTML con {len(datos)} productos...')
-    html = generar_html(datos, FECHA_STR, analisis)
+    html = generar_html(datos, FECHA_STR, analisis, ultimo_update_str)
     with open(ARCHIVO_HTML, 'w', encoding='utf-8') as f:
         f.write(html)
     print(f'Dashboard: {ARCHIVO_HTML}')
