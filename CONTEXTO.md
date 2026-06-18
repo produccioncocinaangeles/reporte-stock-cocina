@@ -122,6 +122,16 @@ Pestaña completa de análisis de ventas mensuales. Estado actual en `reporte-st
 
 ---
 
+## Rediseño pendiente (rama `rediseno`)
+
+- Rama `rediseno` creada el 18-jun-2026 desde el commit estable `08b16d2`.
+- El rediseño se desarrolla en `reporte-stock-PRUEBAS` como siempre.
+- Cuando esté listo: copiar `generar_dashboard.py` a repo-temp, hacer checkout a `rediseno`, commitear y pushear.
+- Para fusionar a producción: PR de `rediseno` → `main` (o merge directo si todo está bien).
+- `main` NO se toca durante el rediseño — GitHub Actions sigue publicando la versión estable.
+
+---
+
 ## Proyecto futuro
 
 Dashboard de stock para la **pizzería delivery del hermano** del usuario,
