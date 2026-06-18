@@ -1,65 +1,40 @@
 {
-  "fecha": "2026-06-17",
+  "fecha": "2026-06-18",
   "entradas": [
     {
-      "sku": "MCL",
+      "sku": "CLC",
       "oficina": "PAT",
       "cantidad": 3.0
     },
     {
-      "sku": "MCJ",
+      "sku": "RM",
       "oficina": "PAT",
-      "cantidad": 5.0
+      "cantidad": 1.0
     },
     {
-      "sku": "CL",
-      "oficina": "PAT",
-      "cantidad": 3.0
+      "sku": "TLS",
+      "oficina": "VIT",
+      "cantidad": 7.0
     },
     {
       "sku": "LS",
-      "oficina": "PAT",
-      "cantidad": 1.0
+      "oficina": "VIT",
+      "cantidad": 10.0
     },
     {
-      "sku": "LJC",
-      "oficina": "PAT",
-      "cantidad": 1.0
+      "sku": "RB",
+      "oficina": "VIT",
+      "cantidad": 18.0
     },
     {
-      "sku": "CF",
+      "sku": "RB",
       "oficina": "PAT",
-      "cantidad": 1.0
+      "cantidad": 6.0
     },
     {
-      "sku": "RS",
-      "oficina": "PAT",
-      "cantidad": 3.0
-    },
-    {
-      "sku": "ÑP",
-      "oficina": "PAT",
-      "cantidad": 1.0
-    },
-    {
-      "sku": "TF",
-      "oficina": "PAT",
-      "cantidad": 1.0
-    },
-    {
-      "sku": "RA",
-      "oficina": "PAT",
-      "cantidad": 1.0
-    },
-    {
-      "sku": "PAC",
-      "oficina": "PAT",
-      "cantidad": 3.0
-    },
-    {
-      "sku": "EM",
-      "oficina": "PAT",
-      "cantidad": 3.0
+      "sku": "ÑC",
+      "oficina": "VIT",
+      "cantidad": 17.0
     },
     {
       "sku": "EJ",
@@ -67,50 +42,36 @@
       "cantidad": 1.0
     },
     {
-      "sku": "PV",
-      "oficina": "PAT",
-      "cantidad": 2.0
-    },
-    {
-      "sku": "LR",
-      "oficina": "PAT",
-      "cantidad": 1.0
-    },
-    {
-      "sku": "CP",
-      "oficina": "PAT",
-      "cantidad": 1.0
+      "sku": "CM",
+      "oficina": "VIT",
+      "cantidad": 10.0
     },
     {
       "sku": "CM",
       "oficina": "PAT",
-      "cantidad": 1.0
+      "cantidad": 5.0
     },
     {
-      "sku": "TCM",
+      "sku": "SA",
       "oficina": "PAT",
-      "cantidad": 4.0
-    },
+      "cantidad": 25.0
+    }
+  ],
+  "salidas": [
     {
-      "sku": "EC",
-      "oficina": "PAT",
-      "cantidad": 2.0
-    },
-    {
-      "sku": "SSA",
-      "oficina": "PAT",
-      "cantidad": 2.0
-    },
-    {
-      "sku": "LM",
+      "sku": "RS",
       "oficina": "PAT",
       "cantidad": 1.0
     },
     {
-      "sku": "TPU",
+      "sku": "EM",
+      "oficina": "PAT",
+      "cantidad": 1.0
+    },
+    {
+      "sku": "CAMAC",
       "oficina": "PAT",
       "cantidad": 1.0
     }
-  ],
-  "salidas": []
+  ]
 }
