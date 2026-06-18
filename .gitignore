@@ -3,5 +3,7 @@ velocidades.json
 config.txt
 token.txt
 actualizar_local.bat
+.mcp.json
+.claude/
 __pycache__/
 *.pyc
