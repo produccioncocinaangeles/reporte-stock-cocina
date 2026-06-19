@@ -879,10 +879,11 @@ select,input[type=text],input[type=number]{font-size:13px;font-weight:500;paddin
 .bar-track{flex:1;height:8px;background:#f0f0ee;border-radius:4px;overflow:hidden}
 .bar-fill{height:100%;border-radius:4px}
 .bar-val{font-size:11px;color:#42493b;width:42px;text-align:right;flex-shrink:0}
-.month-wrap{display:flex;align-items:flex-end;gap:6px;height:100px;margin-bottom:6px}
-.month-col{display:flex;flex-direction:column;align-items:center;gap:2px;flex:1;cursor:pointer;position:relative}
-.month-val{font-size:10px;font-weight:600;color:#727969;text-align:center;position:absolute;bottom:calc(100% - 20px);white-space:nowrap}
-.month-bar{border-radius:3px 3px 0 0;min-height:4px;width:100%}
+.month-wrap{display:flex;align-items:flex-end;gap:6px;margin-bottom:6px}
+.month-col{display:flex;flex-direction:column;align-items:center;gap:4px;flex:1;cursor:pointer}
+.month-val{font-size:11px;font-weight:600;color:#727969;white-space:nowrap}
+.month-track{height:90px;width:100%;display:flex;align-items:flex-end}
+.month-bar{width:100%;border-radius:3px 3px 0 0;min-height:4px}
 .month-lab{font-size:9px;color:#727969;white-space:nowrap}
 .cal-header{display:grid;grid-template-columns:repeat(7,1fr);gap:2px;margin-bottom:2px}
 .cal-hdr{font-size:9px;font-weight:700;color:#727969;text-align:center;text-transform:uppercase;padding:1px 0}
@@ -890,8 +891,8 @@ select,input[type=text],input[type=number]{font-size:13px;font-weight:500;paddin
 .tday{height:52px;display:flex;flex-direction:column;align-items:center;justify-content:center;border-radius:4px;position:relative;cursor:default;padding:2px}
 .tday[data-tip]:not([data-tip=""]):hover::after{content:attr(data-tip);position:absolute;bottom:calc(100% + 6px);left:50%;transform:translateX(-50%);background:rgba(25,25,25,0.92);color:#fff;padding:4px 9px;border-radius:5px;font-size:10px;white-space:nowrap;z-index:300;pointer-events:none;font-weight:500;letter-spacing:0.02em;box-shadow:0 2px 6px rgba(0,0,0,0.25)}
 .tday.empty{background:transparent}
-.tday-num{font-size:8px;line-height:1;opacity:0.65;align-self:flex-end;padding-right:1px}
-.tday-val{font-size:11px;font-weight:700;line-height:1.1}
+.tday-num{font-size:10px;font-weight:600;line-height:1;opacity:0.8;align-self:flex-end;padding-right:2px}
+.tday-val{font-size:13px;font-weight:700;line-height:1.1}
 .tday-dot{width:5px;height:5px;border-radius:50%;position:absolute;top:3px;left:3px}
 .tday-dot.feriado-dot{background:#1960a6}
 .tday-dot.festividad-dot{background:#275300}
@@ -906,7 +907,6 @@ select,input[type=text],input[type=number]{font-size:13px;font-weight:500;paddin
   .ana-card{border-right:none}
   .ana-metricas{grid-template-columns:repeat(2,1fr);font-size:12px}
   .ana-metricas .metrica:nth-child(2){border-right:none}
-  .month-lab{font-size:8px}
 }
 """
 
@@ -1417,8 +1417,8 @@ function renderComparativaMeses(){
     var bg  = act ? '#275300' : '#c2c9b7';
     var lbl = MNA[parseInt(m.split('-')[1])];
     html += '<div class="month-col" data-mes="'+m+'" onclick="seleccionarMesAna(this.dataset.mes)">'
-      +'<span class="month-val" style="bottom:'+h+'px;'+(act?'color:#275300':'')+'">'+v+'</span>'
-      +'<div class="month-bar" style="height:'+h+'px;background:'+bg+'"></div>'
+      +'<span class="month-val" style="'+(act?'color:#275300':'')+'">'+v+'</span>'
+      +'<div class="month-track"><div class="month-bar" style="height:'+h+'px;background:'+bg+'"></div></div>'
       +'<span class="month-lab" style="'+(act?'color:#275300;font-weight:600':'')+'">'+(lbl||m)+'</span></div>';
   }
   html += '</div><div style="font-size:11px;color:#727969">Promedio: <strong style="color:#191c1d">'+(ANA_DATA.promedio_mensual.toLocaleString?ANA_DATA.promedio_mensual.toLocaleString('es-CL'):ANA_DATA.promedio_mensual)+' un.</strong> · Clic en barra para ver ese mes</div>';
@@ -1478,12 +1478,10 @@ function renderCalendario(d){
     if(fSet[dd])    { tip += ' · '+fSet[dd];    dots += '<span class="tday-dot feriado-dot"></span>'; }
     if(festSet[dd]) { tip += ' · '+festSet[dd]; dots += '<span class="tday-dot festividad-dot"></span>'; }
     if(vSet[dd])    { tip += ' · '+vSet[dd];    dots += '<span class="tday-dot vacacion-dot"></span>'; }
-    var valHtml = unidades>0
-      ? '<span class="tday-val" style="color:'+tc+'">'+unidades+'</span>'
-      : '<span class="tday-num" style="color:'+tc+';opacity:0.4;font-size:9px">'+dd+'</span>';
+    var valHtml = unidades>0 ? '<span class="tday-val" style="color:'+tc+'">'+unidades+'</span>' : '';
     html += '<div class="tday" style="background:'+bg+'" data-tip="'+tip+'">'
       +dots
-      +(unidades>0?'<span class="tday-num" style="color:'+tc+'">'+dd+'</span>':'')
+      +'<span class="tday-num" style="color:'+tc+'">'+dd+'</span>'
       +valHtml
       +'</div>';
   }

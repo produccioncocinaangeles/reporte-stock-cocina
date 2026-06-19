@@ -118,6 +118,13 @@ Pestaña completa de análisis de ventas mensuales. Estado actual en `reporte-st
 - Buscador restaurado: ignora tildes/eñes, botón ✕ para borrar.
 - `actualizar_local.bat` + `token.txt` en .gitignore (script de actualización local).
 
+**Correcciones post-lanzamiento (18-jun, mismo día):**
+- Mapa de calor: el número del día quedaba casi invisible (8px, opacidad 0.65). Corregido a 10px, opacidad 0.8, siempre visible junto a las unidades.
+- Comparativa mensual: el número sobre la barra activa (mes en curso) se superponía o cortaba por usar `position:absolute` calculado según la altura de la barra. Patrón corregido: el número va en su propia fila de flujo normal arriba de un "track" de altura fija (`.month-track`, 90px), la barra crece dentro de ese track — nunca se superpone sin importar la altura.
+- Se exploraron alternativas (línea con área, barras horizontales) pero el usuario prefirió mantener barras verticales, solo con el bug de posicionamiento corregido.
+
+**Sincronización multi-PC:** skills (`analisis-stock-restaurante`, `frontend-design`, `ui-ux-pro-max`) y el MCP de Stitch (`.mcp.json`) ahora viven en `G:\Mi unidad\repo-temp\.claude\` y `.mcp.json` — protegidos en `.gitignore` porque el repo es público. Se sincronizan entre PCs vía Google Drive sin tocar GitHub. (Se detectó y corrigió un incidente: una copia completa de `~/.claude/` con credenciales había quedado expuesta en Drive — eliminada.)
+
 **Migración:** carpeta de trabajo movida de OneDrive a Google Drive (`G:\Mi unidad\`) para acceso desde ambos PCs.
 
 ---
