@@ -411,6 +411,23 @@ def procesar():
     resultados.sort(key=lambda x: (orden[x['estado']], x['dias_prod'] if x['dias_prod'] is not None else 9999))
     return resultados
 
+ARCHIVO_HIST_PROY = os.path.join(CARPETA, 'historial_proyecciones.json')
+
+def guardar_historial_proyecciones(datos):
+    # Snapshot mensual de lote_sugerido por SKU (un registro por mes, no por dia)
+    # para poder comparar como cambia la proyeccion historica con el tiempo.
+    try:
+        with open(ARCHIVO_HIST_PROY, encoding='utf-8') as f:
+            hist = json.load(f)
+    except (FileNotFoundError, json.JSONDecodeError):
+        hist = {}
+    mes_str = FECHA_HOY.strftime('%Y-%m')
+    if mes_str not in hist:
+        hist[mes_str] = {d['sku']: d['lote_sugerido'] for d in datos}
+        with open(ARCHIVO_HIST_PROY, 'w', encoding='utf-8') as f:
+            json.dump(hist, f, ensure_ascii=False, indent=2)
+    return hist
+
 # ─── ANÁLISIS DE VENTAS ───────────────────────────────────────
 FERIADOS_CHILE = {
     '2024-01-01':'Año Nuevo','2024-03-29':'Viernes Santo','2024-03-30':'Sábado Santo',
@@ -584,11 +601,13 @@ def calcular_analisis():
             mx = max(spark_vals) if spark_vals else 1
             spark_norm = [round(v / mx * 10) if mx > 0 else 0 for v in spark_vals]
             tend = 'estable'
+            MIN_VOL_TEND = 10  # bajo este volumen mensual el % es ruido, no tendencia real
             if len(spark_vals) >= 2 and spark_vals[-2] > 0:
                 val_tend = int(round(spark_vals[-1] * dias_n_mes / dias_datos_est)) if es_incompleto and dias_datos_est > 0 else spark_vals[-1]
-                cambio = (val_tend - spark_vals[-2]) / spark_vals[-2]
-                if cambio > 0.15:   tend = 'sube'
-                elif cambio < -0.15: tend = 'baja'
+                if val_tend >= MIN_VOL_TEND or spark_vals[-2] >= MIN_VOL_TEND:
+                    cambio = (val_tend - spark_vals[-2]) / spark_vals[-2]
+                    if cambio > 0.15:   tend = 'sube'
+                    elif cambio < -0.15: tend = 'baja'
             productos.append({
                 'sku': sku_p, 'nombre': NOMBRES[sku_p],
                 'total': int(tot_sku),
@@ -739,6 +758,9 @@ select,input[type=text],input[type=number]{font-size:13px;font-weight:500;paddin
 .tab-body.active{display:block}
 
 /* ── Movimientos ─────────────────────────────────────────── */
+.movs-filtros{display:flex;gap:6px;margin-bottom:8px}
+.movs-filter-btn{font-size:11px;font-weight:700;padding:4px 12px;border-radius:20px;border:1px solid #c2c9b7;background:#f8f9fa;color:#555;cursor:pointer;font-family:inherit}
+.movs-filter-btn.activo{background:#275300;color:#fff;border-color:#275300}
 .movs-table{width:100%;border-collapse:collapse;font-size:12px}
 .movs-table th{text-align:left;color:#727969;padding:6px 10px;border-bottom:1px solid #c2c9b7;font-size:10px;text-transform:uppercase;letter-spacing:0.05em;font-weight:700}
 .movs-table td{padding:7px 10px;border-bottom:1px solid #edeeef;vertical-align:middle}
@@ -989,7 +1011,8 @@ function buildMovs(movs, idx, completo){
       ? '<span class="tienda-vit">Vitacura</span>'
       : '<span class="tienda-pat">Pataguas</span>';
     const cantCls = m.signo==='+' ? 'cant-pos' : 'cant-neg';
-    return '<tr><td style="color:#888">'+m.fecha+'</td><td>'+tipoBadge(m.tipo)+'</td>'
+    const rowBg = m.stock===0 ? 'background:rgba(186,26,26,0.07);' : '';
+    return '<tr data-tienda="'+m.tienda+'" style="'+rowBg+'"><td style="color:#888">'+m.fecha+'</td><td>'+tipoBadge(m.tipo)+'</td>'
       +'<td style="color:#666;font-size:11px">'+m.documento+'</td><td>'+tienda+'</td>'
       +'<td class="'+cantCls+'" style="text-align:right">'+m.signo+m.cantidad+'</td>'
       +'<td style="text-align:right;font-weight:600">'+m.stock+'</td></tr>';
@@ -1000,13 +1023,25 @@ function buildMovs(movs, idx, completo){
   } else if(completo && movs.length > 0){
     boton = '<div style="font-size:11px;color:#aaa;padding:8px 0;text-align:center">Historial completo · '+movs.length+' movimientos</div>';
   }
-  return '<div class="movs-scroll"><table class="movs-table"><thead><tr>'
+  var filtros = '<div class="movs-filtros">'
+    +'<button class="movs-filter-btn activo" onclick="filtrarMovs('+idx+',&apos;Todas&apos;,this)">Todas</button>'
+    +'<button class="movs-filter-btn" onclick="filtrarMovs('+idx+',&apos;Vitacura&apos;,this)">Vitacura</button>'
+    +'<button class="movs-filter-btn" onclick="filtrarMovs('+idx+',&apos;Pataguas&apos;,this)">Pataguas</button>'
+    +'</div>';
+  return filtros+'<div class="movs-scroll"><table class="movs-table"><thead><tr>'
     +'<th>Fecha</th><th>Tipo</th><th>Documento</th><th>Tienda</th>'
     +'<th style="text-align:right">Cant.</th><th style="text-align:right">Stock</th>'
     +'</tr></thead><tbody>'+rows+'</tbody></table></div>'+boton;
 }
 function verMovsCompletos(i){
   document.getElementById('tab-'+i+'-mov').innerHTML = buildMovs(DATA[i].movs, i, true);
+}
+function filtrarMovs(idx, tienda, btn){
+  document.querySelectorAll('#tab-'+idx+'-mov .movs-filter-btn').forEach(function(b){ b.classList.remove('activo'); });
+  btn.classList.add('activo');
+  document.querySelectorAll('#tab-'+idx+'-mov tr[data-tienda]').forEach(function(r){
+    r.style.display = (tienda==='Todas' || r.dataset.tienda===tienda) ? '' : 'none';
+  });
 }
 
 // ── Análisis ───────────────────────────────────────────────
@@ -1524,10 +1559,14 @@ function renderTablaContrib(d){
   var html = '<table class="rank-table"><thead><tr>'
     +'<th data-col="nombre" onclick="sortTablaAna(this.dataset.col)" style="cursor:pointer;user-select:none">Producto'+arw('nombre')+'</th>'
     +'<th data-col="total" onclick="sortTablaAna(this.dataset.col)" style="cursor:pointer;user-select:none;text-align:right">Unidades'+arw('total')+'</th>'
-    +(incompleto ? '<th style="text-align:right">Proyec. mes</th>' : '')
+    +'<th style="text-align:right">Proyec. histórica</th>'
     +'<th data-col="quiebre" onclick="sortTablaAna(this.dataset.col)" style="cursor:pointer;user-select:none;text-align:right">Quiebre'+arw('quiebre')+'</th>'
-    +'<th data-col="tendencia" onclick="sortTablaAna(this.dataset.col)" style="cursor:pointer;user-select:none">Tendencia'+arw('tendencia')+'</th>'
+    +'<th data-col="tendencia" onclick="sortTablaAna(this.dataset.col)" style="cursor:pointer;user-select:none">vs mes ant.'+arw('tendencia')+'</th>'
     +'</tr></thead><tbody>';
+  var histProy = ANA_DATA.historial_proy || {};
+  var mesesHist = Object.keys(histProy).sort();
+  var mesViejo = mesesHist.length >= 2 ? mesesHist[0] : null;
+  var mesNuevo = mesesHist.length >= 2 ? mesesHist[mesesHist.length-1] : null;
   for(var i=0;i<prods.length;i++){
     var p = prods[i];
     var spark = '<div style="display:flex;align-items:flex-end;gap:2px;height:18px">';
@@ -1544,15 +1583,22 @@ function renderTablaContrib(d){
       : p.tendencia==='baja'
       ? '<span style="font-size:10px;padding:2px 8px;background:#fce8e8;color:#ba1a1a;border-radius:10px;font-weight:600">Baja ↓</span>'
       : '<span style="font-size:10px;padding:2px 8px;background:#f0f0ee;border-radius:10px;color:#727969">Estable</span>';
-    var proyTd = '';
-    if(incompleto && d.dias_datos > 0){
-      var proy = Math.max(p.total, Math.round(p.total * d.dias_mes / d.dias_datos));
-      proyTd = '<td style="text-align:right"><span style="color:#727969">'+proy+' un.</span></td>';
+    var dataP = DATA.find(function(x){return x.sku===p.sku;}) || {};
+    var prom  = dataP.lote_sugerido || 0;
+    var promTd = prom > 0 ? '<span style="color:#727969">'+prom+' un.</span>' : '<span style="color:#ccc">—</span>';
+    if(mesViejo && histProy[mesViejo][p.sku] > 0){
+      var vViejo = histProy[mesViejo][p.sku];
+      var vNuevo = histProy[mesNuevo][p.sku] || prom;
+      var difH = Math.round((vNuevo - vViejo) / vViejo * 100);
+      if(Math.abs(difH) >= 10){
+        var colH = difH > 0 ? '#275300' : '#ba1a1a';
+        promTd += '<br><span style="font-size:9px;color:'+colH+'">'+(difH>0?'+':'')+difH+'% vs '+mesViejo+'</span>';
+      }
     }
     html += '<tr>'
       +'<td>'+p.nombre+'<span style="color:#aaa;font-size:10px;margin-left:4px">'+p.sku+'</span></td>'
       +'<td style="text-align:right">'+p.total+'</td>'
-      +(incompleto ? proyTd : '')
+      +'<td style="text-align:right">'+promTd+'</td>'
       +'<td style="text-align:right;color:'+qColor+';font-weight:'+(p.dias_quiebre>2?'600':'400')+'">'+qText+'</td>'
       +'<td>'+tBadge+'</td>'
       +'</tr>';
@@ -2188,8 +2234,10 @@ if __name__ == '__main__':
     print('La Cocina — Generador de Dashboard')
     print('='*50)
     datos = procesar()
+    hist_proy = guardar_historial_proyecciones(datos)
     print('\nCalculando datos de análisis...')
     analisis = calcular_analisis()
+    analisis['historial_proy'] = hist_proy
     print(f'  Meses disponibles: {len(analisis.get("meses", []))}')
     # Leer ultimo_update del historial para mostrar en el header
     MESES_ES = ['ene','feb','mar','abr','may','jun','jul','ago','sep','oct','nov','dic']

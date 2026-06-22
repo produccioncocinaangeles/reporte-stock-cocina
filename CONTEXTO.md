@@ -129,6 +129,26 @@ Pestaña completa de análisis de ventas mensuales. Estado actual en `reporte-st
 
 ---
 
+## Estado al 22-jun-2026
+
+**Tabla "Contribución por producto" (tab Análisis) — vuelta a definir varias veces, estado final:**
+- Columna **"Proyec. histórica"** = mismo valor que `lote_sugerido` de la pestaña Productos ("Consumo estimado 30 días"), NO un cálculo nuevo. Decisión explícita del usuario tras varias iteraciones (se probó extrapolación lineal del mes y distribución proporcional de la proyección general — ambas se descartaron).
+- Debajo del número, si hay ≥2 meses de historial guardado, aparece un indicador "+X% vs YYYY-MM" cuando el cambio es ≥10% — usa el nuevo archivo `historial_proyecciones.json`.
+- Columna **"vs mes ant."** (antes "Tendencia"): compara la proyección de este mes vs el mes anterior. Para evitar ruido en productos de bajo volumen, si ambos valores son menores a 10 unidades, se fuerza "Estable" en vez de Sube/Baja (variable `MIN_VOL_TEND` en `calcular_analisis()`).
+
+**Nuevo: `historial_proyecciones.json`** — snapshot mensual (NO diario) de `lote_sugerido` por SKU, para poder comparar cómo cambia la proyección histórica con el tiempo. Se guarda una sola vez por mes (la primera corrida de ese mes). Archivo pequeño (~1 KB/mes) — **debe estar en git, NO en .gitignore**, para que persista entre corridas de GitHub Actions.
+
+**Filtro de tienda restaurado** en tabla de Movimientos (Productos tab) — se había perdido en algún punto entre ediciones, igual que pasó antes con el buscador sin tildes. Botones Todas/Vitacura/Pataguas, función `filtrarMovs()`.
+
+**Validación de proyecciones con datos reales (22-jun):**
+- Verificado que las vacaciones bajan el ritmo de venta a casi la mitad (enero-febrero vacaciones de verano: 11-15 un./día vs marzo normal: 22.5 un./día). Las vacaciones de invierno (22-jun al 3-jul) cubren el resto de junio — cualquier proyección de cierre de mes debe descontar este efecto, no asumir que el ritmo se mantiene.
+- El Día del Padre (21-jun) NO generó un pico de ventas ese día específico (28 un., normal para domingo). Hubo picos inusuales el 17-18 jun (mié-jue) sin causa clara identificada.
+
+**Pendiente / ideas no implementadas:**
+- Pestaña nueva **"Rendimiento de cocinero"**: el usuario quiere un ícono discreto en el header (no un botón de nav normal) que pida una clave simple antes de mostrar la vista. Importante: como el repo es público, esto NO es seguridad real, solo evita que alguien la encuentre navegando casualmente. Falta definir qué métricas mostrar exactamente (¿unidades producidas por cocinero?, ¿quiebres asociados?). No implementado todavía.
+
+---
+
 ## Rediseño pendiente (rama `rediseno`)
 
 - Rama `rediseno` creada el 18-jun-2026 desde el commit estable `08b16d2`.
