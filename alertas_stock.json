@@ -1,47 +1,5 @@
 {
-  "fecha": "2026-06-21",
-  "entradas": [
-    {
-      "sku": "LS",
-      "oficina": "VIT",
-      "cantidad": 1.0
-    },
-    {
-      "sku": "TCM",
-      "oficina": "PAT",
-      "cantidad": 1.0
-    },
-    {
-      "sku": "CAMAC",
-      "oficina": "PAT",
-      "cantidad": 1.0
-    }
-  ],
-  "salidas": [
-    {
-      "sku": "TS",
-      "oficina": "VIT",
-      "cantidad": 1.0
-    },
-    {
-      "sku": "TSA",
-      "oficina": "PAT",
-      "cantidad": 1.0
-    },
-    {
-      "sku": "TCM",
-      "oficina": "VIT",
-      "cantidad": 1.0
-    },
-    {
-      "sku": "BAR",
-      "oficina": "PAT",
-      "cantidad": 1.0
-    },
-    {
-      "sku": "LM",
-      "oficina": "VIT",
-      "cantidad": 1.0
-    }
-  ]
+  "fecha": "2026-06-22",
+  "entradas": [],
+  "salidas": []
 }
