@@ -1,10 +1,20 @@
 {
-  "fecha": "2026-06-22",
+  "fecha": "2026-06-23",
   "entradas": [
     {
-      "sku": "RM",
-      "oficina": "VIT",
-      "cantidad": 1.0
+      "sku": "MCL",
+      "oficina": "PAT",
+      "cantidad": 4.0
+    },
+    {
+      "sku": "ÑJ",
+      "oficina": "PAT",
+      "cantidad": 4.0
+    },
+    {
+      "sku": "PV",
+      "oficina": "PAT",
+      "cantidad": 3.0
     }
   ],
   "salidas": []
