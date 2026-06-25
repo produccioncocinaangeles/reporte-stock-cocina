@@ -1,10 +1,10 @@
 {
-  "fecha": "2026-06-22",
+  "fecha": "2026-06-25",
   "entradas": [
     {
-      "sku": "RM",
+      "sku": "TSA",
       "oficina": "VIT",
-      "cantidad": 1.0
+      "cantidad": 8.0
     }
   ],
   "salidas": []
