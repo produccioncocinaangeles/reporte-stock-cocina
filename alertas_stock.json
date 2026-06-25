@@ -1,11 +1,5 @@
 {
   "fecha": "2026-06-25",
-  "entradas": [
-    {
-      "sku": "TSA",
-      "oficina": "VIT",
-      "cantidad": 8.0
-    }
-  ],
+  "entradas": [],
   "salidas": []
 }
