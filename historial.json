@@ -1,5 +1,5 @@
 {
-  "ultimo_update": "2026-06-26T06:30:07",
+  "ultimo_update": "2026-06-26T10:56:17",
   "movimientos": [
     {
       "fecha": "2026-01-15",
@@ -46800,6 +46800,104 @@
       "oficina": "PAT",
       "tipo": "produccion",
       "cantidad": 3.0,
+      "doc_id": 0,
+      "inferido": true
+    },
+    {
+      "fecha": "2026-06-26",
+      "sku": "RS",
+      "oficina": "VIT",
+      "tipo": "venta",
+      "cantidad": 1.0,
+      "doc_id": 20551
+    },
+    {
+      "fecha": "2026-06-26",
+      "sku": "RA",
+      "oficina": "VIT",
+      "tipo": "venta",
+      "cantidad": 1.0,
+      "doc_id": 20551
+    },
+    {
+      "fecha": "2026-06-26",
+      "sku": "RM",
+      "oficina": "VIT",
+      "tipo": "venta",
+      "cantidad": 1.0,
+      "doc_id": 20551
+    },
+    {
+      "fecha": "2026-06-26",
+      "sku": "OP",
+      "oficina": "PAT",
+      "tipo": "venta",
+      "cantidad": 1.0,
+      "doc_id": 20549
+    },
+    {
+      "fecha": "2026-06-26",
+      "sku": "CP",
+      "oficina": "PAT",
+      "tipo": "venta",
+      "cantidad": 1.0,
+      "doc_id": 20550
+    },
+    {
+      "fecha": "2026-06-26",
+      "sku": "CAMA",
+      "oficina": "PAT",
+      "tipo": "venta",
+      "cantidad": 2.0,
+      "doc_id": 20550
+    },
+    {
+      "fecha": "2026-06-26",
+      "sku": "MCJ",
+      "oficina": "PAT",
+      "tipo": "venta",
+      "cantidad": 1.0,
+      "doc_id": 20550
+    },
+    {
+      "fecha": "2026-06-26",
+      "sku": "LF",
+      "oficina": "PAT",
+      "tipo": "venta",
+      "cantidad": 3.0,
+      "doc_id": 20550
+    },
+    {
+      "fecha": "2026-06-26",
+      "sku": "EM",
+      "oficina": "PAT",
+      "tipo": "venta",
+      "cantidad": 2.0,
+      "doc_id": 20550
+    },
+    {
+      "fecha": "2026-06-26",
+      "sku": "PN",
+      "oficina": "PAT",
+      "tipo": "venta",
+      "cantidad": 2.0,
+      "doc_id": 20552
+    },
+    {
+      "fecha": "2026-06-26",
+      "sku": "CAMA",
+      "oficina": "VIT",
+      "tipo": "consumo",
+      "cantidad": 3.0,
+      "doc_id": 0,
+      "inferido": true
+    },
+    {
+      "fecha": "2026-06-26",
+      "sku": "BAP",
+      "oficina": "VIT",
+      "tipo": "produccion",
+      "cantidad": 16.0,
       "doc_id": 0,
       "inferido": true
     }
