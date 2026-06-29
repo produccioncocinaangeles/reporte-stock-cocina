@@ -1,5 +1,5 @@
 {
-  "ultimo_update": "2026-06-28T04:35:26",
+  "ultimo_update": "2026-06-29T09:55:58",
   "movimientos": [
     {
       "fecha": "2026-01-15",
@@ -47505,6 +47505,94 @@
       "cantidad": 1.0,
       "doc_id": 0,
       "inferido": true
+    },
+    {
+      "fecha": "2026-06-28",
+      "sku": "PV",
+      "oficina": "VIT",
+      "tipo": "venta",
+      "cantidad": 1.0,
+      "doc_id": 20584
+    },
+    {
+      "fecha": "2026-06-28",
+      "sku": "RB",
+      "oficina": "PAT",
+      "tipo": "venta",
+      "cantidad": 1.0,
+      "doc_id": 20581
+    },
+    {
+      "fecha": "2026-06-28",
+      "sku": "TCH",
+      "oficina": "PAT",
+      "tipo": "venta",
+      "cantidad": 1.0,
+      "doc_id": 20581
+    },
+    {
+      "fecha": "2026-06-28",
+      "sku": "P",
+      "oficina": "PAT",
+      "tipo": "venta",
+      "cantidad": 1.0,
+      "doc_id": 20582
+    },
+    {
+      "fecha": "2026-06-28",
+      "sku": "P",
+      "oficina": "PAT",
+      "tipo": "venta",
+      "cantidad": 1.0,
+      "doc_id": 20583
+    },
+    {
+      "fecha": "2026-06-28",
+      "sku": "TFC",
+      "oficina": "PAT",
+      "tipo": "venta",
+      "cantidad": 1.0,
+      "doc_id": 20583
+    },
+    {
+      "fecha": "2026-06-28",
+      "sku": "CJ",
+      "oficina": "PAT",
+      "tipo": "venta",
+      "cantidad": 1.0,
+      "doc_id": 20585
+    },
+    {
+      "fecha": "2026-06-28",
+      "sku": "CLC",
+      "oficina": "PAT",
+      "tipo": "venta",
+      "cantidad": 1.0,
+      "doc_id": 20585
+    },
+    {
+      "fecha": "2026-06-28",
+      "sku": "PC",
+      "oficina": "PAT",
+      "tipo": "venta",
+      "cantidad": 1.0,
+      "doc_id": 20586
+    },
+    {
+      "fecha": "2026-06-28",
+      "sku": "PCP",
+      "oficina": "PAT",
+      "tipo": "venta",
+      "cantidad": 1.0,
+      "doc_id": 20586
+    },
+    {
+      "fecha": "2026-06-28",
+      "sku": "PC",
+      "oficina": "PAT",
+      "tipo": "venta",
+      "cantidad": 1.0,
+      "doc_id": 20587
     }
   ],
   "docs_ignorar": [
