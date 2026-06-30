@@ -1,5 +1,41 @@
 {
   "fecha": "2026-06-30",
-  "entradas": [],
+  "entradas": [
+    {
+      "sku": "CLC",
+      "oficina": "PAT",
+      "cantidad": 2.0
+    },
+    {
+      "sku": "TLS",
+      "oficina": "VIT",
+      "cantidad": 10.0
+    },
+    {
+      "sku": "PC",
+      "oficina": "PAT",
+      "cantidad": 1.0
+    },
+    {
+      "sku": "RB",
+      "oficina": "PAT",
+      "cantidad": 2.0
+    },
+    {
+      "sku": "TPP",
+      "oficina": "PAT",
+      "cantidad": 4.0
+    },
+    {
+      "sku": "ÑC",
+      "oficina": "PAT",
+      "cantidad": 2.0
+    },
+    {
+      "sku": "PV",
+      "oficina": "PAT",
+      "cantidad": 1.0
+    }
+  ],
   "salidas": []
 }
