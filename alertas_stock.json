@@ -1,16 +1,57 @@
 {
-  "fecha": "2026-07-01",
+  "fecha": "2026-07-02",
   "entradas": [
     {
-      "sku": "RB",
+      "sku": "LCM",
+      "oficina": "VIT",
+      "cantidad": 10.0
+    },
+    {
+      "sku": "TLS",
+      "oficina": "PAT",
+      "cantidad": 5.0
+    },
+    {
+      "sku": "TS",
+      "oficina": "PAT",
+      "cantidad": 2.0
+    },
+    {
+      "sku": "PAC",
+      "oficina": "PAT",
+      "cantidad": 5.0
+    },
+    {
+      "sku": "ÑC",
       "oficina": "PAT",
       "cantidad": 1.0
     },
     {
-      "sku": "PAC",
+      "sku": "MIGNON",
       "oficina": "VIT",
       "cantidad": 24.0
+    },
+    {
+      "sku": "TCM",
+      "oficina": "VIT",
+      "cantidad": 10.0
+    },
+    {
+      "sku": "LM",
+      "oficina": "VIT",
+      "cantidad": 5.0
     }
   ],
-  "salidas": []
+  "salidas": [
+    {
+      "sku": "PCP",
+      "oficina": "PAT",
+      "cantidad": 1.0
+    },
+    {
+      "sku": "BAR",
+      "oficina": "VIT",
+      "cantidad": 1.0
+    }
+  ]
 }
