@@ -1,16 +1,5 @@
 {
   "fecha": "2026-07-03",
-  "entradas": [
-    {
-      "sku": "TLS",
-      "oficina": "PAT",
-      "cantidad": 1.0
-    },
-    {
-      "sku": "PAC",
-      "oficina": "PAT",
-      "cantidad": 1.0
-    }
-  ],
+  "entradas": [],
   "salidas": []
 }
