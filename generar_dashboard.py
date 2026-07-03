@@ -524,11 +524,8 @@ def calcular_analisis():
 
     todos_meses = sorted(ventas['mes'].unique())
 
-    # Incluir mes actual solo si ya transcurrió ≥40% del mes
     mes_actual_str  = FECHA_HOY.to_period('M').strftime('%Y-%m')
     dias_mes_actual = pd.Period(mes_actual_str, 'M').days_in_month
-    if FECHA_HOY.day < dias_mes_actual * 0.4:
-        todos_meses = [m for m in todos_meses if m != mes_actual_str]
 
     meses_disp = todos_meses[-12:]
 
@@ -594,15 +591,26 @@ def calcular_analisis():
         dias_n_mes      = pd.Period(mes, 'M').days_in_month
         dias_datos_est  = int(df_m['dia_num'].max()) if es_incompleto and len(df_m) > 0 else dias_n_mes
 
-        for sku_p, tot_sku in por_sku.items():
-            if sku_p not in NOMBRES:
-                continue
+        # Productos sin ventas este mes pero activos (vendieron en los
+        # últimos 3 meses): se incluyen con total 0 — un producto que
+        # proyectaba venta y vendió nada es una señal, no un dato faltante.
+        skus_mes    = [s for s in por_sku.index if s in NOMBRES]
+        meses_prev3 = todos_meses[max(0, idx_m - 3):idx_m]
+        skus_cero   = [s for s in NOMBRES
+                       if s not in set(skus_mes)
+                       and any(monthly_sku.get((pm, s), 0) > 0 for pm in meses_prev3)]
+
+        for sku_p in skus_mes + skus_cero:
+            tot_sku = int(por_sku.get(sku_p, 0))
             spark_vals = [int(monthly_sku.get((sm, sku_p), 0)) for sm in spark_meses_list]
             mx = max(spark_vals) if spark_vals else 1
             spark_norm = [round(v / mx * 10) if mx > 0 else 0 for v in spark_vals]
             tend = 'estable'
             MIN_VOL_TEND = 10  # bajo este volumen mensual el % es ruido, no tendencia real
-            if len(spark_vals) >= 2 and spark_vals[-2] > 0:
+            MIN_DIAS_TEND = 7  # con menos días de datos la extrapolación del mes en curso es ruido
+            if es_incompleto and dias_datos_est < MIN_DIAS_TEND:
+                tend = 'sin_datos'
+            elif len(spark_vals) >= 2 and spark_vals[-2] > 0:
                 val_tend = int(round(spark_vals[-1] * dias_n_mes / dias_datos_est)) if es_incompleto and dias_datos_est > 0 else spark_vals[-1]
                 if val_tend >= MIN_VOL_TEND or spark_vals[-2] >= MIN_VOL_TEND:
                     cambio = (val_tend - spark_vals[-2]) / spark_vals[-2]
@@ -610,7 +618,7 @@ def calcular_analisis():
                     elif cambio < -0.15: tend = 'baja'
             productos.append({
                 'sku': sku_p, 'nombre': NOMBRES[sku_p],
-                'total': int(tot_sku),
+                'total': tot_sku,
                 'pct': round(float(tot_sku) / total_m * 100, 1),
                 'dias_quiebre': quiebres.get(sku_p, 0),
                 'spark': spark_norm, 'tendencia': tend,
@@ -663,6 +671,35 @@ def calcular_analisis():
         if vals:
             promedios_sku[sku] = round(sum(vals) / len(vals))
 
+    # Ritmo global de producción — el método cambia según la historia disponible:
+    # <13 meses: crecimiento compuesto sobre los últimos meses completos,
+    # excluyendo enero-febrero (vacaciones de verano distorsionan la base).
+    # Cuando existe el mismo mes del año anterior: comparación año contra año.
+    ritmo = None
+    mismo_mes_ant = f'{int(mes_actual_str[:4]) - 1}-{mes_actual_str[5:]}'
+    meses_ritmo = [m for m in todos_meses
+                   if m != mes_actual_str and m[5:7] not in ('01', '02')][-4:]
+    if mismo_mes_ant in totales_mes_dict:
+        ritmo = {
+            'metodo': 'yoy',
+            'mes_ant': mismo_mes_ant,
+            'total_ant': totales_mes_dict[mismo_mes_ant],
+            'mes_ref': mes_actual_str,
+        }
+    elif len(meses_ritmo) >= 2 and totales_mes_dict.get(meses_ritmo[0], 0) > 0:
+        vals_r = [totales_mes_dict[m] for m in meses_ritmo]
+        cmgr = (vals_r[-1] / vals_r[0]) ** (1 / (len(vals_r) - 1)) - 1
+        ult3 = vals_r[-3:]
+        ritmo = {
+            'metodo': 'movil',
+            'meses': meses_ritmo,
+            'totales': vals_r,
+            'cmgr_pct': round(cmgr * 100, 1),
+            'referencia': round(sum(ult3) / len(ult3)),
+            'n_ref': len(ult3),
+            'mes_ref': mes_actual_str,
+        }
+
     return {
         'meses': meses_disp,
         'por_mes': por_mes_res,
@@ -670,6 +707,7 @@ def calcular_analisis():
         'por_dia_historico': por_dia_historico,
         'totales_mensuales': {m: totales_mes_dict.get(m, 0) for m in meses_disp},
         'promedios_sku': promedios_sku,
+        'ritmo': ritmo,
     }
 
 # ─── HTML (sin f-string para evitar conflictos con JS) ───────
@@ -987,10 +1025,20 @@ select,input[type=text],input[type=number]{font-size:13px;font-weight:500;paddin
 .alerta-roja{background:var(--danger-bg);border-color:var(--danger-border)}
 .alerta-amarilla{background:var(--warn-bg);border-color:var(--warn-border)}
 .alerta-verde{background:var(--ok-bg);border-color:var(--ok-border)}
+.alerta-gris{background:var(--neutral-bg);border-color:var(--neutral-border)}
 .alerta-titulo{font-size:13px;font-weight:700;margin-bottom:5px}
 .alerta-roja .alerta-titulo{color:var(--danger-text)}
 .alerta-amarilla .alerta-titulo{color:var(--warn-text)}
 .alerta-verde .alerta-titulo{color:var(--ok-text)}
+.alerta-gris .alerta-titulo{color:var(--neutral-text)}
+.ritmo-card{margin:0 20px 14px;border-radius:12px;padding:14px 16px;border:1px solid var(--neutral-border);background:var(--card-bg);box-shadow:var(--shadow-sm)}
+.ritmo-titulo{font-size:13px;font-weight:700;margin-bottom:5px;color:var(--text-color)}
+.ritmo-detalle{font-size:12px;color:#475569;line-height:1.5;margin-bottom:3px}
+.ritmo-ref{font-size:12px;font-weight:700;color:#475569}
+.tabla-ayuda{margin:0 0 10px;font-size:11px;color:#64748b}
+.tabla-ayuda summary{cursor:pointer;font-weight:600;color:#475569;padding:4px 0;user-select:none}
+.tabla-ayuda ul{margin:6px 0 4px;padding-left:18px;line-height:1.7}
+.tabla-ayuda li{margin-bottom:4px}
 .alerta-detalle{font-size:12px;color:#475569;margin-bottom:3px;line-height:1.5}
 .alerta-comp{font-size:11px;color:#64748b;margin-bottom:3px}
 .alerta-pct{font-size:12px;font-weight:700;color:#475569}
@@ -1040,6 +1088,7 @@ select,input[type=text],input[type=number]{font-size:13px;font-weight:500;paddin
   .ana-grid{grid-template-columns:1fr;margin:0 12px 14px}
   .ana-metricas{grid-template-columns:repeat(2,1fr);font-size:12px;padding:0 12px 14px}
   .ana-section{margin:0 12px 14px;padding:16px}
+  .ritmo-card{margin:0 12px 14px}
   .ana-chips{padding:8px 12px 14px}
 }
 
@@ -1159,14 +1208,29 @@ function buildAnalisis(p){
     + 'Pataguas: <b>'+p.total_pat+' und</b> vendidas en '+p.dias_stock_pat+' días con stock → <b>'+p.vel_pat.toFixed(3)+' und/día</b><br>'
     + 'Ritmo total: <b>'+vt.toFixed(3)+' und/día</b> → ≈<b>'+(vt*30).toFixed(0)+' und/mes</b> si nunca falta stock</div>';
 
-  // Períodos sin stock Vitacura
+  // Períodos sin stock Vitacura — consolidado por mes, detalle plegable
   const per = p.periodos_sin_stock_vit||[];
   if(per.length>0){
+    var qMes = {};
+    var fIso = function(s){ var q = s.split('/'); return q[2]+'-'+q[1]+'-'+q[0]; };
+    per.forEach(function(pp){
+      var d0 = new Date(fIso(pp.inicio)+'T00:00:00'), d1 = new Date(fIso(pp.fin)+'T00:00:00');
+      // 'fin' es el día en que volvió el stock — no se cuenta como día sin stock
+      for(var dt = new Date(d0); dt < d1; dt.setDate(dt.getDate()+1)){
+        var km = dt.getFullYear()+'-'+('0'+(dt.getMonth()+1)).slice(-2);
+        qMes[km] = (qMes[km]||0)+1;
+      }
+    });
+    var resumenQ = Object.keys(qMes).sort().map(function(km){
+      return '<b>'+mesLabel(km)+':</b> '+qMes[km]+(qMes[km]===1?' día':' días');
+    }).join(' · ');
     const chips = per.map(function(pp){
       return '<span class="periodo-chip">'+pp.inicio+' → '+pp.fin+' ('+pp.dias+'d)</span>';
     }).join('');
-    h += '<div class="insight-warn"><b>⚠️ Vitacura sin stock ('+per.length+' veces)</b><br>'
-      + chips+'<br><b>Tiempo de reposición estimado: '+repo+' días</b></div>';
+    h += '<div class="insight-warn"><b>⚠️ Vitacura sin stock</b><br>'
+      + resumenQ
+      + '<details class="tabla-ayuda" style="margin:4px 0 6px"><summary>Ver fechas exactas ('+per.length+(per.length===1?' período':' períodos')+')</summary>'+chips+'</details>'
+      + '<b>Tiempo de reposición estimado: '+repo+' días</b></div>';
   }
 
   // Stock actual
@@ -1179,9 +1243,28 @@ function buildAnalisis(p){
 
   // Recomendaciones
   if(vt>0){
+    // Ajuste vs la foto de proyecciones del mes anterior — muestra si el
+    // sistema recalibró la recomendación de producción de este producto
+    var ajusteTxt = '';
+    var hp = ANA_DATA.historial_proy || {};
+    var mesRefAj = ANA_DATA.ritmo ? ANA_DATA.ritmo.mes_ref : null;
+    if(mesRefAj){
+      var kPrev = null, ks = Object.keys(hp).sort();
+      for(var ki=ks.length-1; ki>=0; ki--){ if(ks[ki] < mesRefAj){ kPrev = ks[ki]; break; } }
+      if(kPrev && hp[kPrev][p.sku] > 0){
+        var vAnt = hp[kPrev][p.sku];
+        var difAj = Math.round((p.lote_sugerido - vAnt) / vAnt * 100);
+        if(Math.abs(difAj) >= 10){
+          var colAj = difAj > 0 ? '#275300' : '#ba1a1a';
+          var verbAj = difAj > 0 ? 'el producto se aceleró' : 'el producto se enfrió';
+          ajusteTxt = '<br><span style="font-size:11px;color:'+colAj+'">↳ ajustado: en '+mesLabel(kPrev).split(' ')[0].toLowerCase()+' se estimaban '+vAnt+' und, ahora '+p.lote_sugerido+' ('+(difAj>0?'+':'')+difAj+'%) — '+verbAj+'</span>';
+        }
+      }
+    }
     h += '<div class="insight-ok"><b>✅ Recomendaciones</b><br>'
       + 'Punto de reorden: cuando queden <b>'+p.pto_reorden+' und</b> → producir de inmediato<br>'
-      + 'Consumo estimado 30 días: <b>'+p.lote_sugerido+' und</b> <span style="color:#777;font-size:11px">(a tu ritmo real; ya descuenta los días sin stock)</span><br>'
+      + 'Consumo estimado 30 días: <b>'+p.lote_sugerido+' und</b> <span style="color:#777;font-size:11px">(a tu ritmo real; ya descuenta los días sin stock)</span>'
+      + ajusteTxt + '<br>'
       + 'Despacho sugerido Pataguas: <b>'+p.despacho_sug+' und</b></div>';
   }
 
@@ -1382,8 +1465,39 @@ function seleccionarMesAna(mes){
   renderAnalisis();
 }
 
+function renderRitmo(){
+  var el = document.getElementById('ana-ritmo');
+  if(!el) return;
+  var r = ANA_DATA.ritmo;
+  // Solo en el mes en curso — en meses pasados la referencia no aporta
+  if(!r || ANA_MES !== r.mes_ref){ el.innerHTML = ''; return; }
+  var html = '';
+  if(r.metodo === 'movil'){
+    var t = r.cmgr_pct;
+    var estado = t >= 10 ? 'creciendo' : t <= -10 ? 'bajando'
+               : t >= 3 ? 'estable con crecimiento suave'
+               : t <= -3 ? 'estable con leve baja' : 'estable';
+    var ico = t >= 10 ? '📈' : t <= -10 ? '📉' : '📊';
+    var sig = t >= 0 ? '+' : '';
+    var serie = r.meses.map(function(m,i){ return mesLabel(m).split(' ')[0]+': '+r.totales[i]; }).join(' · ');
+    html = '<div class="ritmo-card">'
+      +'<div class="ritmo-titulo">'+ico+' Ritmo de producción: '+estado+'</div>'
+      +'<div class="ritmo-detalle">Últimos '+r.meses.length+' meses completos → '+serie+' un. ('+sig+String(t).replace('.',',')+'% mensual promedio, sin contar enero-febrero por vacaciones)</div>'
+      +'<div class="ritmo-ref">Referencia para '+mesLabel(r.mes_ref)+': ~'+r.referencia+' un. (promedio de los últimos '+r.n_ref+' meses)</div>'
+      +'</div>';
+  } else if(r.metodo === 'yoy'){
+    html = '<div class="ritmo-card">'
+      +'<div class="ritmo-titulo">📊 Ritmo de producción — comparación año contra año</div>'
+      +'<div class="ritmo-detalle">Mismo mes del año pasado ('+mesLabel(r.mes_ant)+'): <strong>'+r.total_ant+' un.</strong></div>'
+      +'<div class="ritmo-ref">Referencia para '+mesLabel(r.mes_ref)+': superar las '+r.total_ant+' un. del año anterior</div>'
+      +'</div>';
+  }
+  el.innerHTML = html;
+}
+
 function renderAnalisis(){
   renderChipsAna();
+  renderRitmo();
   if(!ANA_MES || !ANA_DATA.por_mes || !ANA_DATA.por_mes[ANA_MES]){
     document.getElementById('ana-diagnostico').innerHTML = '<div style="padding:24px 16px;color:#999;font-size:13px">Sin datos para el período seleccionado.</div>';
     document.getElementById('ana-quiebres').innerHTML = '';
@@ -1444,7 +1558,18 @@ function renderDiagnostico(d){
   var html = '';
 
   // ── ALERTA TEMPRANA (solo mes en curso) ──────────────────
-  if(d.incompleto){
+  var MIN_DIAS_ALERTA = 7;
+  if(d.incompleto && d.dias_datos < MIN_DIAS_ALERTA){
+    var alertaInfo = calcularAlerta(d);
+    var compInfo = alertaInfo ? '<div class="alerta-comp">Mismo período en meses anteriores → '
+      + alertaInfo.comparables.map(function(c){ return mesLabel(c.mes)+': '+c.total+' un.'; }).join(' · ')+'</div>' : '';
+    html += '<div class="alerta-banner alerta-gris">'
+      +'<div class="alerta-titulo">⏳ Mes recién comenzando</div>'
+      +'<div class="alerta-detalle"><strong>'+total_f+' un.</strong> en '+d.dias_datos+(d.dias_datos===1?' día':' días')
+      +' · muy pocos días para evaluar el ritmo o proyectar el cierre (disponible desde el día '+MIN_DIAS_ALERTA+')</div>'
+      + compInfo
+      +'</div>';
+  } else if(d.incompleto){
     var alerta = calcularAlerta(d);
     if(alerta){
       var acls = alerta.pct <= -30 ? 'alerta-roja' : alerta.pct <= -10 ? 'alerta-amarilla' : 'alerta-verde';
@@ -1474,7 +1599,7 @@ function renderDiagnostico(d){
   if(d.incompleto){
     var pf = d.proyeccion != null ? (d.proyeccion.toLocaleString?d.proyeccion.toLocaleString('es-CL'):d.proyeccion) : '—';
     intro = 'Lleva <strong>'+total_f+' unidades</strong> en '+d.dias_datos+' días.'
-      +(d.proyeccion ? ' Proyección al cierre (ponderada por patrón de día de semana): <strong>~'+pf+' un.</strong>' : '');
+      +(d.proyeccion && d.dias_datos >= MIN_DIAS_ALERTA ? ' Proyección al cierre (ponderada por patrón de día de semana): <strong>~'+pf+' un.</strong>' : '');
   } else {
     var suf = diff>=0?'sobre':'bajo';
     intro = 'Cerró con <strong>'+total_f+' unidades</strong> — <strong>'+diffSign+diff+'%</strong> '+suf+' el ritmo de los meses anteriores.';
@@ -1550,7 +1675,7 @@ function renderMetricasAna(d){
 }
 
 function renderComparativaMeses(){
-  var meses   = ANA_DATA.meses || [];
+  var meses   = (ANA_DATA.meses || []).slice(-6);
   var totales = ANA_DATA.totales_mensuales || {};
   var vals    = meses.map(function(m){return totales[m]||0;});
   var maxV    = Math.max.apply(null, vals);
@@ -1684,8 +1809,10 @@ function renderTablaContrib(d){
     +'</tr></thead><tbody>';
   var histProy = ANA_DATA.historial_proy || {};
   var mesesHist = Object.keys(histProy).sort();
-  var mesViejo = mesesHist.length >= 2 ? mesesHist[0] : null;
-  var mesNuevo = mesesHist.length >= 2 ? mesesHist[mesesHist.length-1] : null;
+  // Foto de proyecciones del mes seleccionado, y la foto anterior más cercana
+  var snapMes = histProy[ANA_MES] || null;
+  var snapPrevKey = null;
+  for(var k=mesesHist.length-1;k>=0;k--){ if(mesesHist[k] < ANA_MES){ snapPrevKey = mesesHist[k]; break; } }
   for(var i=0;i<prods.length;i++){
     var p = prods[i];
     var spark = '<div style="display:flex;align-items:flex-end;gap:2px;height:18px">';
@@ -1701,29 +1828,47 @@ function renderTablaContrib(d){
       ? '<span style="font-size:10px;padding:2px 8px;background:#eaf3de;color:#275300;border-radius:10px;font-weight:600">Sube ↑</span>'
       : p.tendencia==='baja'
       ? '<span style="font-size:10px;padding:2px 8px;background:#fce8e8;color:#ba1a1a;border-radius:10px;font-weight:600">Baja ↓</span>'
+      : p.tendencia==='sin_datos'
+      ? '<span style="color:#ccc">—</span>'
       : '<span style="font-size:10px;padding:2px 8px;background:#f0f0ee;border-radius:10px;color:#727969">Estable</span>';
-    var dataP = DATA.find(function(x){return x.sku===p.sku;}) || {};
-    var prom  = dataP.lote_sugerido || 0;
-    var promTd = prom > 0 ? '<span style="color:#727969">'+prom+' un.</span>' : '<span style="color:#ccc">—</span>';
-    if(mesViejo && histProy[mesViejo][p.sku] > 0){
-      var vViejo = histProy[mesViejo][p.sku];
-      var vNuevo = histProy[mesNuevo][p.sku] || prom;
-      var difH = Math.round((vNuevo - vViejo) / vViejo * 100);
-      if(Math.abs(difH) >= 10){
-        var colH = difH > 0 ? '#275300' : '#ba1a1a';
-        promTd += '<br><span style="font-size:9px;color:'+colH+'">'+(difH>0?'+':'')+difH+'% vs '+mesViejo+'</span>';
+    var promTd;
+    if(incompleto){
+      // Mes en curso: proyección vigente + % de ajuste como vista rápida
+      // (el detalle a fondo vive en la pestaña Productos, en Recomendaciones)
+      var dataP = DATA.find(function(x){return x.sku===p.sku;}) || {};
+      var prom  = dataP.lote_sugerido || 0;
+      promTd = prom > 0 ? '<span style="color:#727969">'+prom+' un.</span>' : '<span style="color:#ccc">—</span>';
+      if(prom > 0 && snapPrevKey && histProy[snapPrevKey][p.sku] > 0){
+        var vPrev = histProy[snapPrevKey][p.sku];
+        var difH = Math.round((prom - vPrev) / vPrev * 100);
+        if(Math.abs(difH) >= 10){
+          var colH = difH > 0 ? '#275300' : '#ba1a1a';
+          promTd += '<br><span style="font-size:9px;color:'+colH+'">ajuste: '+(difH>0?'+':'')+difH+'% vs '+mesLabel(snapPrevKey).split(' ')[0].toLowerCase()+'</span>';
+        }
       }
+    } else {
+      // Mes pasado: la proyección que existía ese mes (foto guardada), para
+      // comparar proyectado vs vendido real. Sin foto → sin dato.
+      var vSnap = snapMes ? (snapMes[p.sku] || 0) : 0;
+      promTd = vSnap > 0 ? '<span style="color:#727969">'+vSnap+' un.</span>' : '<span style="color:#ccc">—</span>';
     }
     html += '<tr>'
       +'<td>'+tituloCase(p.nombre)+'<span class="sku-tag" style="color:#aaa;font-size:10px;margin-left:4px">'+p.sku+'</span></td>'
-      +'<td style="text-align:right">'+p.total+'</td>'
+      +'<td style="text-align:right'+(p.total===0?';color:#ba1a1a;font-weight:700':'')+'">'+p.total+'</td>'
       +'<td style="text-align:right">'+promTd+'</td>'
       +'<td style="text-align:right;color:'+qColor+';font-weight:'+(p.dias_quiebre>2?'600':'400')+'">'+qText+'</td>'
       +'<td>'+tBadge+'</td>'
       +'</tr>';
   }
   html += '</tbody></table>';
-  document.getElementById('ana-tabla').innerHTML = html;
+  var ayuda = '<details class="tabla-ayuda"><summary>ℹ️ ¿Cómo leer esta tabla?</summary><ul>'
+    +'<li><strong>Unidades:</strong> lo vendido en el mes seleccionado. Un <span style="color:#ba1a1a;font-weight:700">0</span> en rojo es un producto que venía vendiendo y este mes no vendió nada — puede ser quiebre de stock o pérdida de demanda.</li>'
+    +'<li><strong>Proyec. histórica:</strong> cuánto estimaba el sistema que se vendería en 30 días, según el ritmo real de venta (descuenta los días sin stock). En meses pasados se muestra la estimación que existía ese mes, para comparar contra lo que de verdad se vendió.</li>'
+    +'<li><strong>ajuste: +13% vs jun:</strong> la recomendación de producción del sistema cambió respecto al mes anterior — verde si el producto se aceleró, rojo si se enfrió. El detalle completo está en la pestaña Productos, en el recuadro de Recomendaciones de cada producto.</li>'
+    +'<li><strong>Quiebre:</strong> días del mes en que el producto estuvo sin stock en Vitacura.</li>'
+    +'<li><strong>vs mes ant.:</strong> si las ventas reales van subiendo o bajando comparadas con el mes anterior. Muestra "—" los primeros 7 días del mes (muy pocos datos para evaluar).</li>'
+    +'</ul></details>';
+  document.getElementById('ana-tabla').innerHTML = ayuda + html;
 }
 
 // ── Alertas de cuadratura de stock ─────────────────────────
@@ -2346,6 +2491,8 @@ HTML_TEMPLATE = """<!DOCTYPE html>
 <div id="vista-analisis" style="display:none">
 
 <div class="ana-chips" id="ana-chips"></div>
+
+<div id="ana-ritmo"></div>
 
 <div id="ana-diagnostico"></div>
 
