@@ -7,3 +7,5 @@ actualizar_local.bat
 .claude/
 __pycache__/
 *.pyc
+la-cocina-*.json
+*service-account*.json

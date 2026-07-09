@@ -8,6 +8,10 @@ import os, json, requests, math, time
 import pandas as pd
 import numpy as np
 from collections import Counter
+try:
+    import gspread
+except ImportError:
+    gspread = None
 
 # ─── CONFIGURACIÓN ───────────────────────────────────────────
 CARPETA       = os.path.dirname(os.path.abspath(__file__))
@@ -15,6 +19,10 @@ ARCHIVO_VIT   = os.path.join(CARPETA, 'consolidado_productos_vitacura.xlsx')
 ARCHIVO_PAT   = os.path.join(CARPETA, 'consolidado_productos_pataguas.xlsx')
 ARCHIVO_JSON  = os.path.join(CARPETA, 'historial.json')
 ARCHIVO_HTML  = os.path.join(CARPETA, 'dashboard.html')
+# Recetas: Google Sheet "La Cocina - Recetas", leída vía cuenta de servicio
+# (compartida con esa cuenta como Editor — ver crear_planilla_recetas.py).
+RECETAS_SHEET_ID = '1bzRCgI5Cs0mIvjnFvfJZiZ6K3DaNU8D69jvo0vhU49g'
+GOOGLE_SERVICE_ACCOUNT_FILE = os.path.join(CARPETA, 'la-cocina-498520-9b115beec377.json')
 BSALE_TOKEN   = os.environ.get('BSALE_TOKEN', '')
 # Hora de Chile siempre: en GitHub Actions (UTC) la corrida nocturna cae en el
 # día siguiente UTC y desplazaba la fecha del dashboard y los cálculos de venta.
@@ -96,6 +104,72 @@ MAPA = {
 }
 
 # ─── LECTURA ─────────────────────────────────────────────────
+def norm_txt(s):
+    """Minúsculas y sin tildes, para comparar nombres de ingredientes sin
+    depender de cómo se escribieron en la planilla."""
+    import unicodedata
+    s = unicodedata.normalize('NFD', s.strip().lower())
+    return ''.join(c for c in s if unicodedata.category(c) != 'Mn')
+
+def leer_recetas():
+    """Lee la receta desde la Google Sheet (Producto, SKU, Ingrediente, Cantidad, Unidad)
+    vía cuenta de servicio y arma {sku: [ingredientes]}. La cantidad es por 1 unidad del
+    producto, para poder escalarla a cualquier lote. Si falta configuración o falla la
+    conexión, devuelve {} y el tab Recetas queda vacío sin romper el resto del dashboard.
+
+    El Producto se "arrastra hacia abajo" igual que se ve visualmente en la hoja: si
+    alguien carga varias filas de ingredientes para el mismo producto y solo escribe el
+    Producto en la primera (sin copiarlo a las siguientes), las filas de abajo igual se
+    asocian a ese último producto escrito — no depende de la fórmula de SKU de la hoja,
+    que si queda vacía descarta la fila silenciosamente."""
+    if not RECETAS_SHEET_ID or gspread is None or not os.path.exists(GOOGLE_SERVICE_ACCOUNT_FILE):
+        return {}
+    try:
+        gc = gspread.service_account(filename=GOOGLE_SERVICE_ACCOUNT_FILE)
+        libro = gc.open_by_key(RECETAS_SHEET_ID)
+        ws = libro.worksheet('Recetas')
+        # Fila 1 = banner de instrucciones, fila 2 = encabezados; los datos arrancan en la 3.
+        filas = ws.get_all_values()[2:]
+    except Exception as e:
+        print(f"  Warning: no se pudo leer recetas desde Google Sheets ({e})")
+        return {}
+    if not filas:
+        return {}
+    # Nombres de elaborados internos (pestaña Elaborados de la misma planilla):
+    # en la UI se marcan "se prepara" para que la lista de compras distinga lo
+    # comprable de lo que hace la cocina. Si la pestaña está vacía no pasa nada.
+    elaborados = set()
+    try:
+        for fila_e in libro.worksheet('Elaborados').get_all_values()[1:]:
+            if fila_e and fila_e[0].strip():
+                elaborados.add(norm_txt(fila_e[0]))
+    except Exception:
+        pass
+    nombre_a_sku = {v: k for k, v in NOMBRES.items()}
+    recetas = {}
+    producto_actual = ''
+    for fila in filas:
+        fila = (fila + [''] * 5)[:5]
+        producto, _sku_formula, ingrediente, cantidad, unidad = fila
+        if producto.strip():
+            producto_actual = producto.strip()
+        if not ingrediente.strip():
+            continue
+        sku = nombre_a_sku.get(producto_actual)
+        if not sku:
+            continue
+        try:
+            cant = float(cantidad) if cantidad.strip() else 0.0
+        except ValueError:
+            cant = 0.0
+        recetas.setdefault(sku, []).append({
+            'ingrediente': ingrediente.strip(),
+            'cantidad':    cant,
+            'unidad':      unidad.strip(),
+            'elaborado':   norm_txt(ingrediente) in elaborados,
+        })
+    return recetas
+
 def leer_json(oficina):
     with open(ARCHIVO_JSON, encoding='utf-8') as f:
         cache = json.load(f)
@@ -330,6 +404,9 @@ def procesar():
     else:
         print(f"  {len(sb)} productos con stock desde Bsale")
 
+    recetas = leer_recetas()
+    print(f"  {len(recetas)} productos con receta cargada" if recetas else "  Sin RECETAS_SHEET_ID configurado o sin datos (tab Recetas quedará vacío)")
+
     resultados = []
     for sku in NOMBRES:
         dv = vit[vit['SKU']==sku].copy()
@@ -404,6 +481,7 @@ def procesar():
             'n_lotes': n_lotes, 'prom_lote': prom_lote,
             'periodos_sin_stock_vit': per_v,
             'lotes': lts, 'movs': movimientos(dv, dp), 'ventas_mes': vm,
+            'receta': recetas.get(sku, []),
         })
         print(f"  OK {sku} - {NOMBRES[sku][:30]}")
 
@@ -729,8 +807,11 @@ CSS = """
   --info-bg:#eff6ff;--info-text:#1d4ed8;--info-border:#dbeafe;
   --neutral-bg:#f8fafc;--neutral-text:#475569;--neutral-border:#e2e8f0;
   --zero-color:#cbd5e1;
+  --ease-out:cubic-bezier(0.23,1,0.32,1);
+  --ease-in-out:cubic-bezier(0.77,0,0.175,1);
 }
 body.dark-mode{
+  color-scheme: dark !important;
   --body-bg:#0f172a;
   --card-bg:#1e293b;
   --text-color:#f8fafc;
@@ -769,13 +850,22 @@ body{font-family:'Inter',-apple-system,BlinkMacSystemFont,sans-serif;background:
 
 /* ── Transición de vistas ──────────────────────────────────── */
 @keyframes vistaIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
-.vista-enter{animation:vistaIn 0.28s ease-out}
+.vista-enter{animation:vistaIn 240ms var(--ease-out)}
 @media (prefers-reduced-motion:reduce){.vista-enter{animation:none}}
+
+/* ── Entradas suaves al hacer scroll ────────────────────────── */
+.reveal{opacity:0;transform:translateY(14px);transition:opacity 420ms var(--ease-out),transform 420ms var(--ease-out)}
+.reveal-visible{opacity:1;transform:translateY(0)}
+@media (prefers-reduced-motion:reduce){
+  .reveal{opacity:1;transform:none;transition:none}
+}
 
 /* ── Métricas ────────────────────────────────────────────── */
 .metricas{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;padding:0 20px 16px}
-.metrica{padding:16px 18px;background:var(--card-bg);border-radius:12px;box-shadow:var(--shadow-sm);border:var(--card-border);transition:transform 0.15s,box-shadow 0.15s}
-.metrica:hover{transform:translateY(-2px);box-shadow:var(--shadow-lg)}
+.metrica{padding:16px 18px;background:var(--card-bg);border-radius:12px;box-shadow:var(--shadow-sm);border:var(--card-border);transition:transform 160ms var(--ease-out),box-shadow 160ms var(--ease-out)}
+@media (hover:hover) and (pointer:fine){
+  .metrica:hover{transform:translateY(-2px);box-shadow:var(--shadow-lg)}
+}
 .metrica-label{font-size:10px;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:0.07em;margin-bottom:5px}
 .metrica-valor{font-size:30px;font-weight:800;line-height:1;letter-spacing:-0.02em}
 .metrica-valor:not(.activo){color:#cbd5e1!important}
@@ -810,12 +900,14 @@ select,input[type=text],input[type=number]{font-size:13px;font-weight:500;paddin
 .container{padding:4px 20px 16px}
 
 /* ── Cards ───────────────────────────────────────────────── */
-.card{background:var(--card-bg);border:var(--card-border);border-radius:12px;margin-bottom:20px;overflow:hidden;box-shadow:var(--shadow-sm);transition:box-shadow 0.15s,transform 0.15s;box-sizing:border-box}
+.card{background:var(--card-bg);border:var(--card-border);border-radius:12px;margin-bottom:20px;overflow:hidden;box-shadow:var(--shadow-sm);transition:box-shadow 180ms var(--ease-out),transform 180ms var(--ease-out);box-sizing:border-box}
 .card.sin_stock{border-left:6px solid #ef4444}
 .card.critico{border-left:6px solid #f97316}
 .card.bajo{border-left:6px solid #facc15}
 .card.ok{border-left:6px solid #e2e8f0}
-.card:hover{box-shadow:var(--shadow-lg)}
+@media (hover:hover) and (pointer:fine){
+  .card:hover{box-shadow:var(--shadow-lg);transform:translateY(-2px)}
+}
 .dato-cero{color:#cbd5e1!important}
 .card-row{padding:20px 32px;display:flex;justify-content:flex-start;align-items:center;gap:24px;cursor:pointer;user-select:none}
 .nicho{flex:0 0 30%;min-width:0;background:var(--body-bg);border:1px solid var(--border-color);border-radius:8px;padding:10px 12px}
@@ -845,10 +937,15 @@ select,input[type=text],input[type=number]{font-size:13px;font-weight:500;paddin
 .badge-despacho.parcial{color:#ea580c}
 .badge-despacho.producir{color:#94a3b8}
 .badge-dist{background:var(--warn-bg);color:var(--warn-text);font-size:10px}
-.chevron{font-size:12px;color:#cbd5e1;margin-left:6px;transition:transform 0.2s}
+.chevron{font-size:12px;color:#cbd5e1;margin-left:6px;transition:transform 220ms var(--ease-in-out)}
 .chevron.open{transform:rotate(180deg)}
-.detalle{display:none;border-top:1px solid #f1f5f9}
-.detalle.open{display:block}
+.detalle{display:grid;grid-template-rows:0fr;opacity:0;overflow:hidden;border-top:1px solid transparent;
+  transition:grid-template-rows 280ms var(--ease-in-out),opacity 200ms var(--ease-out),border-color 280ms var(--ease-out)}
+.detalle.open{grid-template-rows:1fr;opacity:1;border-top-color:#f1f5f9}
+.detalle-inner{overflow:hidden;min-height:0}
+@media (prefers-reduced-motion:reduce){
+  .detalle{transition:opacity 200ms ease}
+}
 
 /* ── Tabs ────────────────────────────────────────────────── */
 .tabs{display:flex;border-bottom:1px solid #f1f5f9;background:transparent}
@@ -861,7 +958,7 @@ select,input[type=text],input[type=number]{font-size:13px;font-weight:500;paddin
 .movs-filtros{display:flex;gap:6px;margin-bottom:8px}
 .movs-filter-btn{font-size:11px;font-weight:700;padding:4px 12px;border-radius:20px;border:1px solid var(--neutral-border);background:var(--card-bg);color:#555;cursor:pointer;font-family:inherit}
 .movs-filter-btn.activo{background:#166534;color:#fff;border-color:#166534}
-.movs-table{width:100%;border-collapse:collapse;font-size:12px}
+.movs-table{width:100%;border-collapse:collapse;font-size:12px;font-variant-numeric:tabular-nums}
 .movs-table th{text-align:left;color:#94a3b8;padding:14px 12px;border-bottom:1px solid #f1f5f9;font-size:10px;text-transform:uppercase;letter-spacing:0.05em;font-weight:700}
 .movs-table td{padding:14px 12px;border-bottom:1px solid #f1f5f9;vertical-align:middle}
 .movs-table tr:last-child td{border-bottom:none}
@@ -884,7 +981,10 @@ select,input[type=text],input[type=number]{font-size:13px;font-weight:500;paddin
 .insight-ok{background:var(--ok-bg);border:1px solid var(--ok-border);border-radius:12px;padding:14px 16px;font-size:12px;color:var(--ok-text);line-height:1.8;margin-bottom:10px}
 .insight-peligro{background:var(--danger-bg);border:1px solid var(--danger-border);border-radius:12px;padding:14px 16px;font-size:12px;color:var(--danger-text);line-height:1.8;margin-bottom:10px}
 .periodo-chip{display:inline-block;font-size:10px;padding:2px 8px;border-radius:4px;background:var(--danger-bg);color:var(--danger-text);margin:2px}
-.lote-card{background:var(--card-bg);border:1px solid var(--neutral-border);border-radius:10px;padding:10px 12px;font-size:11px;margin-bottom:6px;box-shadow:var(--shadow-sm)}
+.lote-card{background:var(--card-bg);border:1px solid var(--neutral-border);border-radius:10px;padding:10px 12px;font-size:11px;margin-bottom:6px;box-shadow:var(--shadow-sm);transition:transform 160ms var(--ease-out),box-shadow 160ms var(--ease-out)}
+@media (hover:hover) and (pointer:fine){
+  .lote-card:hover{transform:translateY(-1px);box-shadow:var(--shadow-lg)}
+}
 .mes-table{width:100%;border-collapse:collapse;font-size:12px;margin-top:8px}
 .mes-table th{text-align:left;color:#94a3b8;padding:14px 12px;border-bottom:1px solid #f1f5f9;font-size:10px;text-transform:uppercase;font-weight:700}
 .mes-table td{padding:14px 12px;border-bottom:1px solid #f1f5f9}
@@ -897,14 +997,17 @@ select,input[type=text],input[type=number]{font-size:13px;font-weight:500;paddin
 .dias-btn-active{background:var(--card-bg);color:#166534;font-weight:700;box-shadow:0 1px 3px rgba(0,0,0,0.12)}
 
 /* ── Guías ───────────────────────────────────────────────── */
-.guia-section{background:var(--card-bg);border-radius:12px;box-shadow:var(--shadow-sm);border:var(--card-border);padding:24px;margin:0 20px 24px}
+.guia-section{background:var(--card-bg);border-radius:12px;box-shadow:var(--shadow-sm);border:var(--card-border);padding:24px;margin:0 20px 24px;transition:box-shadow 180ms var(--ease-out)}
+@media (hover:hover) and (pointer:fine){
+  .guia-section:hover{box-shadow:var(--shadow-lg)}
+}
 .guia-header{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;margin-bottom:8px}
 .guia-title{font-size:15px;font-weight:700;margin-bottom:2px;letter-spacing:-0.01em;color:var(--text-color)}
 .guia-sub{font-size:11px;color:#64748b;font-weight:400}
 .guia-controls{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
 .dias-group{display:flex;align-items:center;gap:4px;background:var(--neutral-bg);border-radius:8px;padding:4px;border:1px solid var(--neutral-border)}
 .table-container-responsive{width:100%;overflow-x:auto!important;display:block!important;-webkit-overflow-scrolling:touch}
-.guia-table{width:100%;border-collapse:collapse;font-size:12px;background:transparent}
+.guia-table{width:100%;border-collapse:collapse;font-size:12px;background:transparent;font-variant-numeric:tabular-nums}
 .guia-table th{text-align:left;color:#94a3b8;padding:14px 12px;border-bottom:1px solid #f1f5f9;font-size:10px;text-transform:uppercase;font-weight:700;letter-spacing:0.05em}
 .th-sort{cursor:pointer;user-select:none}
 .th-sort:hover{color:#475569}
@@ -947,11 +1050,14 @@ select,input[type=text],input[type=number]{font-size:13px;font-weight:500;paddin
 
 /* ── Resumen ─────────────────────────────────────────────── */
 .res-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;padding:0 20px 16px}
-.res-card{background:var(--card-bg);border-radius:12px;padding:18px 20px;border:var(--card-border);box-shadow:var(--shadow-sm)}
+.res-card{background:var(--card-bg);border-radius:12px;padding:18px 20px;border:var(--card-border);box-shadow:var(--shadow-sm);transition:transform 180ms var(--ease-out),box-shadow 180ms var(--ease-out)}
+@media (hover:hover) and (pointer:fine){
+  .res-card:hover{transform:translateY(-2px);box-shadow:var(--shadow-lg)}
+}
 .res-card-title{font-size:13px;font-weight:700;letter-spacing:-0.01em;color:#475569;margin-bottom:12px}
 .res-item{display:flex;align-items:center;justify-content:space-between;padding:8px 0;border-bottom:1px solid #f1f5f9;font-size:12px;font-weight:500}
 .res-item:last-child{border-bottom:none}
-.res-item-nombre{color:var(--text-color);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;flex:1;margin-right:8px;text-transform:lowercase!important}
+.res-item-nombre{color:var(--text-color);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;flex:1;min-width:0;margin-right:8px;text-transform:lowercase!important}
 .res-item-nombre::first-letter{text-transform:uppercase!important}
 .card-master{background:var(--card-bg);border-radius:12px;padding:18px 20px;box-shadow:var(--shadow-sm);border:var(--card-border);margin:0 20px 16px}
 .grid-resumen-operaciones{display:grid;grid-template-columns:repeat(2,1fr);gap:20px;margin:24px 20px 16px;align-items:stretch}
@@ -963,8 +1069,10 @@ select,input[type=text],input[type=number]{font-size:13px;font-weight:500;paddin
 .etiqueta-item{display:flex;align-items:center;justify-content:space-between;background:var(--neutral-bg);border:1px solid var(--neutral-border);border-radius:8px;padding:8px 12px;font-size:12px;font-weight:500}
 /* ── Grid de KPIs del Resumen ──────────────────────────────── */
 .grid-resumen-kpis{display:grid;grid-template-columns:repeat(6,1fr);gap:16px;margin:0 20px 24px}
-.card-kpi-individual{background:var(--card-bg);border-radius:12px;padding:16px;box-shadow:var(--shadow-sm);border:var(--card-border);text-align:center;transition:transform 0.15s,box-shadow 0.15s}
-.card-kpi-individual:hover{transform:translateY(-2px);box-shadow:var(--shadow-lg)}
+.card-kpi-individual{background:var(--card-bg);border-radius:12px;padding:16px;box-shadow:var(--shadow-sm);border:var(--card-border);text-align:center;transition:transform 160ms var(--ease-out),box-shadow 160ms var(--ease-out)}
+@media (hover:hover) and (pointer:fine){
+  .card-kpi-individual:hover{transform:translateY(-2px);box-shadow:var(--shadow-lg)}
+}
 .card-kpi-individual .res-stat-val{font-size:28px;font-weight:800;letter-spacing:-0.02em;color:var(--text-color);display:block}
 .card-kpi-individual .res-stat-val.dato-cero{color:#cbd5e1}
 .card-kpi-individual .res-stat-label{font-size:11px;font-weight:600;color:#94a3b8;letter-spacing:0.02em;margin-top:4px;display:block}
@@ -981,7 +1089,7 @@ select,input[type=text],input[type=number]{font-size:13px;font-weight:500;paddin
 }
 
 /* ── Ranking ─────────────────────────────────────────────── */
-.rank-table{width:100%;border-collapse:collapse;font-size:13px}
+.rank-table{width:100%;border-collapse:collapse;font-size:13px;font-variant-numeric:tabular-nums}
 .rank-table th{text-align:left;color:#94a3b8;padding:14px 12px;border-bottom:1px solid #f1f5f9;font-size:10px;text-transform:uppercase;font-weight:700;letter-spacing:0.05em}
 .rank-table td{padding:14px 12px;border-bottom:1px solid #f1f5f9;vertical-align:middle}
 .rank-table td:first-child{font-size:15px;font-weight:600;color:var(--text-color);text-transform:lowercase!important}
@@ -1093,6 +1201,84 @@ select,input[type=text],input[type=number]{font-size:13px;font-weight:500;paddin
 }
 
 .ana-section-full{width:100%;margin-top:32px}
+
+/* ── Ver ingredientes: botón + modal (Guía de Producción) ────── */
+.prod-check{width:18px;height:18px;accent-color:var(--system-green);cursor:pointer}
+.btn-ver-ing{display:none;align-items:center;gap:8px;margin:0 20px 16px}
+.ing-modal-overlay{display:none;position:fixed;inset:0;background:rgba(15,23,42,0.55);z-index:900;align-items:flex-start;justify-content:center;padding:24px 16px;overflow-y:auto}
+.ing-modal-overlay.open{display:flex}
+.ing-modal{background:var(--card-bg);border-radius:14px;max-width:640px;width:100%;box-shadow:0 12px 40px rgba(0,0,0,0.25);margin-top:20px}
+.ing-modal-head{display:flex;align-items:center;justify-content:space-between;padding:16px 20px;border-bottom:1px solid var(--neutral-border)}
+.ing-modal-title{font-size:15px;font-weight:700}
+.ing-modal-close{background:none;border:none;font-size:20px;cursor:pointer;color:#94a3b8;line-height:1;padding:4px}
+.ing-modal-tabs{display:flex;gap:4px;padding:12px 20px 0}
+.ing-modal-tab{font-size:13px;font-weight:600;padding:8px 14px;border-radius:8px 8px 0 0;border:none;background:none;color:#64748b;cursor:pointer;font-family:inherit}
+.ing-modal-tab.active{background:var(--neutral-bg);color:var(--text-color)}
+.ing-modal-body{padding:16px 20px 20px;max-height:60vh;overflow-y:auto}
+.ing-modal-foot{display:flex;gap:8px;padding:14px 20px;border-top:1px solid var(--neutral-border);flex-wrap:wrap}
+.ing-modal-foot input{flex:1;min-width:180px}
+.ing-modal-foot .btn{white-space:nowrap}
+.ing-row{display:flex;align-items:center;gap:10px;padding:8px 4px;border-bottom:1px solid var(--neutral-bg);font-size:13px}
+.ing-row:last-child{border-bottom:none}
+.ing-nombre{flex:1}
+.ing-chip{font-size:12px;font-weight:700;background:var(--neutral-bg);padding:3px 10px;border-radius:8px;white-space:nowrap}
+.ing-row.checked .ing-nombre{text-decoration:line-through;opacity:0.45}
+.ing-producto-block{margin-bottom:18px}
+.ing-producto-nombre{font-size:14px;font-weight:700;color:var(--text-color);padding-bottom:8px;margin-bottom:4px;border-bottom:2px solid var(--neutral-border)}
+
+/* ── Pestaña Producción: planificador semanal ────────────────── */
+.prod-explica{background:#eef4e8;border:1px solid #c2c9b7;border-radius:12px;margin:14px 20px 0;padding:12px 14px;font-size:12.5px;color:#3f4a38;line-height:1.55}
+.prod-explica b{color:#275300}
+body.dark-mode .prod-explica{background:#1d2419;border-color:#3a4433;color:#c8d0bf}
+body.dark-mode .prod-explica b{color:#a5cc7f}
+.prod-sug{font-size:11px;color:#64748b;background:var(--neutral-bg);border-radius:6px;padding:2px 7px;font-weight:600;white-space:nowrap;flex-shrink:0}
+.prod-warn{color:#b45309;font-weight:600}
+.stk-vit{color:#275300;font-weight:700}
+.stk-pat{color:#1960a6;font-weight:700}
+body.dark-mode .stk-vit{color:#8fbf5f}
+body.dark-mode .stk-pat{color:#6aa9e0}
+.stepper{display:flex;align-items:center;flex-shrink:0}
+.stepper button{width:34px;height:38px;border:1px solid var(--neutral-border);background:var(--card-bg);font-size:18px;font-weight:700;color:#475569;cursor:pointer;font-family:inherit;padding:0}
+.stepper button:first-child{border-radius:8px 0 0 8px}
+.stepper button:last-child{border-radius:0 8px 8px 0}
+.stepper input{width:46px;height:38px;border:1px solid var(--neutral-border);border-left:none;border-right:none;border-radius:0;text-align:center;font-size:15px;font-weight:700;padding:0}
+.stepper input.tiene-valor{background:#eef4e8;color:#275300}
+body.dark-mode .stepper input.tiene-valor{background:#243318;color:#a5cc7f}
+.stepper input::-webkit-outer-spin-button,.stepper input::-webkit-inner-spin-button{-webkit-appearance:none;margin:0}
+.stepper input[type=number]{-moz-appearance:textfield}
+.prod-h4{font-size:11px;text-transform:uppercase;letter-spacing:0.05em;color:#64748b;margin:0 0 8px}
+.prod-sin-dato td{color:#b45309}
+.badge-elab{font-size:10px;color:#7c5800;background:#fdf3d7;border-radius:5px;padding:1px 6px;font-weight:700;white-space:nowrap}
+body.dark-mode .badge-elab{background:#3a2f10;color:#e0c375}
+.prod-inverso{border:1px dashed #c2c9b7;border-radius:10px;padding:10px 12px;margin-top:12px}
+.prod-inverso-lbl{font-size:12px;font-weight:600;color:#475569;margin-bottom:6px}
+body.dark-mode .prod-inverso-lbl{color:#aab4a0}
+.prod-inverso-row{display:flex;gap:6px;align-items:center;flex-wrap:wrap;font-size:13px}
+.prod-inverso-row input{width:70px}
+.prod-inverso-res{font-size:12.5px;color:#275300;font-weight:700;margin-top:6px}
+body.dark-mode .prod-inverso-res{color:#a5cc7f}
+.btn-mini{font-size:12px;font-weight:700;padding:6px 12px;border-radius:8px;border:none;background:#275300;color:#fff;cursor:pointer;font-family:inherit}
+.plan-bar{position:fixed;bottom:0;left:50%;transform:translate(-50%,110%);width:100%;max-width:640px;background:#275300;color:#fff;padding:12px 16px;display:flex;align-items:center;gap:12px;box-shadow:0 -4px 16px rgba(0,0,0,0.18);border-radius:14px 14px 0 0;transition:transform 0.25s ease;z-index:800;box-sizing:border-box}
+.plan-bar.visible{transform:translate(-50%,0)}
+.plan-bar-info{flex:1;font-size:13px;font-weight:600;line-height:1.4;min-width:0}
+.plan-bar-info small{display:block;font-size:11px;opacity:0.85;font-weight:400;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.plan-bar-btn{background:#fff;color:#275300;border:none;font-weight:800;font-size:13px;padding:10px 16px;border-radius:10px;cursor:pointer;font-family:inherit;white-space:nowrap}
+.plan-sheet-overlay{position:fixed;inset:0;background:rgba(15,23,42,0.5);display:none;z-index:900}
+.plan-sheet-overlay.open{display:block}
+.plan-sheet{position:fixed;bottom:0;left:50%;transform:translate(-50%,100%);width:100%;max-width:640px;background:var(--card-bg);border-radius:18px 18px 0 0;max-height:85vh;display:flex;flex-direction:column;z-index:901;transition:transform 0.28s ease;box-sizing:border-box;box-shadow:0 -8px 32px rgba(0,0,0,0.25)}
+.plan-sheet.open{transform:translate(-50%,0)}
+.plan-sheet-head{padding:16px 20px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid var(--neutral-border)}
+.plan-sheet-body{padding:12px 20px;overflow-y:auto;flex:1}
+.plan-sheet-foot{padding:12px 20px;border-top:1px solid var(--neutral-border)}
+.plan-aviso{background:#fef3c7;border:1px solid #fcd34d;border-radius:10px;padding:10px 12px;font-size:12px;color:#92400e;margin-bottom:12px;line-height:1.5}
+body.dark-mode .plan-aviso{background:#3a2f10;border-color:#6b5518;color:#ecd9a0}
+.plan-nota{font-size:11.5px;color:#94a3b8;margin:10px 0;line-height:1.5}
+.plan-ver-msg{border:none;background:none;color:#64748b;font-size:12px;font-weight:600;cursor:pointer;font-family:inherit;text-decoration:underline}
+.wsp-preview{display:none;margin-top:10px;background:#0b141a;color:#e9edef;border-radius:10px;padding:12px;font-size:12px;white-space:pre-wrap;font-family:ui-monospace,Consolas,monospace;line-height:1.6;max-height:200px;overflow-y:auto}
+.wsp-preview.open{display:block}
+@media(max-width:640px){
+  .prod-explica{margin:12px 12px 0}
+}
 """
 
 JS = """
@@ -1183,7 +1369,9 @@ function buildMovs(movs, idx, completo){
     +'</tr></thead><tbody>'+rows+'</tbody></table></div>'+boton;
 }
 function verMovsCompletos(i){
-  document.getElementById('tab-'+i+'-mov').innerHTML = buildMovs(DATA[i].movs, i, true);
+  // RENDER_LIST y no DATA: con un filtro activo el índice i es de la lista
+  // filtrada — usar DATA[i] mostraba los movimientos de otro producto.
+  document.getElementById('tab-'+i+'-mov').innerHTML = buildMovs(RENDER_LIST[i].movs, i, true);
 }
 function filtrarMovs(idx, tienda, btn){
   document.querySelectorAll('#tab-'+idx+'-mov .movs-filter-btn').forEach(function(b){ b.classList.remove('activo'); });
@@ -1298,6 +1486,20 @@ function buildAnalisis(p){
   return h;
 }
 
+// ── Entradas suaves al hacer scroll ─────────────────────────
+function initScrollReveal(root){
+  if(!('IntersectionObserver' in window)) return;
+  var io = new IntersectionObserver(function(entries){
+    entries.forEach(function(entry){
+      if(entry.isIntersecting){
+        entry.target.classList.add('reveal-visible');
+        io.unobserve(entry.target);
+      }
+    });
+  }, {threshold:0.08, rootMargin:'0px 0px -40px 0px'});
+  (root||document).querySelectorAll('.reveal:not(.reveal-visible)').forEach(function(el){io.observe(el);});
+}
+
 // ── Cards ──────────────────────────────────────────────────
 function colorDias(dias, und){
   if(und===0) return "#E74C3C";
@@ -1323,7 +1525,13 @@ function bloqueSucursal(label, dotColor, valor, dias){
     +   '<div class="nicho-dias'+(cero?' dato-cero':'')+'">'+statusDot+textDias(dias,valor)+'</div>'
     + '</div>';
 }
-function renderCards(data){
+// Lista actualmente pintada en la vista Productos. Los índices de las
+// tarjetas (toggleCard, verMovsCompletos, etc.) apuntan a ESTA lista, que
+// puede ser un subconjunto filtrado de DATA.
+var RENDER_LIST = [];
+function renderCards(data, animate){
+  animate = animate !== false;
+  RENDER_LIST = data;
   const cont  = document.getElementById('productos');
   const noRes = document.getElementById('no-res');
   if(!data.length){cont.innerHTML='';noRes.style.display='block';return;}
@@ -1334,7 +1542,9 @@ function renderCards(data){
     const eCls = (p.estado==='sin_stock'||p.estado==='critico') ? 'danger' : p.estado==='bajo' ? 'warning' : 'ok';
 
     var estadoDotColor = (p.estado==='sin_stock'||p.estado==='critico') ? 'var(--danger-text)' : p.estado==='bajo' ? 'var(--warn-text)' : 'var(--ok-text)';
-    return '<div class="card '+p.estado+'">'
+    var revealCls = animate ? ' reveal' : '';
+    var revealStyle = animate ? ' style="transition-delay:'+(Math.min(i,8)*40)+'ms"' : '';
+    return '<div class="card '+p.estado+revealCls+'"'+revealStyle+'>'
       +'<div class="card-row" onclick="toggleCard('+i+')">'
       +  '<div class="card-info">'
       +    '<div class="card-nombre-row"><span class="estado-dot" style="background:'+estadoDotColor+'"></span><span class="card-nombre">'+tituloCase(p.nombre)+'</span> <span class="chevron" id="chev-'+i+'">▼</span></div>'
@@ -1347,18 +1557,25 @@ function renderCards(data){
       +  bloqueSucursal('Vitacura','#3B6D11',p.vit,p.dias_vit)
       +  bloqueSucursal('Pataguas','#185FA5',p.pat,p.dias_pat)
       +'</div>'
-      +'<div class="detalle" id="det-'+i+'">'
-      +  '<div class="tabs">'
-      +    '<button class="tab active" data-tab="mov" data-idx="'+i+'" onclick="switchTabD(this)">Movimientos</button>'
-      +    '<button class="tab" data-tab="analisis" data-idx="'+i+'" onclick="switchTabD(this)">Análisis</button>'
-      +  '</div>'
-      +  '<div class="tab-body active" id="tab-'+i+'-mov">'+buildMovs(p.movs, i, false)+'</div>'
-      +  '<div class="tab-body" id="tab-'+i+'-analisis">'+buildAnalisis(p)+'</div>'
-      +'</div>'
+      // El contenido del detalle (movimientos + análisis) se construye recién
+      // al abrir la tarjeta: armarlo por adelantado para todas las tarjetas
+      // congelaba la página al cambiar filtros en el teléfono.
+      +'<div class="detalle" id="det-'+i+'"><div class="detalle-inner" id="det-inner-'+i+'"></div></div>'
       +'</div>';
   }).join('');
+  if(animate) initScrollReveal(cont);
 }
 function toggleCard(i){
+  var inner = document.getElementById('det-inner-'+i);
+  if(inner && !inner.innerHTML){
+    var p = RENDER_LIST[i];
+    inner.innerHTML = '<div class="tabs">'
+      +  '<button class="tab active" data-tab="mov" data-idx="'+i+'" onclick="switchTabD(this)">Movimientos</button>'
+      +  '<button class="tab" data-tab="analisis" data-idx="'+i+'" onclick="switchTabD(this)">Análisis</button>'
+      +'</div>'
+      +'<div class="tab-body active" id="tab-'+i+'-mov">'+buildMovs(p.movs, i, false)+'</div>'
+      +'<div class="tab-body" id="tab-'+i+'-analisis">'+buildAnalisis(p)+'</div>';
+  }
   document.getElementById('det-'+i).classList.toggle('open');
   document.getElementById('chev-'+i).classList.toggle('open');
 }
@@ -1394,7 +1611,7 @@ function filtrar(){
     if(bus && !norm(p.nombre).includes(bus) && !norm(p.sku).includes(bus)) return false;
     return true;
   });
-  renderCards(fil);
+  renderCards(fil, false);
   updateMetricas(fil);
 }
 function setMetricaVal(id, val){
@@ -1417,8 +1634,8 @@ function toggleDarkMode(){
   localStorage.setItem('theme', activo ? 'dark' : 'light');
 }
 
-var VISTAS = ['vista-resumen','vista-productos','vista-guias','vista-analisis'];
-var NAVS   = ['nav-resumen','nav-productos','nav-guias','nav-analisis'];
+var VISTAS = ['vista-resumen','vista-productos','vista-guias','vista-analisis','vista-recetas'];
+var NAVS   = ['nav-resumen','nav-productos','nav-guias','nav-analisis','nav-recetas'];
 function switchVista(vistaId, navId, cb){
   VISTAS.forEach(function(v){document.getElementById(v).style.display='none';});
   NAVS.forEach(function(n){document.getElementById(n).classList.remove('nav-active');});
@@ -1442,6 +1659,283 @@ function mostrarAnalisis(){
     }
     renderAnalisis();
   });
+}
+function mostrarRecetas(){ switchVista('vista-recetas','nav-recetas', function(){ renderProduccion(DATA); }); }
+
+// ── Producción: planificador semanal con recetas ─────────────
+// El usuario decide cuánto producir de cada producto (la sugerencia semanal es
+// solo referencia). El plan consolida la materia prima de todo lo elegido y se
+// comparte por WhatsApp con el menú nativo del teléfono.
+function fmtCant(n){
+  return (Math.round(n*100)/100).toLocaleString('es-CL');
+}
+var PLAN = {};              // sku -> unidades a producir esta semana
+var PROD_COCINERO = '';
+var PROD_ORDEN = 'urgencia';
+var PLAN_SHEET_TAB = 'consolidado';
+
+function sugSemana(p){ return p.vel_total>0 ? Math.max(1, Math.round(p.vel_total*7)) : 0; }
+function recetaIncompleta(p){ return p.receta && p.receta.length>0 && p.receta.some(function(i){ return !(i.cantidad>0); }); }
+function prodBySku(sku){ return DATA.find(function(d){ return d.sku===sku; }); }
+
+function setChipProdOrden(btn){
+  PROD_ORDEN = btn.getAttribute('data-orden');
+  document.querySelectorAll('#chips-prod-orden .chip').forEach(function(c){c.classList.remove('chip-active');});
+  btn.classList.add('chip-active');
+  filtrarRecetas();
+}
+function setChipProdCocinero(btn){
+  PROD_COCINERO = btn.getAttribute('data-cocinero');
+  document.querySelectorAll('#chips-prod-cocinero .chip').forEach(function(c){c.classList.remove('chip-active');});
+  btn.classList.add('chip-active');
+  filtrarRecetas();
+}
+function filtrarRecetas(){
+  var bus = norm(document.getElementById('rec-buscar').value);
+  var fil = DATA.filter(function(p){
+    if(PROD_COCINERO && p.cocinero!==PROD_COCINERO) return false;
+    if(bus && !norm(p.nombre).includes(bus) && !norm(p.sku).includes(bus)) return false;
+    return true;
+  });
+  renderProduccion(fil, false);
+}
+
+function renderProduccion(data, animate){
+  data = data || DATA;                      // DATA ya viene ordenada por urgencia
+  animate = animate !== false;
+  if(PROD_ORDEN==='az') data = data.slice().sort(function(a,b){ return a.nombre.localeCompare(b.nombre); });
+  var cont  = document.getElementById('recetas');
+  var noRes = document.getElementById('rec-no-res');
+  if(!data.length){ cont.innerHTML=''; noRes.style.display='block'; renderPlanBar(); return; }
+  noRes.style.display='none';
+  var revealBase = animate ? ' reveal' : '';
+  cont.innerHTML = data.map(function(p,i){
+    var tieneReceta = p.receta && p.receta.length>0;
+    var meta = 'Stock: <span class="stk-vit">'+p.vit+' Vit</span> · <span class="stk-pat">'+p.pat+' Pat</span>';
+    if(p.dias_total!==null && p.dias_total!==undefined) meta += ' · Cobertura: '+Math.round(p.dias_total)+'d';
+    if(p.cocinero) meta += ' · 👨‍🍳 <span class="cap">'+tituloCase(p.cocinero)+'</span>';
+    if(!tieneReceta) meta += ' · <span class="prod-warn">sin receta cargada</span>';
+    else if(recetaIncompleta(p)) meta += ' · <span class="prod-warn">⚠ receta incompleta</span>';
+    var val = PLAN[p.sku]||0;
+    var revealStyle = animate ? ' style="transition-delay:'+(Math.min(i,8)*40)+'ms"' : '';
+    return '<div class="card '+p.estado+revealBase+'"'+revealStyle+'>'
+      +'<div class="card-row" data-sku="'+p.sku+'" onclick="toggleProdCard(this)">'
+      +  '<div class="card-info">'
+      +    '<div class="card-nombre-row"><span class="card-nombre">'+tituloCase(p.nombre)+'</span> <span class="chevron" id="pchev-'+p.sku+'">▼</span></div>'
+      +    '<div class="card-meta">'+meta+'</div>'
+      +  '</div>'
+      +  '<span class="prod-sug" title="Ventas de una semana al ritmo actual">sug. '+sugSemana(p)+'/sem</span>'
+      +  '<div class="stepper" onclick="event.stopPropagation()">'
+      +    '<button type="button" data-sku="'+p.sku+'" onclick="prodPaso(this,-1)">−</button>'
+      +    '<input type="number" min="0" inputmode="numeric" id="qty-'+p.sku+'" data-sku="'+p.sku+'" value="'+(val||'')+'" placeholder="0"'+(val?' class="tiene-valor"':'')+' oninput="prodSetQty(this)">'
+      +    '<button type="button" data-sku="'+p.sku+'" onclick="prodPaso(this,1)">+</button>'
+      +  '</div>'
+      +'</div>'
+      +'<div class="detalle" id="pdet-'+p.sku+'"><div class="detalle-inner">'+prodDetalleHtml(p)+'</div></div>'
+      +'</div>';
+  }).join('');
+  if(animate) initScrollReveal(cont);
+  renderPlanBar();
+}
+
+function prodDetalleHtml(p){
+  if(!p.receta || !p.receta.length){
+    return '<div style="padding:12px 16px;color:#b45309;font-size:13px">Todavía no hay receta cargada para este producto en la planilla de recetas.</div>';
+  }
+  var filas = p.receta.map(function(ing){
+    var sinDato = !(ing.cantidad>0);
+    var cant = sinDato ? '<span class="prod-warn">sin dato</span>' : fmtCant(ing.cantidad)+' '+(ing.unidad||'');
+    return '<tr'+(sinDato?' class="prod-sin-dato"':'')+'><td>'+ing.ingrediente+(ing.elaborado?' <span class="badge-elab">se prepara</span>':'')+'</td><td style="text-align:right;font-weight:600;white-space:nowrap">'+cant+'</td></tr>';
+  }).join('');
+  var opts = p.receta.filter(function(i){ return i.cantidad>0; }).map(function(i){
+    return '<option value="'+i.cantidad+'">'+i.ingrediente+(i.unidad?' ('+i.unidad+')':'')+'</option>';
+  }).join('');
+  var inverso = opts
+    ? '<div class="prod-inverso">'
+      +'<div class="prod-inverso-lbl">🔄 ¿Cuánto alcanzo a producir con lo que tengo?</div>'
+      +'<div class="prod-inverso-row">Tengo <input type="number" min="0" step="0.1" inputmode="decimal" id="inv-kg-'+p.sku+'" data-sku="'+p.sku+'" oninput="prodCalcInverso(this)"> de '
+      +'<select id="inv-ing-'+p.sku+'" data-sku="'+p.sku+'" onchange="prodCalcInverso(this)">'+opts+'</select></div>'
+      +'<div class="prod-inverso-res" id="inv-res-'+p.sku+'"></div>'
+      +'</div>'
+    : '';
+  return '<div style="padding:12px 16px">'
+    +'<h4 class="prod-h4">Receta por 1 unidad</h4>'
+    +'<table class="movs-table"><tbody>'+filas+'</tbody></table>'
+    +inverso
+    +'</div>';
+}
+
+function toggleProdCard(el){
+  var sku = el.getAttribute('data-sku');
+  document.getElementById('pdet-'+sku).classList.toggle('open');
+  document.getElementById('pchev-'+sku).classList.toggle('open');
+}
+function setPlan(sku, v){
+  v = Math.max(0, Math.round(Number(v)||0));
+  if(v>0) PLAN[sku]=v; else delete PLAN[sku];
+  var inp = document.getElementById('qty-'+sku);
+  if(inp) inp.classList.toggle('tiene-valor', v>0);
+  renderPlanBar();
+  if(document.getElementById('plan-sheet').classList.contains('open')) renderPlanSheet();
+}
+function prodPaso(btn, d){
+  var sku = btn.getAttribute('data-sku');
+  var v = (PLAN[sku]||0)+d;
+  setPlan(sku, v);
+  var inp = document.getElementById('qty-'+sku);
+  if(inp) inp.value = PLAN[sku]||'';
+}
+function prodSetQty(inp){
+  setPlan(inp.getAttribute('data-sku'), inp.value);
+}
+function prodCalcInverso(el){
+  var sku  = el.getAttribute('data-sku');
+  var disp = Number(document.getElementById('inv-kg-'+sku).value)||0;
+  var porU = Number(document.getElementById('inv-ing-'+sku).value)||0;
+  var res  = document.getElementById('inv-res-'+sku);
+  if(disp>0 && porU>0){
+    var unds = Math.floor(disp/porU);
+    res.innerHTML = '→ alcanza para <b>'+unds+' unidades</b> &nbsp;<button type="button" class="btn-mini" data-sku="'+sku+'" data-unds="'+unds+'" onclick="prodUsarInverso(this)">Usar esta cantidad</button>';
+  } else {
+    res.innerHTML = '';
+  }
+}
+function prodUsarInverso(btn){
+  var sku  = btn.getAttribute('data-sku');
+  var unds = Number(btn.getAttribute('data-unds'))||0;
+  setPlan(sku, unds);
+  var inp = document.getElementById('qty-'+sku);
+  if(inp) inp.value = unds;
+}
+
+function renderPlanBar(){
+  var bar = document.getElementById('plan-bar');
+  var skus = Object.keys(PLAN);
+  if(!skus.length){ bar.classList.remove('visible'); return; }
+  var tot = skus.reduce(function(s,k){ return s+PLAN[k]; },0);
+  document.getElementById('plan-resumen').textContent = skus.length+' producto'+(skus.length>1?'s':'')+' · '+tot+' unidades';
+  document.getElementById('plan-detalle').textContent = skus.map(function(k){
+    var p = prodBySku(k);
+    return PLAN[k]+' '+(p?tituloCase(p.nombre):k);
+  }).join(' · ');
+  bar.classList.add('visible');
+}
+
+// Consolidación de materia prima. Normaliza unidades hermanas para poder
+// sumarlas (g→kg, ml→L); lo que no tiene cantidad en la receta se lista como
+// aviso, nunca se suma en silencio.
+function normIngUnidad(ing){
+  var u = (ing.unidad||'').trim().toLowerCase();
+  if(u==='g')  return {u:'kg', c:ing.cantidad/1000};
+  if(u==='ml') return {u:'L',  c:ing.cantidad/1000};
+  if(u==='l')  return {u:'L',  c:ing.cantidad};
+  return {u:(ing.unidad||'').trim(), c:ing.cantidad};
+}
+function planConsolidado(){
+  var ings = {}, avisos = [];
+  Object.keys(PLAN).forEach(function(sku){
+    var p = prodBySku(sku);
+    if(!p) return;
+    if(!p.receta || !p.receta.length){
+      avisos.push(tituloCase(p.nombre)+' no tiene receta cargada — su materia prima NO está en esta lista.');
+      return;
+    }
+    p.receta.forEach(function(ing){
+      if(!(ing.cantidad>0)){
+        avisos.push(tituloCase(p.nombre)+': "'+ing.ingrediente+'" no tiene cantidad en la receta — falta en el total.');
+        return;
+      }
+      var nu = normIngUnidad(ing);
+      var k = norm(ing.ingrediente)+'|'+nu.u;
+      if(!ings[k]) ings[k] = {ingrediente: ing.ingrediente, unidad: nu.u, cantidad: 0, elaborado: !!ing.elaborado};
+      ings[k].cantidad += nu.c*PLAN[sku];
+    });
+  });
+  var lista = Object.values(ings).sort(function(a,b){ return norm(a.ingrediente).localeCompare(norm(b.ingrediente)); });
+  return {lista: lista, avisos: avisos};
+}
+
+function abrirPlanSheet(){
+  document.getElementById('plan-sheet-overlay').classList.add('open');
+  document.getElementById('plan-sheet').classList.add('open');
+  renderPlanSheet();
+}
+function cerrarPlanSheet(){
+  document.getElementById('plan-sheet-overlay').classList.remove('open');
+  document.getElementById('plan-sheet').classList.remove('open');
+  document.getElementById('plan-wsp-preview').classList.remove('open');
+}
+function tabPlanSheet(t){
+  PLAN_SHEET_TAB = t;
+  document.getElementById('ptab-consolidado').classList.toggle('active', t==='consolidado');
+  document.getElementById('ptab-porproducto').classList.toggle('active', t==='porproducto');
+  renderPlanSheet();
+}
+function planIngRow(nombre, elaborado, cantStr){
+  return '<div class="ing-row"><span class="ing-nombre">'+nombre+(elaborado?' <span class="badge-elab">se prepara</span>':'')+'</span><span class="ing-chip">'+cantStr+'</span></div>';
+}
+function renderPlanSheet(){
+  var body = document.getElementById('plan-sheet-body');
+  var c = planConsolidado();
+  var html = '';
+  if(c.avisos.length) html += '<div class="plan-aviso">⚠ '+c.avisos.join('<br>⚠ ')+'</div>';
+  if(PLAN_SHEET_TAB==='consolidado'){
+    html += c.lista.map(function(ing){
+      return planIngRow(ing.ingrediente, ing.elaborado, fmtCant(ing.cantidad)+(ing.unidad?' '+ing.unidad:''));
+    }).join('');
+    if(!c.lista.length && !c.avisos.length) html += '<div class="plan-nota">Elige cantidades en la lista de productos para armar el plan.</div>';
+    html += '<div class="plan-nota">Cantidades = receta por unidad × unidades del plan. Los ingredientes marcados "se prepara" son elaborados en cocina, no se compran tal cual.</div>';
+  } else {
+    Object.keys(PLAN).forEach(function(sku){
+      var p = prodBySku(sku);
+      if(!p) return;
+      html += '<div class="ing-producto-block"><div class="ing-producto-nombre">'+tituloCase(p.nombre)+' × '+PLAN[sku]+' und</div>';
+      if(p.receta && p.receta.length){
+        html += p.receta.map(function(ing){
+          var cantStr = (ing.cantidad>0) ? fmtCant(ing.cantidad*PLAN[sku])+(ing.unidad?' '+ing.unidad:'') : 'sin dato';
+          return planIngRow(ing.ingrediente, ing.elaborado, cantStr);
+        }).join('');
+      } else {
+        html += '<div class="plan-nota">Sin receta cargada.</div>';
+      }
+      html += '</div>';
+    });
+  }
+  body.innerHTML = html;
+}
+
+function mensajePlan(){
+  var c = planConsolidado();
+  var lineas = ['🧺 *Materia prima — plan de la semana*',''];
+  Object.keys(PLAN).forEach(function(sku){
+    var p = prodBySku(sku);
+    lineas.push('• '+PLAN[sku]+' '+(p?tituloCase(p.nombre):sku));
+  });
+  lineas.push('','*Ingredientes:*');
+  c.lista.forEach(function(ing){
+    lineas.push('- '+ing.ingrediente+': '+fmtCant(ing.cantidad)+(ing.unidad?' '+ing.unidad:'')+(ing.elaborado?' (se prepara en cocina)':''));
+  });
+  if(c.avisos.length){
+    lineas.push('');
+    c.avisos.forEach(function(a){ lineas.push('⚠ '+a); });
+  }
+  return lineas.join('\\n');
+}
+// Compartir con el menú nativo del teléfono (eliges WhatsApp y el contacto).
+// En PC no existe ese menú: se abre WhatsApp con el mensaje listo y eliges el chat allá.
+function compartirTexto(msg){
+  if(navigator.share){
+    navigator.share({text: msg}).catch(function(){});
+  } else {
+    window.open('https://wa.me/?text='+encodeURIComponent(msg), '_blank');
+  }
+}
+function compartirPlan(){ compartirTexto(mensajePlan()); }
+function togglePlanWsp(){
+  var pre = document.getElementById('plan-wsp-preview');
+  if(pre.classList.contains('open')){ pre.classList.remove('open'); return; }
+  pre.textContent = mensajePlan();
+  pre.classList.add('open');
 }
 
 // ── Variables de estado de la pestaña Análisis ─────────────
@@ -2049,6 +2543,10 @@ function renderGuiaProduccion(){
   const dias = parseInt(document.getElementById('g-dias').value)||7;
   document.getElementById('g-dias-label').textContent = dias+' días';
 
+  // Conservar qué productos estaban marcados antes de re-dibujar la tabla
+  // (cambiar de cocinero/días no debería perder la selección del checklist).
+  var seleccionados = new Set(Array.from(document.querySelectorAll('.prod-check:checked')).map(function(c){return c.getAttribute('data-sku');}));
+
   var prods = DATA.filter(function(p){return coc ? p.cocinero===coc : true;});
   prods.sort(function(a,b){ return cobertura(a) - cobertura(b); });
 
@@ -2059,7 +2557,9 @@ function renderGuiaProduccion(){
     var cob   = cobertura(p);
     var dt    = (p.vel_total<=0 || cob>=99999) ? '—' : Math.round(cob)+'d';
     var bCls  = cob<=3 ? 'danger' : cob<=7 ? 'warning' : 'ok';
+    var chk   = seleccionados.has(p.sku) ? ' checked' : '';
     return '<tr>'
+      +'<td><input type="checkbox" class="prod-check" data-sku="'+p.sku+'"'+chk+' onchange="actualizarChecklist()"></td>'
       +'<td>'+tituloCase(p.nombre)+'</td>'
       +'<td style="width:60px"><span class="badge '+bCls+'">'+dt+'</span></td>'
       +'<td style="color:#64748b;font-size:11px">'+tituloCase(p.cocinero)+'</td>'
@@ -2070,8 +2570,129 @@ function renderGuiaProduccion(){
       +'</tr>';
   }).join('');
 
-  document.getElementById('tabla-produccion').innerHTML = filas||'<tr><td colspan="7" style="text-align:center;color:#aaa;padding:20px">Sin productos</td></tr>';
+  document.getElementById('tabla-produccion').innerHTML = filas||'<tr><td colspan="8" style="text-align:center;color:#aaa;padding:20px">Sin productos</td></tr>';
   document.getElementById('resumen-produccion').textContent = prods.length+' productos · para '+dias+' días';
+  var selAll = document.getElementById('sel-all-prod');
+  if(selAll) selAll.checked = prods.length>0 && prods.every(function(p){return seleccionados.has(p.sku);});
+  actualizarChecklist();
+}
+
+// ── Ver ingredientes de lo que se va a producir (modal con tabs) ─
+var ING_MODAL_TAB = 'consolidado';
+function selAllProd(cb){
+  document.querySelectorAll('.prod-check').forEach(function(c){ c.checked = cb.checked; });
+  actualizarChecklist();
+}
+function skusSeleccionados(){
+  return Array.from(document.querySelectorAll('.prod-check:checked')).map(function(c){return c.getAttribute('data-sku');});
+}
+function actualizarChecklist(){
+  var n = skusSeleccionados().length;
+  var wrap = document.getElementById('btn-ver-ing-wrap');
+  wrap.style.display = n>0 ? 'flex' : 'none';
+  document.getElementById('ver-ing-count').textContent = n;
+  if(n===0) cerrarModalIngredientes();
+  else if(document.getElementById('ing-modal-overlay').classList.contains('open')) renderModalIngredientes();
+}
+function abrirModalIngredientes(){
+  document.getElementById('ing-modal-overlay').classList.add('open');
+  renderModalIngredientes();
+}
+function cerrarModalIngredientes(){
+  document.getElementById('ing-modal-overlay').classList.remove('open');
+}
+function cambiarTabIngredientes(tab){
+  ING_MODAL_TAB = tab;
+  document.getElementById('tab-consolidado').classList.toggle('active', tab==='consolidado');
+  document.getElementById('tab-porproducto').classList.toggle('active', tab==='porproducto');
+  renderModalIngredientes();
+}
+function toggleIngRow(el){
+  el.parentElement.classList.toggle('checked', el.checked);
+}
+function ingRowHtml(ing){
+  var cantStr = ing.cantidad > 0 ? '<span class="ing-chip">'+fmtCant(ing.cantidad)+(ing.unidad?' '+ing.unidad:'')+'</span>' : '';
+  return '<label class="ing-row">'
+    +'<input type="checkbox" style="width:16px;height:16px;flex-shrink:0" onchange="toggleIngRow(this)">'
+    +'<span class="ing-nombre">'+ing.ingrediente+'</span>'
+    +cantStr
+    +'</label>';
+}
+function renderModalIngredientes(){
+  var skus = skusSeleccionados();
+  var body = document.getElementById('ing-modal-body');
+  if(!skus.length){ body.innerHTML = '<div style="color:#94a3b8;font-size:13px;padding:8px">No hay productos seleccionados.</div>'; return; }
+
+  if(ING_MODAL_TAB === 'consolidado'){
+    var ings = {};
+    skus.forEach(function(sku){
+      var p = DATA.find(function(d){ return d.sku===sku; });
+      if(!p || !p.receta) return;
+      p.receta.forEach(function(ing){
+        var k = norm(ing.ingrediente);
+        if(!ings[k]) ings[k] = {ingrediente: ing.ingrediente, cantidad: 0, unidad: ing.unidad||''};
+        ings[k].cantidad += (ing.cantidad||0);
+      });
+    });
+    var lista = Object.values(ings).sort(function(a,b){ return norm(a.ingrediente).localeCompare(norm(b.ingrediente)); });
+    body.innerHTML = lista.length
+      ? lista.map(ingRowHtml).join('')
+      : '<div style="color:#94a3b8;font-size:13px;padding:8px">Ninguno de los productos seleccionados tiene receta cargada todavía.</div>';
+  } else {
+    body.innerHTML = skus.map(function(sku){
+      var p = DATA.find(function(d){ return d.sku===sku; });
+      if(!p) return '';
+      var filas = (p.receta && p.receta.length)
+        ? p.receta.map(ingRowHtml).join('')
+        : '<div style="color:#94a3b8;font-size:12px;padding:4px 0 8px">Sin receta cargada.</div>';
+      return '<div class="ing-producto-block"><div class="ing-producto-nombre">'+tituloCase(p.nombre)+'</div>'+filas+'</div>';
+    }).join('');
+  }
+}
+function buildMensajeIngredientes(){
+  var skus = skusSeleccionados();
+  if(!skus.length) return '';
+  var lineas = [];
+  if(ING_MODAL_TAB === 'consolidado'){
+    lineas.push('Ingredientes necesarios:');
+    var ings = {};
+    skus.forEach(function(sku){
+      var p = DATA.find(function(d){ return d.sku===sku; });
+      if(!p || !p.receta) return;
+      p.receta.forEach(function(ing){
+        var k = norm(ing.ingrediente);
+        if(!ings[k]) ings[k] = {ingrediente: ing.ingrediente, cantidad: 0, unidad: ing.unidad||''};
+        ings[k].cantidad += (ing.cantidad||0);
+      });
+    });
+    var lista = Object.values(ings).sort(function(a,b){ return norm(a.ingrediente).localeCompare(norm(b.ingrediente)); });
+    lista.forEach(function(ing){
+      var cantStr = ing.cantidad>0 ? ' ('+fmtCant(ing.cantidad)+(ing.unidad?' '+ing.unidad:'')+')' : '';
+      lineas.push('- '+ing.ingrediente+cantStr);
+    });
+  } else {
+    lineas.push('Ingredientes necesarios por producto:');
+    skus.forEach(function(sku){
+      var p = DATA.find(function(d){ return d.sku===sku; });
+      if(!p) return;
+      lineas.push('');
+      lineas.push('*'+tituloCase(p.nombre)+'*');
+      if(p.receta && p.receta.length){
+        p.receta.forEach(function(ing){
+          var cantStr = ing.cantidad>0 ? ' ('+fmtCant(ing.cantidad)+(ing.unidad?' '+ing.unidad:'')+')' : '';
+          lineas.push('- '+ing.ingrediente+cantStr);
+        });
+      } else {
+        lineas.push('(sin receta cargada)');
+      }
+    });
+  }
+  return lineas.join('\\n');
+}
+function enviarWhatsAppIngredientes(){
+  var msg = buildMensajeIngredientes();
+  if(!msg) return;
+  compartirTexto(msg);
 }
 
 // Clasifica el despacho de un producto en uno de 4 estados claros:
@@ -2297,10 +2918,23 @@ fClear.addEventListener('click', function(){
   fBuscar.focus();
 });
 document.getElementById('r-mes').addEventListener('change', renderRanking);
+var recBuscar = document.getElementById('rec-buscar');
+var recClear  = document.getElementById('rec-buscar-clear');
+recBuscar.addEventListener('input', function(){
+  recClear.style.display = recBuscar.value ? 'flex' : 'none';
+  filtrarRecetas();
+});
+recClear.addEventListener('click', function(){
+  recBuscar.value = '';
+  recClear.style.display = 'none';
+  filtrarRecetas();
+  recBuscar.focus();
+});
 renderCards(DATA);
 updateMetricas();
 buildMesesOpts();
 renderResumen();
+initScrollReveal(document);
 """
 
 HTML_TEMPLATE = """<!DOCTYPE html>
@@ -2345,27 +2979,28 @@ HTML_TEMPLATE = """<!DOCTYPE html>
   <button class="navtab" id="nav-productos" onclick="mostrarProductos()">Productos</button>
   <button class="navtab" id="nav-guias" onclick="mostrarGuias()">Guías</button>
   <button class="navtab" id="nav-analisis" onclick="mostrarAnalisis()">Análisis</button>
+  <button class="navtab" id="nav-recetas" onclick="mostrarRecetas()">Producción</button>
 </nav>
 
 <!-- VISTA RESUMEN -->
 <div id="vista-resumen">
-  <div id="res-stats"></div>
-  <div class="grid-resumen-operaciones">
+  <div id="res-stats" class="reveal"></div>
+  <div class="grid-resumen-operaciones reveal" style="transition-delay:60ms">
     <div id="res-alert-col"></div>
     <div id="res-recepciones"></div>
   </div>
-  <div id="res-salidas"></div>
-  <div class="res-grid" id="res-grid"></div>
+  <div id="res-salidas" class="reveal" style="transition-delay:120ms"></div>
+  <div class="res-grid reveal" id="res-grid" style="transition-delay:180ms"></div>
 </div>
 
 <!-- VISTA PRODUCTOS -->
 <div id="vista-productos" style="display:none">
 
 <div class="metricas">
-  <div class="metrica rojo"><div class="metrica-label">Sin stock</div><div class="metrica-valor" id="m1">—</div></div>
-  <div class="metrica rojo"><div class="metrica-label">Crítico ≤3d</div><div class="metrica-valor" id="m2">—</div></div>
-  <div class="metrica amarillo"><div class="metrica-label">Bajo ≤14d</div><div class="metrica-valor" id="m3">—</div></div>
-  <div class="metrica verde"><div class="metrica-label">OK &gt;14d</div><div class="metrica-valor activo" id="m4">—</div></div>
+  <div class="metrica rojo reveal"><div class="metrica-label">Sin stock</div><div class="metrica-valor" id="m1">—</div></div>
+  <div class="metrica rojo reveal" style="transition-delay:40ms"><div class="metrica-label">Crítico ≤3d</div><div class="metrica-valor" id="m2">—</div></div>
+  <div class="metrica amarillo reveal" style="transition-delay:80ms"><div class="metrica-label">Bajo ≤14d</div><div class="metrica-valor" id="m3">—</div></div>
+  <div class="metrica verde reveal" style="transition-delay:120ms"><div class="metrica-label">OK &gt;14d</div><div class="metrica-valor activo" id="m4">—</div></div>
 </div>
   <div class="toolbar">
     <div class="search-wrap">
@@ -2415,7 +3050,7 @@ HTML_TEMPLATE = """<!DOCTYPE html>
 <div id="vista-guias" style="display:none">
 
   <!-- Guía Producción -->
-  <div class="guia-section">
+  <div class="guia-section reveal">
     <div class="guia-header">
       <div>
         <div class="guia-title">🏭 Guía de Producción</div>
@@ -2439,6 +3074,7 @@ HTML_TEMPLATE = """<!DOCTYPE html>
     <div class="table-container-responsive">
     <table class="guia-table">
       <thead><tr>
+        <th style="width:32px"><input type="checkbox" id="sel-all-prod" onchange="selAllProd(this)" title="Seleccionar todos"></th>
         <th class="th-sort" onclick="ordenarTablaGuia(this)">Producto<span class="sort-arrow">↕</span></th><th class="th-sort" style="width:55px" onclick="ordenarTablaGuia(this)">Días<span class="sort-arrow">↕</span></th><th class="th-sort" onclick="ordenarTablaGuia(this)">Cocinero<span class="sort-arrow">↕</span></th>
         <th class="th-sort" style="text-align:right" onclick="ordenarTablaGuia(this)">Vitacura<span class="sort-arrow">↕</span></th><th class="th-sort" style="text-align:right" onclick="ordenarTablaGuia(this)">Pataguas<span class="sort-arrow">↕</span></th>
         <th class="th-sort" style="text-align:right" onclick="ordenarTablaGuia(this)">Total<span class="sort-arrow">↕</span></th><th class="th-sort" style="text-align:right" onclick="ordenarTablaGuia(this)">Producir<span class="sort-arrow">↕</span></th>
@@ -2448,8 +3084,13 @@ HTML_TEMPLATE = """<!DOCTYPE html>
     </div>
   </div>
 
+  <!-- Botón para ver ingredientes de lo seleccionado arriba -->
+  <div class="btn-ver-ing" id="btn-ver-ing-wrap">
+    <button class="btn btn-primary" onclick="abrirModalIngredientes()">📋 Ver ingredientes (<span id="ver-ing-count">0</span>)</button>
+  </div>
+
   <!-- Guía Despacho -->
-  <div class="guia-section">
+  <div class="guia-section reveal" style="transition-delay:90ms">
     <div class="guia-header">
       <div>
         <div class="guia-title">🚚 Guía de Despacho — Vitacura → Pataguas</div>
@@ -2496,30 +3137,106 @@ HTML_TEMPLATE = """<!DOCTYPE html>
 
 <div id="ana-diagnostico"></div>
 
-<div id="ana-quiebres"></div>
+<div id="ana-quiebres" class="reveal" style="transition-delay:40ms"></div>
 
-<div class="ana-metricas" id="ana-metricas">
+<div class="ana-metricas reveal" id="ana-metricas" style="transition-delay:80ms">
   <div class="metrica"><div class="metrica-label">Cargando…</div></div>
 </div>
 
 <div class="ana-grid">
-  <div class="ana-card ana-card-wide">
+  <div class="ana-card ana-card-wide reveal" style="transition-delay:120ms">
     <div class="ana-card-title">Comparativa mensual</div>
     <div id="ana-comparativa"></div>
   </div>
-  <div class="ana-card ana-card-wide">
+  <div class="ana-card ana-card-wide reveal" style="transition-delay:160ms">
     <div class="ana-card-title">Ventas por día del mes</div>
     <div id="ana-calendario"></div>
   </div>
 </div>
 
-<div class="ana-section ana-section-full">
+<div class="ana-section ana-section-full reveal" style="transition-delay:200ms">
   <div class="ana-section-title">Contribución por producto</div>
   <div class="tabla-wrap table-container-responsive">
     <div id="ana-tabla"></div>
   </div>
 </div>
 
+</div>
+
+<!-- VISTA PRODUCCIÓN (planificador semanal con recetas) -->
+<div id="vista-recetas" style="display:none">
+  <div class="prod-explica">
+    <b>¿Cómo funciona?</b> Elige cuánto producir de cada producto — la sugerencia
+    semanal es una referencia, <b>tú decides</b>. Abajo se arma sola la lista de
+    materia prima de todo lo elegido, para revisarla contra la bodega y
+    compartirla por WhatsApp. Toca un producto para ver su receta por unidad o
+    calcular al revés ("tengo 5 kg de atún, ¿cuántos salen?").
+  </div>
+  <div class="toolbar">
+    <div class="search-wrap">
+      <span class="search-ico">🔍</span>
+      <input type="text" id="rec-buscar" placeholder="Buscar producto o SKU...">
+      <button type="button" id="rec-buscar-clear" class="search-clear" aria-label="Borrar búsqueda" style="display:none">✕</button>
+    </div>
+    <div class="chips" id="chips-prod-orden">
+      <button class="chip chip-active" data-orden="urgencia" onclick="setChipProdOrden(this)">⚠️ Por urgencia</button>
+      <button class="chip" data-orden="az" onclick="setChipProdOrden(this)">A–Z</button>
+    </div>
+    <div class="chips" id="chips-prod-cocinero">
+      <button class="chip chip-active" data-cocinero="" onclick="setChipProdCocinero(this)">👨‍🍳 Todos</button>
+      <button class="chip" data-cocinero="CAROLINA" onclick="setChipProdCocinero(this)">Carolina</button>
+      <button class="chip" data-cocinero="ADRIANA" onclick="setChipProdCocinero(this)">Adriana</button>
+      <button class="chip" data-cocinero="CÉSAR" onclick="setChipProdCocinero(this)">César</button>
+      <button class="chip" data-cocinero="JESÚS" onclick="setChipProdCocinero(this)">Jesús</button>
+    </div>
+  </div>
+  <div class="container">
+    <div id="recetas"></div>
+    <div class="no-res" id="rec-no-res" style="display:none">No se encontraron productos.</div>
+  </div>
+</div>
+
+<!-- Barra del plan de producción (aparece al elegir cantidades) -->
+<div class="plan-bar" id="plan-bar">
+  <div class="plan-bar-info">🧺 Plan: <span id="plan-resumen"></span><small id="plan-detalle"></small></div>
+  <button class="plan-bar-btn" onclick="abrirPlanSheet()">Materia prima</button>
+</div>
+
+<!-- Hoja: materia prima del plan de producción -->
+<div class="plan-sheet-overlay" id="plan-sheet-overlay" onclick="cerrarPlanSheet()"></div>
+<div class="plan-sheet" id="plan-sheet">
+  <div class="plan-sheet-head">
+    <span class="ing-modal-title">🧺 Materia prima del plan</span>
+    <button class="ing-modal-close" onclick="cerrarPlanSheet()" aria-label="Cerrar">✕</button>
+  </div>
+  <div class="ing-modal-tabs">
+    <button class="ing-modal-tab active" id="ptab-consolidado" onclick="tabPlanSheet('consolidado')">Consolidado</button>
+    <button class="ing-modal-tab" id="ptab-porproducto" onclick="tabPlanSheet('porproducto')">Por producto</button>
+  </div>
+  <div class="plan-sheet-body" id="plan-sheet-body"></div>
+  <div class="plan-sheet-foot">
+    <button class="btn btn-primary" style="width:100%" onclick="compartirPlan()">📤 Compartir lista</button>
+    <div style="text-align:center;margin-top:6px"><button type="button" class="plan-ver-msg" onclick="togglePlanWsp()">ver el mensaje antes de enviar</button></div>
+    <div class="wsp-preview" id="plan-wsp-preview"></div>
+  </div>
+</div>
+
+<!-- Modal: ingredientes de lo seleccionado en Guía de Producción -->
+<div class="ing-modal-overlay" id="ing-modal-overlay" onclick="if(event.target===this) cerrarModalIngredientes()">
+  <div class="ing-modal">
+    <div class="ing-modal-head">
+      <span class="ing-modal-title">Ingredientes a tener listos</span>
+      <button class="ing-modal-close" onclick="cerrarModalIngredientes()" aria-label="Cerrar">✕</button>
+    </div>
+    <div class="ing-modal-tabs">
+      <button class="ing-modal-tab active" id="tab-consolidado" onclick="cambiarTabIngredientes('consolidado')">Consolidado</button>
+      <button class="ing-modal-tab" id="tab-porproducto" onclick="cambiarTabIngredientes('porproducto')">Por producto</button>
+    </div>
+    <div class="ing-modal-body" id="ing-modal-body"></div>
+    <div class="ing-modal-foot">
+      <button class="btn btn-primary" style="flex:1" onclick="enviarWhatsAppIngredientes()">📤 Compartir lista</button>
+    </div>
+  </div>
 </div>
 
 <script>

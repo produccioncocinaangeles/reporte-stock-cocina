@@ -95,6 +95,23 @@ Pestaña completa de análisis de ventas mensuales. Estado actual en `reporte-st
 
 - Comunicación **siempre en español**.
 - El usuario no es programador: explicar el porqué en lenguaje simple antes de ejecutar.
+- **Reglas permanentes del usuario** (versión completa en
+  `C:\Users\<usuario>\.claude\CLAUDE.md` de cada PC; copia maestra en
+  `G:\Mi unidad\Claude code\CLAUDE-global-copiar-a-cada-PC.md`):
+  1. Contradecirlo con razones si su idea es mala, ANTES de ejecutar.
+  2. Investigar métodos/herramientas que ya existen hechos por expertos antes
+     de inventar algo a medida (nombrar el método estándar de la industria).
+  3. Opciones antes de construir: 2-3 alternativas de simple a compleja, con
+     pros y contras — él elige.
+- **Regla de soluciones simples (aprendida a costo alto, jul-2026):** antes de
+  proponer cualquier solución técnica, elegir la MÁS SIMPLE que cumpla: sin
+  instalar programas, que funcione desde el teléfono, gratis, y de preferencia
+  dentro del ecosistema Google (Sheets, Apps Script) donde ya viven los datos.
+  Contexto: para "que varias personas carguen recetas desde el teléfono" una
+  sesión anterior propuso una extensión de Chrome y luego Tailscale (instalar
+  en PC y teléfono) — se gastaron horas y tokens antes de llegar a Apps Script,
+  que era la respuesta obvia. Extensiones, VPNs y servidores locales son
+  ÚLTIMO recurso, no primera propuesta.
 - **Nunca pushear a GitHub sin aprobación explícita** ("listo súbelo" / "ok subamos"). Cada push activa Actions que envía emails.
 - Cambios riesgosos → probar en `reporte-stock-PRUEBAS` primero.
 - Validar cálculos mostrando impacto en todos los productos antes de dar por buenos.
@@ -146,6 +163,129 @@ Pestaña completa de análisis de ventas mensuales. Estado actual en `reporte-st
 
 **Pendiente / ideas no implementadas:**
 - Pestaña nueva **"Rendimiento de cocinero"**: el usuario quiere un ícono discreto en el header (no un botón de nav normal) que pida una clave simple antes de mostrar la vista. Importante: como el repo es público, esto NO es seguridad real, solo evita que alguien la encuentre navegando casualmente. Falta definir qué métricas mostrar exactamente (¿unidades producidas por cocinero?, ¿quiebres asociados?). No implementado todavía.
+
+---
+
+## Estado al 3-jul-2026 (commit 00d740f)
+
+**Pestaña Análisis — mes nuevo y claridad (todo en producción):**
+- El mes en curso aparece desde el día 1 (se eliminó el filtro que lo ocultaba hasta el 40% del mes).
+- Comparativa mensual: solo últimos 6 meses; los chips mantienen hasta 12.
+- Primeros 7 días del mes: banner gris "⏳ Mes recién comenzando" (sin veredicto ni proyección — con 2 días proyectaba ~700 un., puro ruido) y columna "vs mes ant." en "—" (`sin_datos`). Desde el día 7 vuelve el análisis normal.
+- **Tarjeta "Ritmo de producción"** (solo visible en el mes en curso): crecimiento compuesto (CMGR) de los últimos 4 meses completos excluyendo enero-febrero (vacaciones), más referencia de cierre (promedio de últimos 3 meses). Cuando exista el mismo mes del año anterior en el historial cambia automáticamente a comparación año contra año (YoY) — ocurrirá desde enero 2027. Datos jul-2026: Mar 698 → Abr 667 → May 824 → Jun 756 (+2,7% mensual) → referencia julio ~749.
+- **Columna "Proyec. histórica"**: en meses pasados muestra la foto de `historial_proyecciones.json` de ese mes (para validar proyectado vs vendido real); en el mes en curso muestra la proyección vigente + etiqueta "ajuste: ±X% vs jun" cuando cambió ≥10%. El detalle a fondo ("en jun se estimaban 31 und, ahora 35 (+13%) — el producto se aceleró") está en Recomendaciones de la pestaña Productos.
+- **Productos con venta 0** aparecen al final de la tabla (0 en rojo) si vendieron en alguno de los 3 meses previos — un producto activo que no vendió nada es señal, no dato faltante.
+- Leyenda plegable "ℹ️ ¿Cómo leer esta tabla?" sobre la tabla de contribución.
+- **"Vitacura sin stock"** (detalle de producto): consolidado de días por mes a simple vista + fechas exactas en desplegable. Ojo: las fechas de `periodos_sin_stock_vit` vienen en formato dd/mm/yyyy — el JS las convierte con `fIso()`; el día "fin" es cuando volvió el stock y no se cuenta.
+
+**Regla de diseño clave (guardada en memoria):** el dashboard lo usan terceros que no pueden preguntar — todo cálculo debe explicarse solo en la UI (mostrar valores de origen, no solo el resultado; leyendas en lenguaje simple).
+
+**Dato importante del negocio:** el dashboard cubre SOLO productos de producción propia (56 SKUs en NOMBRES). En junio hay ~20 SKUs fuera de catálogo (PP, PN, BURMA, D, LF...) con 337 un. vendidas — son reventa/otros, excluidos a propósito. Total junio catálogo: 756 un. (no 1.093, que incluye lo de fuera).
+
+**`CLAUDE.md`** creado en repo-temp (va en git), PRUEBAS y REDISENO (locales): contexto automático para sesiones nuevas en cualquier carpeta.
+
+**Pendientes:**
+- Extender ventana de velocidad cuando días con stock < 20 en 3 meses (caso RPP con lote inflado a 33) — confirmado, no implementado.
+- Alerta de "ritmo lento" al final del mes debe considerar festividades próximas en los días restantes (limitación metodológica discutida, sin implementar).
+- Pestaña "Rendimiento de cocinero" con ícono discreto + clave simple — solo idea.
+- Pasada completa de leyendas explicativas al resto del dashboard (alerta temprana, calendario, guías).
+
+---
+
+## Estado al 9-jul-2026 — Pestaña Producción (en REDISENO, no en producción)
+
+La pestaña **Recetas se transformó en "Producción"**: planificador semanal donde
+el usuario decide cuánto producir (definido en entrevista el 8-9 jul; maqueta
+aprobada en `maqueta_produccion.html`). Implementado en `generar_dashboard.py`
+de `reporte-stock-REDISENO` (ids internos siguen siendo `vista-recetas` /
+`nav-recetas` / `mostrarRecetas` para minimizar cambios).
+
+**Qué hace:**
+- Cards por producto ordenadas por urgencia (orden de DATA), con stock
+  Vit/Pat, cobertura, cocinero y **sugerencia semanal** (`vel_total*7`) como
+  referencia — la cantidad la decide el usuario con stepper −/+.
+- Filtros: buscador, chips por urgencia/A-Z y por cocinero (Carolina, Adriana,
+  César, Jesús — de `COCINEROS`).
+- Detalle por producto: receta por 1 unidad + **cálculo inverso** ("tengo 5 kg
+  de atún → alcanza para 10 und → Usar esta cantidad").
+- Barra verde fija inferior con resumen del plan → hoja (bottom sheet) con
+  materia prima consolidada o por producto. Consolidación normaliza g→kg y
+  ml→L; ingredientes sin cantidad o productos sin receta se listan como ⚠
+  avisos, nunca se suman en silencio.
+- **Compartir por menú nativo** (`navigator.share`, respaldo wa.me sin
+  número): también se cambió el modal de ingredientes de Guías (se eliminó el
+  campo de número de WhatsApp).
+- `leer_recetas()` ahora marca ingredientes "se prepara" leyendo la pestaña
+  `Elaborados` de la planilla (hoy vacía — al llenarla aparecen las etiquetas
+  solas). El plan NO se guarda todavía (queda como paso siguiente: Apps Script).
+
+**Contexto de la decisión:** el dolor real es que el cocinero dicta ingredientes
+de memoria y las compras salen incompletas varias veces por semana (caso
+tártaro de atún: se compró cebolla+cilantro, faltó jengibre). El usuario (jefe
+de cocina) arma el plan semanal; su jefe compra — recibe la lista por WhatsApp.
+
+---
+
+## Sistema de recetas (jun-2026, vive en `reporte-stock-REDISENO`)
+
+Sistema paralelo al dashboard para digitalizar las recetas de los productos.
+Los archivos están en `G:\Mi unidad\reporte-stock-REDISENO\` (no en git).
+
+**Dónde viven los datos:**
+- Google Sheet **"La Cocina - Recetas"** (en la raíz de `G:\Mi unidad`), ID
+  `1bzRCgI5Cs0mIvjnFvfJZiZ6K3DaNU8D69jvo0vhU49g`.
+- Pestañas: `Recetas` (Producto | SKU | Ingrediente | Cantidad | Unidad, con
+  dropdowns), `Ingredientes` (lista maestra, evita duplicados tipo "queso" vs
+  "queso mantecoso"), `Productos` (auxiliar Producto→SKU) y `Elaborados`.
+- Acceso vía cuenta de servicio (`la-cocina-498520-*.json`, gspread).
+
+**Scripts:**
+- `crear_planilla_recetas.py` — arma/repara la estructura de la Sheet desde cero.
+  Seguro de re-ejecutar (no borra datos cargados).
+- `importar_recetas_excel.py` — importó la matriz de ingredientes desde
+  `Copia de Costos SEP 2023.xlsx` (hoja INSUMOS). Unidad `kg` por defecto en
+  todo (decisión del usuario, 30-jun-2026), se corrige fila a fila después.
+  Incluye mapeos manuales de nombres viejos→SKU y exclusiones confirmadas
+  (ej. Pastel de Choclo Mediano quedó fuera).
+- `editor_recetas.py` + `abrir_editor_recetas.bat` — editor local en el
+  navegador (localhost) para agregar/editar/borrar ingredientes manteniendo
+  las filas de cada producto juntas. Es el ÚNICO lugar donde se manejan datos
+  sensibles (precio/proveedor/merma, elaborados).
+- `apps_script_Code.gs` + `apps_script_Index.html` — **editor online** (Google
+  Apps Script como aplicación web): un link para cargar recetas desde el
+  teléfono/WhatsApp sin PC encendida. NO expone precios ni proveedores; usa un
+  candado para escrituras simultáneas. Instrucciones de publicación en
+  `INSTRUCCIONES_EDITOR_ONLINE.md`.
+
+**Por confirmar:** si el editor online ya fue implementado en script.google.com
+(y cuál es el link).
+
+### Hoja de ruta del sistema de recetas (definida 3-jul-2026)
+
+Visión completa del usuario, por etapas — cada una útil por sí sola:
+
+1. **Cargar todas las recetas** (en curso). Base de todo lo demás.
+2. **Explosión de materiales**: producción sugerida (lote_sugerido, ya existe
+   en el dashboard) × recetas = cuánta materia prima se necesita.
+3. **Formatos de proveedor + costos + merma**: por ingrediente, en qué formato
+   vende el proveedor (ej. barra de queso 3,5 kg), precio y % merma. Permite:
+   convertir necesidad en unidades de compra reales, generar **texto de pedido
+   por proveedor** (listo para WhatsApp) y calcular **costo real por producto**.
+   Datos sensibles solo en el editor local (decisión ya tomada).
+4. **Registro de facturas → inventario de materias primas + gasto por
+   proveedor**. Contexto: facturas llegan EN PAPEL (las recibe quien recibe la
+   mercadería; no hay personal administrativo). Plan acordado:
+   - **Fase 1 — manual**: formulario en el editor local donde el usuario carga
+     las líneas de la factura. Valida la lógica de inventario antes de
+     automatizar.
+   - **Fase 2 — foto + IA**: quien recibe saca foto de la factura → carpeta de
+     Drive/WhatsApp → la IA la lee → el usuario **confirma/corrige antes de
+     guardar** (paso de confirmación obligatorio, nunca guardar directo).
+   - Con inventario de ingredientes + recetas → "¿qué puedo producir con lo
+     que tengo?" (la funcionalidad más valiosa: no parar producción).
+   - Advertencia asumida: el inventario inferido se desvía con el tiempo →
+     requiere **conteo físico periódico** que lo re-ancle (mismo concepto que
+     el stock de Bsale).
 
 ---
 

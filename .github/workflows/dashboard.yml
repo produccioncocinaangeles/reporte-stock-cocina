@@ -22,7 +22,7 @@ jobs:
           python-version: '3.11'
 
       - name: Instalar dependencias
-        run: pip install pandas openpyxl requests numpy
+        run: pip install pandas openpyxl requests numpy gspread google-auth
 
       # ── PASO 1: Actualización diaria del historial ─────────────
       # Agrega ventas y guías nuevas (API) y deduce recepciones/consumos
@@ -42,6 +42,19 @@ jobs:
           git diff --staged --quiet || (git commit -m "Actualizacion diaria: ventas, guias y recepciones inferidas" && git push)
 
       # ── PASO 2: Generar dashboard + velocidades.json ───────────
+      # La credencial de Google Sheets permite leer las recetas para la pestaña
+      # Producción. Si el secret no está configurado, el dashboard se genera
+      # igual pero con las recetas vacías (leer_recetas devuelve {}).
+      - name: Preparar credencial de Google Sheets (recetas)
+        env:
+          GOOGLE_SERVICE_ACCOUNT_JSON: ${{ secrets.GOOGLE_SERVICE_ACCOUNT_JSON }}
+        run: |
+          if [ -n "$GOOGLE_SERVICE_ACCOUNT_JSON" ]; then
+            echo "$GOOGLE_SERVICE_ACCOUNT_JSON" > la-cocina-498520-9b115beec377.json
+          else
+            echo "AVISO: secret GOOGLE_SERVICE_ACCOUNT_JSON no configurado — el dashboard saldrá sin recetas"
+          fi
+
       - name: Generar dashboard
         env:
           BSALE_TOKEN: ${{ secrets.BSALE_TOKEN }}
