@@ -192,7 +192,16 @@ Pestaña completa de análisis de ventas mensuales. Estado actual en `reporte-st
 
 ---
 
-## Estado al 9-jul-2026 — Pestaña Producción (en REDISENO, no en producción)
+## Estado al 9-jul-2026 — Pestaña Producción (SUBIDO a main, commit de26d52)
+
+> Subido el 9-jul con aprobación del usuario ("carga la nueva versión al github").
+> Incluye además: render perezoso del detalle en la vista Productos (cambiar el
+> filtro de cocinero congelaba el teléfono) y fix de `verMovsCompletos` con filtro
+> activo. Se fusionó con 3 vías contra el commit 00d740f (Análisis 3-jul) — ambas
+> ramas de trabajo quedaron combinadas; REDISENO y repo-temp tienen el mismo
+> `generar_dashboard.py`. PENDIENTE: el usuario debe crear el secret
+> `GOOGLE_SERVICE_ACCOUNT_JSON` en GitHub para que las recetas aparezcan en
+> producción (sin él, la pestaña Producción sale con recetas vacías).
 
 La pestaña **Recetas se transformó en "Producción"**: planificador semanal donde
 el usuario decide cuánto producir (definido en entrevista el 8-9 jul; maqueta
