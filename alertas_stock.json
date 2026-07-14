@@ -1,36 +1,132 @@
 {
-  "fecha": "2026-07-13",
+  "fecha": "2026-07-14",
   "entradas": [
     {
+      "sku": "RPP",
+      "oficina": "PAT",
+      "cantidad": 2.0
+    },
+    {
       "sku": "MCL",
-      "oficina": "VIT",
-      "cantidad": 26.0
+      "oficina": "PAT",
+      "cantidad": 6.0
     },
     {
       "sku": "CLC",
-      "oficina": "VIT",
-      "cantidad": 9.0
+      "oficina": "PAT",
+      "cantidad": 4.0
     },
     {
       "sku": "MCJ",
-      "oficina": "VIT",
-      "cantidad": 26.0
+      "oficina": "PAT",
+      "cantidad": 5.0
     },
     {
       "sku": "RC",
+      "oficina": "PAT",
+      "cantidad": 3.0
+    },
+    {
+      "sku": "LA",
       "oficina": "VIT",
-      "cantidad": 9.0
+      "cantidad": 11.0
+    },
+    {
+      "sku": "LA",
+      "oficina": "PAT",
+      "cantidad": 3.0
+    },
+    {
+      "sku": "RM",
+      "oficina": "PAT",
+      "cantidad": 4.0
+    },
+    {
+      "sku": "CL",
+      "oficina": "VIT",
+      "cantidad": 10.0
+    },
+    {
+      "sku": "LS",
+      "oficina": "PAT",
+      "cantidad": 2.0
+    },
+    {
+      "sku": "LJC",
+      "oficina": "PAT",
+      "cantidad": 1.0
+    },
+    {
+      "sku": "PC",
+      "oficina": "PAT",
+      "cantidad": 1.0
+    },
+    {
+      "sku": "TS",
+      "oficina": "PAT",
+      "cantidad": 2.0
     },
     {
       "sku": "ÑJ",
-      "oficina": "VIT",
-      "cantidad": 8.0
+      "oficina": "PAT",
+      "cantidad": 4.0
     },
     {
-      "sku": "ÑC",
+      "sku": "TPP",
       "oficina": "PAT",
       "cantidad": 2.0
+    },
+    {
+      "sku": "EM",
+      "oficina": "PAT",
+      "cantidad": 1.0
+    },
+    {
+      "sku": "EJ",
+      "oficina": "PAT",
+      "cantidad": 1.0
+    },
+    {
+      "sku": "BAP",
+      "oficina": "PAT",
+      "cantidad": 3.0
+    },
+    {
+      "sku": "MIGNON",
+      "oficina": "PAT",
+      "cantidad": 1.0
+    },
+    {
+      "sku": "TA",
+      "oficina": "VIT",
+      "cantidad": 10.0
+    },
+    {
+      "sku": "LR",
+      "oficina": "VIT",
+      "cantidad": 4.0
+    },
+    {
+      "sku": "LR",
+      "oficina": "PAT",
+      "cantidad": 2.0
+    },
+    {
+      "sku": "CP",
+      "oficina": "PAT",
+      "cantidad": 2.0
+    },
+    {
+      "sku": "PCP",
+      "oficina": "PAT",
+      "cantidad": 10.0
     }
   ],
-  "salidas": []
+  "salidas": [
+    {
+      "sku": "MCL",
+      "oficina": "VIT",
+      "cantidad": 1.0
+    }
+  ]
 }
