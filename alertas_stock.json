@@ -1,15 +1,50 @@
 {
-  "fecha": "2026-07-16",
+  "fecha": "2026-07-17",
   "entradas": [
     {
-      "sku": "CJ",
-      "oficina": "VIT",
-      "cantidad": 13.0
+      "sku": "MCL",
+      "oficina": "PAT",
+      "cantidad": 1.0
     },
     {
-      "sku": "TSA",
+      "sku": "CJ",
+      "oficina": "PAT",
+      "cantidad": 3.0
+    },
+    {
+      "sku": "MCJ",
+      "oficina": "PAT",
+      "cantidad": 2.0
+    },
+    {
+      "sku": "LA",
+      "oficina": "PAT",
+      "cantidad": 4.0
+    },
+    {
+      "sku": "RM",
+      "oficina": "PAT",
+      "cantidad": 4.0
+    },
+    {
+      "sku": "TLS",
       "oficina": "VIT",
-      "cantidad": 1.0
+      "cantidad": 6.0
+    },
+    {
+      "sku": "TLS",
+      "oficina": "PAT",
+      "cantidad": 6.0
+    },
+    {
+      "sku": "RB",
+      "oficina": "PAT",
+      "cantidad": 4.0
+    },
+    {
+      "sku": "RS",
+      "oficina": "PAT",
+      "cantidad": 4.0
     },
     {
       "sku": "FCT",
@@ -17,14 +52,24 @@
       "cantidad": 1.0
     },
     {
-      "sku": "CAMA",
+      "sku": "AS",
       "oficina": "VIT",
-      "cantidad": 10.0
+      "cantidad": 7.0
     },
     {
-      "sku": "CAMA",
+      "sku": "AS",
       "oficina": "PAT",
-      "cantidad": 1.0
+      "cantidad": 5.0
+    },
+    {
+      "sku": "PAC",
+      "oficina": "PAT",
+      "cantidad": 4.0
+    },
+    {
+      "sku": "PCP",
+      "oficina": "PAT",
+      "cantidad": 5.0
     }
   ],
   "salidas": []
