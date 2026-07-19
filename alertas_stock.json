@@ -1,20 +1,15 @@
 {
-  "fecha": "2026-07-18",
+  "fecha": "2026-07-19",
   "entradas": [
     {
-      "sku": "TLS",
-      "oficina": "VIT",
-      "cantidad": 5.0
-    },
-    {
-      "sku": "RS",
+      "sku": "LA",
       "oficina": "PAT",
       "cantidad": 1.0
     },
     {
-      "sku": "AS",
-      "oficina": "VIT",
-      "cantidad": 5.0
+      "sku": "SA",
+      "oficina": "PAT",
+      "cantidad": 195.0
     }
   ],
   "salidas": []
