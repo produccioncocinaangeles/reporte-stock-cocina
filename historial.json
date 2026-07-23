@@ -1,5 +1,5 @@
 {
-  "ultimo_update": "2026-07-23T15:59:56",
+  "ultimo_update": "2026-07-23T18:59:11",
   "movimientos": [
     {
       "fecha": "2026-01-15",
@@ -56876,6 +56876,62 @@
       "cantidad": 15.0,
       "doc_id": 0,
       "inferido": true
+    },
+    {
+      "fecha": "2026-07-23",
+      "sku": "CAMA",
+      "oficina": "PAT",
+      "tipo": "venta",
+      "cantidad": 1.0,
+      "doc_id": 20986
+    },
+    {
+      "fecha": "2026-07-23",
+      "sku": "TFC",
+      "oficina": "PAT",
+      "tipo": "venta",
+      "cantidad": 1.0,
+      "doc_id": 20986
+    },
+    {
+      "fecha": "2026-07-23",
+      "sku": "TL",
+      "oficina": "PAT",
+      "tipo": "venta",
+      "cantidad": 1.0,
+      "doc_id": 20987
+    },
+    {
+      "fecha": "2026-07-23",
+      "sku": "ÑC",
+      "oficina": "PAT",
+      "tipo": "venta",
+      "cantidad": 1.0,
+      "doc_id": 20988
+    },
+    {
+      "fecha": "2026-07-23",
+      "sku": "PCP",
+      "oficina": "PAT",
+      "tipo": "venta",
+      "cantidad": 1.0,
+      "doc_id": 20988
+    },
+    {
+      "fecha": "2026-07-23",
+      "sku": "TL",
+      "oficina": "PAT",
+      "tipo": "venta",
+      "cantidad": 1.0,
+      "doc_id": 20988
+    },
+    {
+      "fecha": "2026-07-23",
+      "sku": "EM",
+      "oficina": "PAT",
+      "tipo": "venta",
+      "cantidad": 1.0,
+      "doc_id": 20988
     }
   ],
   "docs_ignorar": [
