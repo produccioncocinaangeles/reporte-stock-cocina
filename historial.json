@@ -1,5 +1,5 @@
 {
-  "ultimo_update": "2026-07-26T19:01:56",
+  "ultimo_update": "2026-07-27T19:05:13",
   "movimientos": [
     {
       "fecha": "2026-01-15",
@@ -57955,6 +57955,193 @@
     {
       "fecha": "2026-07-26",
       "sku": "LSA",
+      "oficina": "VIT",
+      "tipo": "produccion",
+      "cantidad": 7.0,
+      "doc_id": 0,
+      "inferido": true
+    },
+    {
+      "fecha": "2026-07-27",
+      "sku": "ÑC",
+      "oficina": "VIT",
+      "tipo": "venta",
+      "cantidad": 1.0,
+      "doc_id": 21046
+    },
+    {
+      "fecha": "2026-07-27",
+      "sku": "ÑP",
+      "oficina": "VIT",
+      "tipo": "venta",
+      "cantidad": 1.0,
+      "doc_id": 21046
+    },
+    {
+      "fecha": "2026-07-27",
+      "sku": "DLC",
+      "oficina": "VIT",
+      "tipo": "venta",
+      "cantidad": 1.0,
+      "doc_id": 21046
+    },
+    {
+      "fecha": "2026-07-27",
+      "sku": "CAMA",
+      "oficina": "VIT",
+      "tipo": "venta",
+      "cantidad": 1.0,
+      "doc_id": 21047
+    },
+    {
+      "fecha": "2026-07-27",
+      "sku": "SA",
+      "oficina": "VIT",
+      "tipo": "venta",
+      "cantidad": 4.0,
+      "doc_id": 21047
+    },
+    {
+      "fecha": "2026-07-27",
+      "sku": "MCJ",
+      "oficina": "VIT",
+      "tipo": "venta",
+      "cantidad": 1.0,
+      "doc_id": 21049
+    },
+    {
+      "fecha": "2026-07-27",
+      "sku": "EC",
+      "oficina": "VIT",
+      "tipo": "venta",
+      "cantidad": 1.0,
+      "doc_id": 21049
+    },
+    {
+      "fecha": "2026-07-27",
+      "sku": "MMRM",
+      "oficina": "VIT",
+      "tipo": "venta",
+      "cantidad": 1.0,
+      "doc_id": 21049
+    },
+    {
+      "fecha": "2026-07-27",
+      "sku": "PCP",
+      "oficina": "VIT",
+      "tipo": "venta",
+      "cantidad": 1.0,
+      "doc_id": 21049
+    },
+    {
+      "fecha": "2026-07-27",
+      "sku": "PAC",
+      "oficina": "PAT",
+      "tipo": "venta",
+      "cantidad": 1.0,
+      "doc_id": 21041
+    },
+    {
+      "fecha": "2026-07-27",
+      "sku": "ÑC",
+      "oficina": "PAT",
+      "tipo": "venta",
+      "cantidad": 1.0,
+      "doc_id": 21042
+    },
+    {
+      "fecha": "2026-07-27",
+      "sku": "TFC",
+      "oficina": "PAT",
+      "tipo": "venta",
+      "cantidad": 1.0,
+      "doc_id": 21042
+    },
+    {
+      "fecha": "2026-07-27",
+      "sku": "CLC",
+      "oficina": "PAT",
+      "tipo": "venta",
+      "cantidad": 1.0,
+      "doc_id": 21043
+    },
+    {
+      "fecha": "2026-07-27",
+      "sku": "RA",
+      "oficina": "PAT",
+      "tipo": "venta",
+      "cantidad": 1.0,
+      "doc_id": 21044
+    },
+    {
+      "fecha": "2026-07-27",
+      "sku": "TFC",
+      "oficina": "PAT",
+      "tipo": "venta",
+      "cantidad": 1.0,
+      "doc_id": 21045
+    },
+    {
+      "fecha": "2026-07-27",
+      "sku": "MIGNON",
+      "oficina": "PAT",
+      "tipo": "venta",
+      "cantidad": 1.0,
+      "doc_id": 21048
+    },
+    {
+      "fecha": "2026-07-27",
+      "sku": "BADIAC",
+      "oficina": "PAT",
+      "tipo": "venta",
+      "cantidad": 1.0,
+      "doc_id": 21051
+    },
+    {
+      "fecha": "2026-07-27",
+      "sku": "MCC",
+      "oficina": "PAT",
+      "tipo": "venta",
+      "cantidad": 3.0,
+      "doc_id": 21052
+    },
+    {
+      "fecha": "2026-07-27",
+      "sku": "EM",
+      "oficina": "PAT",
+      "tipo": "venta",
+      "cantidad": 2.0,
+      "doc_id": 21052
+    },
+    {
+      "fecha": "2026-07-27",
+      "sku": "RM",
+      "oficina": "PAT",
+      "tipo": "venta",
+      "cantidad": 1.0,
+      "doc_id": 21053
+    },
+    {
+      "fecha": "2026-07-27",
+      "sku": "OP",
+      "oficina": "VIT",
+      "tipo": "produccion",
+      "cantidad": 6.0,
+      "doc_id": 0,
+      "inferido": true
+    },
+    {
+      "fecha": "2026-07-27",
+      "sku": "CAMA",
+      "oficina": "VIT",
+      "tipo": "produccion",
+      "cantidad": 20.0,
+      "doc_id": 0,
+      "inferido": true
+    },
+    {
+      "fecha": "2026-07-27",
+      "sku": "PV",
       "oficina": "VIT",
       "tipo": "produccion",
       "cantidad": 7.0,
