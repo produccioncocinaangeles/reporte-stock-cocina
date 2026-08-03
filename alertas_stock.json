@@ -1,16 +1,11 @@
 {
-  "fecha": "2026-08-02",
-  "entradas": [
+  "fecha": "2026-08-03",
+  "entradas": [],
+  "salidas": [
     {
-      "sku": "TLS",
-      "oficina": "VIT",
-      "cantidad": 5.0
-    },
-    {
-      "sku": "CAMA",
-      "oficina": "VIT",
+      "sku": "CM",
+      "oficina": "PAT",
       "cantidad": 1.0
     }
-  ],
-  "salidas": []
+  ]
 }
