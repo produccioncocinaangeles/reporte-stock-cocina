@@ -1,20 +1,20 @@
 {
-  "fecha": "2026-08-03",
+  "fecha": "2026-08-04",
   "stock": {
     "OP": {
-      "vit": 4,
-      "pat": 2
+      "vit": 3,
+      "pat": 3
     },
     "RPP": {
       "vit": 6,
       "pat": 5
     },
     "MCL": {
-      "vit": 8,
-      "pat": 0
+      "vit": 4,
+      "pat": 4
     },
     "CJ": {
-      "vit": 4,
+      "vit": 2,
       "pat": 4
     },
     "CLC": {
@@ -50,7 +50,7 @@
       "pat": 5
     },
     "LS": {
-      "vit": 0,
+      "vit": 11,
       "pat": 0
     },
     "LJC": {
@@ -63,15 +63,15 @@
     },
     "MMR": {
       "vit": 19,
-      "pat": 5
+      "pat": 4
     },
     "TS": {
       "vit": 3,
       "pat": 5
     },
     "ÑJ": {
-      "vit": 8,
-      "pat": 4
+      "vit": 7,
+      "pat": 5
     },
     "TSA": {
       "vit": 2,
@@ -79,38 +79,38 @@
     },
     "RB": {
       "vit": 6,
-      "pat": 6
+      "pat": 5
     },
     "CF": {
-      "vit": 17,
-      "pat": 2
+      "vit": 14,
+      "pat": 5
     },
     "RS": {
       "vit": 0,
       "pat": 1
     },
     "FCT": {
-      "vit": 0,
+      "vit": 6,
       "pat": 2
     },
     "PCM": {
-      "vit": 2,
-      "pat": 0
+      "vit": 1,
+      "pat": 1
     },
     "ÑP": {
       "vit": 2,
       "pat": 3
     },
     "TF": {
-      "vit": 16,
-      "pat": 1
+      "vit": 11,
+      "pat": 6
     },
     "MCC": {
-      "vit": 3,
-      "pat": 0
+      "vit": 1,
+      "pat": 2
     },
     "CAMA": {
-      "vit": 7,
+      "vit": 5,
       "pat": 7
     },
     "TPP": {
@@ -126,36 +126,36 @@
       "pat": 5
     },
     "PAC": {
-      "vit": 21,
-      "pat": 4
+      "vit": 19,
+      "pat": 6
     },
     "EM": {
-      "vit": 7,
-      "pat": 0
+      "vit": 11,
+      "pat": 6
     },
     "ÑC": {
-      "vit": 5,
-      "pat": 1
+      "vit": 3,
+      "pat": 3
     },
     "EJ": {
       "vit": 4,
-      "pat": 5
-    },
-    "BAP": {
-      "vit": 10,
       "pat": 4
     },
+    "BAP": {
+      "vit": 8,
+      "pat": 6
+    },
     "MIGNON": {
-      "vit": 7,
+      "vit": 6,
       "pat": 5
     },
     "PV": {
-      "vit": 4,
-      "pat": 3
+      "vit": 3,
+      "pat": 4
     },
     "TA": {
-      "vit": 5,
-      "pat": 3
+      "vit": 4,
+      "pat": 4
     },
     "MMRM": {
       "vit": 5,
@@ -182,16 +182,16 @@
       "pat": 5
     },
     "TCM": {
-      "vit": 8,
-      "pat": 0
+      "vit": 4,
+      "pat": 4
     },
     "PCP": {
       "vit": 48,
-      "pat": 14
+      "pat": 13
     },
     "EC": {
-      "vit": 7,
-      "pat": 4
+      "vit": 5,
+      "pat": 6
     },
     "CC": {
       "vit": 10,
