@@ -1,30 +1,15 @@
 {
-  "fecha": "2026-08-07",
+  "fecha": "2026-08-08",
   "entradas": [
+    {
+      "sku": "OP",
+      "oficina": "VIT",
+      "cantidad": 1.0
+    },
     {
       "sku": "CLC",
       "oficina": "PAT",
       "cantidad": 2.0
-    },
-    {
-      "sku": "LA",
-      "oficina": "VIT",
-      "cantidad": 11.0
-    },
-    {
-      "sku": "LA",
-      "oficina": "PAT",
-      "cantidad": 2.0
-    },
-    {
-      "sku": "RM",
-      "oficina": "PAT",
-      "cantidad": 2.0
-    },
-    {
-      "sku": "CL",
-      "oficina": "PAT",
-      "cantidad": 1.0
     },
     {
       "sku": "RS",
@@ -32,25 +17,46 @@
       "cantidad": 1.0
     },
     {
-      "sku": "PCM",
+      "sku": "TPP",
       "oficina": "VIT",
-      "cantidad": 4.0
+      "cantidad": 7.0
     },
     {
       "sku": "RA",
       "oficina": "VIT",
-      "cantidad": 5.0
-    },
-    {
-      "sku": "RA",
-      "oficina": "PAT",
       "cantidad": 4.0
     },
     {
-      "sku": "PCP",
-      "oficina": "PAT",
+      "sku": "ÑC",
+      "oficina": "VIT",
+      "cantidad": 6.0
+    },
+    {
+      "sku": "MIGNON",
+      "oficina": "VIT",
+      "cantidad": 10.0
+    },
+    {
+      "sku": "CM",
+      "oficina": "VIT",
       "cantidad": 5.0
+    },
+    {
+      "sku": "EC",
+      "oficina": "VIT",
+      "cantidad": 11.0
     }
   ],
-  "salidas": []
+  "salidas": [
+    {
+      "sku": "RB",
+      "oficina": "PAT",
+      "cantidad": 1.0
+    },
+    {
+      "sku": "ÑC",
+      "oficina": "PAT",
+      "cantidad": 1.0
+    }
+  ]
 }
