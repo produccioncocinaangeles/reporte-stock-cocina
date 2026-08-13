@@ -1,5 +1,5 @@
 {
-  "fecha": "2026-08-12",
+  "fecha": "2026-08-13",
   "entradas": [
     {
       "sku": "MCL",
@@ -7,14 +7,9 @@
       "cantidad": 1.0
     },
     {
-      "sku": "MCJ",
+      "sku": "TLS",
       "oficina": "VIT",
-      "cantidad": 11.0
-    },
-    {
-      "sku": "RM",
-      "oficina": "VIT",
-      "cantidad": 9.0
+      "cantidad": 4.0
     }
   ],
   "salidas": []
