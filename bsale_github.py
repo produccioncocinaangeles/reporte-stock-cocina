@@ -54,7 +54,7 @@ PRODUCTOS = [
     {"cm": "CP",     "nombre": "CARPACCIO PULPO CON SALSA",       "promedio": 10.0, "cocinero": "JESUS"},
     {"cm": "LSA",    "nombre": "LASAÑA SALMON",                   "promedio": 6.1,  "cocinero": "ADRIANA"},
     {"cm": "RJ",     "nombre": "ROLLO JAMON SERRANO",             "promedio": 5.0,  "cocinero": "CESAR"},
-    {"cm": "AS",     "nombre": "ARROZ SALVAJE",                   "promedio": 2.0,  "cocinero": "PROVEEDOR"},
+    {"cm": "AS",     "nombre": "ARROZ SALVAJE",                   "promedio": 2.0,  "cocinero": "JESUS"},
     {"cm": "TCM",    "nombre": "TALLARIN CARNE MECHADA",          "promedio": 5.0,  "cocinero": "ADRIANA"},
     {"cm": "CM",     "nombre": "CARNE MECHADA",                   "promedio": 10.0, "cocinero": "CESAR"},
     {"cm": "PCP",    "nombre": "PATE CON PERAS",                  "promedio": 45.0, "cocinero": "JESUS"},
@@ -64,7 +64,6 @@ PRODUCTOS = [
     {"cm": "LM",     "nombre": "LASAÑA MEDITERRANEA",             "promedio": 4.4,  "cocinero": "ADRIANA"},
     {"cm": "CAC",    "nombre": "CHOCLO A LA CREMA",               "promedio": 5.0,  "cocinero": "JESUS"},
     {"cm": "TPU",    "nombre": "TEQUEÑOS DE PULPO CON SALSA",     "promedio": 4.0,  "cocinero": "ADRIANA"},
-    {"cm": "BAR",    "nombre": "BARQUILLOS",                      "promedio": 3.0,  "cocinero": "CAROLINA"},
     {"cm": "SA",     "nombre": "SALSA EN FRASCO",                 "promedio": 0.0,  "cocinero": "ADRIANA"},
     {"cm": "CAMAC",  "nombre": "CAMARONES COCIDOS CON SALSA",     "promedio": 0.0,  "cocinero": "CESAR"},
 ]
