@@ -1,11 +1,5 @@
 {
-  "fecha": "2026-08-16",
+  "fecha": "2026-08-17",
   "entradas": [],
-  "salidas": [
-    {
-      "sku": "CAMA",
-      "oficina": "PAT",
-      "cantidad": 1.0
-    }
-  ]
+  "salidas": []
 }
