@@ -1,5 +1,16 @@
 {
   "fecha": "2026-08-17",
-  "entradas": [],
+  "entradas": [
+    {
+      "sku": "PV",
+      "oficina": "VIT",
+      "cantidad": 12.0
+    },
+    {
+      "sku": "TA",
+      "oficina": "VIT",
+      "cantidad": 23.0
+    }
+  ],
   "salidas": []
 }

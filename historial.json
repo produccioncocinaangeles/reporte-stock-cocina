@@ -1,5 +1,5 @@
 {
-  "ultimo_update": "2026-08-17T11:12:14",
+  "ultimo_update": "2026-08-17T18:27:35",
   "movimientos": [
     {
       "fecha": "2026-01-15",
@@ -65689,6 +65689,96 @@
       "tipo": "venta",
       "cantidad": 1.0,
       "doc_id": 21380
+    },
+    {
+      "fecha": "2026-08-17",
+      "sku": "LCM",
+      "oficina": "VIT",
+      "tipo": "venta",
+      "cantidad": 1.0,
+      "doc_id": 21382
+    },
+    {
+      "fecha": "2026-08-17",
+      "sku": "SSA",
+      "oficina": "VIT",
+      "tipo": "venta",
+      "cantidad": 2.0,
+      "doc_id": 21385
+    },
+    {
+      "fecha": "2026-08-17",
+      "sku": "PAC",
+      "oficina": "VIT",
+      "tipo": "venta",
+      "cantidad": 1.0,
+      "doc_id": 21385
+    },
+    {
+      "fecha": "2026-08-17",
+      "sku": "TFC",
+      "oficina": "VIT",
+      "tipo": "venta",
+      "cantidad": 1.0,
+      "doc_id": 21385
+    },
+    {
+      "fecha": "2026-08-17",
+      "sku": "LR",
+      "oficina": "PAT",
+      "tipo": "venta",
+      "cantidad": 1.0,
+      "doc_id": 21383
+    },
+    {
+      "fecha": "2026-08-17",
+      "sku": "RB",
+      "oficina": "PAT",
+      "tipo": "venta",
+      "cantidad": 2.0,
+      "doc_id": 21383
+    },
+    {
+      "fecha": "2026-08-17",
+      "sku": "BBR",
+      "oficina": "PAT",
+      "tipo": "venta",
+      "cantidad": 1.0,
+      "doc_id": 21383
+    },
+    {
+      "fecha": "2026-08-17",
+      "sku": "CLC",
+      "oficina": "PAT",
+      "tipo": "venta",
+      "cantidad": 1.0,
+      "doc_id": 21383
+    },
+    {
+      "fecha": "2026-08-17",
+      "sku": "TCM",
+      "oficina": "PAT",
+      "tipo": "venta",
+      "cantidad": 1.0,
+      "doc_id": 21384
+    },
+    {
+      "fecha": "2026-08-17",
+      "sku": "PV",
+      "oficina": "VIT",
+      "tipo": "produccion",
+      "cantidad": 12.0,
+      "doc_id": 0,
+      "inferido": true
+    },
+    {
+      "fecha": "2026-08-17",
+      "sku": "TA",
+      "oficina": "VIT",
+      "tipo": "produccion",
+      "cantidad": 23.0,
+      "doc_id": 0,
+      "inferido": true
     }
   ],
   "docs_ignorar": [
