@@ -1,32 +1,11 @@
 {
-  "fecha": "2026-08-22",
+  "fecha": "2026-08-23",
   "entradas": [
-    {
-      "sku": "TS",
-      "oficina": "VIT",
-      "cantidad": 1.0
-    },
-    {
-      "sku": "RB",
-      "oficina": "VIT",
-      "cantidad": 1.0
-    },
-    {
-      "sku": "MCC",
-      "oficina": "VIT",
-      "cantidad": 1.0
-    },
-    {
-      "sku": "MCC",
-      "oficina": "PAT",
-      "cantidad": 1.0
-    }
-  ],
-  "salidas": [
     {
       "sku": "LCM",
       "oficina": "PAT",
       "cantidad": 1.0
     }
-  ]
+  ],
+  "salidas": []
 }
