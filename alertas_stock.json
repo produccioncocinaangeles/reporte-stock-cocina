@@ -1,8 +1,48 @@
 {
-  "fecha": "2026-08-23",
+  "fecha": "2026-08-24",
   "entradas": [
     {
-      "sku": "LCM",
+      "sku": "MCL",
+      "oficina": "PAT",
+      "cantidad": 2.0
+    },
+    {
+      "sku": "CLC",
+      "oficina": "PAT",
+      "cantidad": 3.0
+    },
+    {
+      "sku": "RC",
+      "oficina": "PAT",
+      "cantidad": 3.0
+    },
+    {
+      "sku": "RM",
+      "oficina": "PAT",
+      "cantidad": 2.0
+    },
+    {
+      "sku": "TLS",
+      "oficina": "PAT",
+      "cantidad": 2.0
+    },
+    {
+      "sku": "CL",
+      "oficina": "PAT",
+      "cantidad": 1.0
+    },
+    {
+      "sku": "RS",
+      "oficina": "PAT",
+      "cantidad": 1.0
+    },
+    {
+      "sku": "PCM",
+      "oficina": "PAT",
+      "cantidad": 4.0
+    },
+    {
+      "sku": "MCC",
       "oficina": "PAT",
       "cantidad": 1.0
     }
