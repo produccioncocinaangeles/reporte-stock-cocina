@@ -470,14 +470,15 @@ def procesar():
         lote_sugerido = math.ceil(vel_t * 30)                 if vel_t > 0 else 0
         despacho      = max(0, math.ceil(vel_p * max(trepo,7)) - sp_hoy) if vel_p > 0 else 0
 
-        # Prioridad real: considera el despacho pendiente a Pataguas
-        vit_tras_despacho = max(0, sv_hoy - despacho)
-        dias_prod_real    = round(vit_tras_despacho / vel_t, 1) if vel_t > 0 else None
-
-        if   sv_hoy == 0:                                                estado = 'sin_stock'
-        elif dias_prod_real is not None and dias_prod_real <= 3:         estado = 'critico'
-        elif dias_prod_real is not None and dias_prod_real <= 7:         estado = 'bajo'
-        else:                                                            estado = 'ok'
+        # El semaforo mide dias de produccion: cuanto dura el stock de Vitacura
+        # al ritmo de venta de las dos tiendas (dias_prod). No se descuenta el
+        # despacho pendiente a Pataguas — eso es informacion de despacho, no de
+        # produccion, y dejaba en 0 los dias de 11 productos, sin forma de
+        # distinguir cual era mas urgente.
+        if   sv_hoy == 0:                                      estado = 'sin_stock'
+        elif dias_prod is not None and dias_prod <= 3:         estado = 'critico'
+        elif dias_prod is not None and dias_prod <= 7:         estado = 'bajo'
+        else:                                                  estado = 'ok'
 
         lts, prom_lote, n_lotes = lotes(dv)
 
@@ -493,7 +494,6 @@ def procesar():
             'vit': sv_hoy, 'pat': sp_hoy, 'total': total_hoy,
             'vel_vit': vel_v, 'vel_pat': vel_p, 'vel_total': round(vel_t,4),
             'dias_vit': dias_v, 'dias_pat': dias_p, 'dias_total': dias_t, 'dias_prod': dias_prod,
-            'dias_prod_real': dias_prod_real,
             'estado': estado, 'alerta_dist': alerta,
             'tiempo_repo': trepo, 'pto_reorden': pto_reorden,
             'lote_sugerido': lote_sugerido, 'despacho_sug': despacho,
@@ -540,7 +540,6 @@ def calcular_salsas(resultados, recetas):
             'vit': sug_vit, 'pat': sug_pat, 'total': sug_vit + sug_pat,
             'vel_vit': 0.0, 'vel_pat': 0.0, 'vel_total': 0.0,
             'dias_vit': None, 'dias_pat': None, 'dias_total': None, 'dias_prod': None,
-            'dias_prod_real': None,
             'estado': 'salsa', 'alerta_dist': False,
             'tiempo_repo': 0, 'pto_reorden': 0,
             'lote_sugerido': 0, 'despacho_sug': 0,
@@ -2765,7 +2764,7 @@ function renderResumen(){
   var urgHtml = urgentes.length===0
     ? '<div style="color:var(--ok-text);font-size:13px;padding:8px 0;font-weight:500">Sin urgencias — todo bajo control</div>'
     : '<div class="grid-etiquetas">'+urgentes.map(function(p){
-        var dias_s  = p.estado==='sin_stock'?'Sin stock':Math.round(p.dias_prod_real)+'d';
+        var dias_s  = p.estado==='sin_stock'?'Sin stock':Math.round(p.dias_prod)+'d';
         var badgeCls = p.estado==='sin_stock'?'danger':'warning';
         return '<div class="etiqueta-item"><span class="res-item-nombre">'+tituloCase(p.nombre)+'</span>'
           +'<span class="badge '+badgeCls+'" style="flex-shrink:0;margin-left:8px">'+dias_s+'</span></div>';
@@ -2791,7 +2790,7 @@ function renderResumen(){
     ? '<div style="color:#94a3b8;font-size:13px;padding:8px 0">Ninguno</div>'
     : bajos.map(function(p){
         return '<div class="res-item"><span class="res-item-nombre">'+tituloCase(p.nombre)+'</span>'
-          +'<span style="color:var(--warn-text);font-weight:600;font-size:12px">'+Math.round(p.dias_prod_real)+'d</span></div>';
+          +'<span style="color:var(--warn-text);font-weight:600;font-size:12px">'+Math.round(p.dias_prod)+'d</span></div>';
       }).join('');
 
   document.getElementById('res-grid').innerHTML =
@@ -3661,7 +3660,7 @@ if __name__ == '__main__':
                 'vit':            d['vit'],
                 'pat':            d['pat'],
                 'total':          d['total'],
-                'dias':           d['dias_prod_real'],   # Vitacura, ya descontado el despacho a Pataguas
+                'dias':           d['dias_prod'],       # dura el stock de Vitacura al ritmo de las dos tiendas
                 'dias_total':     d['dias_total'],       # (vit + pat) / velocidad total
                 'estado':         d['estado'],
             }

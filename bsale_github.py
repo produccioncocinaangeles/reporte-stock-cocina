@@ -269,8 +269,8 @@ def armar_html(productos, fecha_datos):
 
 <p style="font-size:11px;color:{TENUE};text-align:center;margin:4px 0 0;line-height:1.7;font-family:{FUENTE}">
   Generado automáticamente · Mismos datos del dashboard ({fecha_datos})<br>
-  <b style="color:{SUAVE}">Días</b>: los que le quedan a Vitacura ya descontando el despacho a Pataguas<br>
-  <b style="color:{SUAVE}">Días total</b>: stock de las dos sucursales
+  <b style="color:{SUAVE}">Días</b>: cuánto dura el stock de Vitacura al ritmo de venta de las dos tiendas<br>
+  <b style="color:{SUAVE}">Días total</b>: lo mismo contando también el stock de Pataguas
 </p>
 
 </td></tr></table>
