@@ -60,10 +60,11 @@ jobs:
           BSALE_TOKEN: ${{ secrets.BSALE_TOKEN }}
         run: python generar_dashboard.py
 
-      # ── PASO 2: Enviar correo (usa velocidades.json del paso 1)
+      # ── PASO 3: Enviar correo (usa datos_reporte.json del paso 2)
+      #    Ya no llama a Bsale: consume los datos que calculo el dashboard,
+      #    para que el correo y el dashboard nunca muestren dias distintos.
       - name: Enviar reporte por correo
         env:
-          BSALE_TOKEN: ${{ secrets.BSALE_TOKEN }}
           GMAIL_REMITENTE: ${{ secrets.GMAIL_REMITENTE }}
           GMAIL_PASSWORD: ${{ secrets.GMAIL_PASSWORD }}
           CORREOS_DESTINO: ${{ secrets.CORREOS_DESTINO }}

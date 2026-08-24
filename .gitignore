@@ -9,3 +9,4 @@ __pycache__/
 *.pyc
 la-cocina-*.json
 *service-account*.json
+datos_reporte.json
