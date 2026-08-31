@@ -1,21 +1,5 @@
 {
-  "fecha": "2026-08-29",
-  "entradas": [
-    {
-      "sku": "MCL",
-      "oficina": "VIT",
-      "cantidad": 1.0
-    },
-    {
-      "sku": "LS",
-      "oficina": "PAT",
-      "cantidad": 2.0
-    },
-    {
-      "sku": "TCM",
-      "oficina": "VIT",
-      "cantidad": 4.0
-    }
-  ],
+  "fecha": "2026-08-30",
+  "entradas": [],
   "salidas": []
 }
