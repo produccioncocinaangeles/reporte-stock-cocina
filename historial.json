@@ -1,5 +1,5 @@
 {
-  "ultimo_update": "2026-08-30T20:16:39",
+  "ultimo_update": "2026-08-31T21:04:48",
   "movimientos": [
     {
       "fecha": "2026-01-15",
@@ -71378,6 +71378,377 @@
       "tipo": "venta",
       "cantidad": 1.0,
       "doc_id": 21601
+    },
+    {
+      "fecha": "2026-08-31",
+      "sku": "ÑJ",
+      "oficina": "VIT",
+      "tipo": "despacho",
+      "cantidad": 4.0,
+      "doc_id": 21609
+    },
+    {
+      "fecha": "2026-08-31",
+      "sku": "ÑC",
+      "oficina": "VIT",
+      "tipo": "despacho",
+      "cantidad": 2.0,
+      "doc_id": 21609
+    },
+    {
+      "fecha": "2026-08-31",
+      "sku": "FC",
+      "oficina": "VIT",
+      "tipo": "despacho",
+      "cantidad": 3.0,
+      "doc_id": 21609
+    },
+    {
+      "fecha": "2026-08-31",
+      "sku": "CJ",
+      "oficina": "VIT",
+      "tipo": "despacho",
+      "cantidad": 2.0,
+      "doc_id": 21609
+    },
+    {
+      "fecha": "2026-08-31",
+      "sku": "TS",
+      "oficina": "VIT",
+      "tipo": "despacho",
+      "cantidad": 3.0,
+      "doc_id": 21609
+    },
+    {
+      "fecha": "2026-08-31",
+      "sku": "TL",
+      "oficina": "VIT",
+      "tipo": "despacho",
+      "cantidad": 2.0,
+      "doc_id": 21609
+    },
+    {
+      "fecha": "2026-08-31",
+      "sku": "CDM",
+      "oficina": "VIT",
+      "tipo": "despacho",
+      "cantidad": 5.0,
+      "doc_id": 21609
+    },
+    {
+      "fecha": "2026-08-31",
+      "sku": "CDL",
+      "oficina": "VIT",
+      "tipo": "despacho",
+      "cantidad": 2.0,
+      "doc_id": 21609
+    },
+    {
+      "fecha": "2026-08-31",
+      "sku": "MCC",
+      "oficina": "VIT",
+      "tipo": "despacho",
+      "cantidad": 4.0,
+      "doc_id": 21609
+    },
+    {
+      "fecha": "2026-08-31",
+      "sku": "LS",
+      "oficina": "VIT",
+      "tipo": "despacho",
+      "cantidad": 3.0,
+      "doc_id": 21609
+    },
+    {
+      "fecha": "2026-08-31",
+      "sku": "RM",
+      "oficina": "VIT",
+      "tipo": "despacho",
+      "cantidad": 2.0,
+      "doc_id": 21609
+    },
+    {
+      "fecha": "2026-08-31",
+      "sku": "RJ",
+      "oficina": "VIT",
+      "tipo": "despacho",
+      "cantidad": 1.0,
+      "doc_id": 21609
+    },
+    {
+      "fecha": "2026-08-31",
+      "sku": "CLC",
+      "oficina": "VIT",
+      "tipo": "venta",
+      "cantidad": 1.0,
+      "doc_id": 21602
+    },
+    {
+      "fecha": "2026-08-31",
+      "sku": "RC",
+      "oficina": "VIT",
+      "tipo": "venta",
+      "cantidad": 1.0,
+      "doc_id": 21602
+    },
+    {
+      "fecha": "2026-08-31",
+      "sku": "RB",
+      "oficina": "VIT",
+      "tipo": "venta",
+      "cantidad": 1.0,
+      "doc_id": 21603
+    },
+    {
+      "fecha": "2026-08-31",
+      "sku": "FC",
+      "oficina": "VIT",
+      "tipo": "venta",
+      "cantidad": 1.0,
+      "doc_id": 21603
+    },
+    {
+      "fecha": "2026-08-31",
+      "sku": "TL",
+      "oficina": "VIT",
+      "tipo": "venta",
+      "cantidad": 1.0,
+      "doc_id": 21606
+    },
+    {
+      "fecha": "2026-08-31",
+      "sku": "MCL",
+      "oficina": "VIT",
+      "tipo": "venta",
+      "cantidad": 2.0,
+      "doc_id": 21606
+    },
+    {
+      "fecha": "2026-08-31",
+      "sku": "TCM",
+      "oficina": "VIT",
+      "tipo": "venta",
+      "cantidad": 1.0,
+      "doc_id": 21607
+    },
+    {
+      "fecha": "2026-08-31",
+      "sku": "CLC",
+      "oficina": "VIT",
+      "tipo": "venta",
+      "cantidad": 1.0,
+      "doc_id": 21607
+    },
+    {
+      "fecha": "2026-08-31",
+      "sku": "LA",
+      "oficina": "VIT",
+      "tipo": "venta",
+      "cantidad": 1.0,
+      "doc_id": 21607
+    },
+    {
+      "fecha": "2026-08-31",
+      "sku": "FC",
+      "oficina": "VIT",
+      "tipo": "venta",
+      "cantidad": 1.0,
+      "doc_id": 21607
+    },
+    {
+      "fecha": "2026-08-31",
+      "sku": "LR",
+      "oficina": "VIT",
+      "tipo": "venta",
+      "cantidad": 2.0,
+      "doc_id": 21608
+    },
+    {
+      "fecha": "2026-08-31",
+      "sku": "CLC",
+      "oficina": "VIT",
+      "tipo": "venta",
+      "cantidad": 1.0,
+      "doc_id": 21612
+    },
+    {
+      "fecha": "2026-08-31",
+      "sku": "F",
+      "oficina": "VIT",
+      "tipo": "venta",
+      "cantidad": 1.0,
+      "doc_id": 21612
+    },
+    {
+      "fecha": "2026-08-31",
+      "sku": "FC",
+      "oficina": "PAT",
+      "tipo": "despacho",
+      "cantidad": 3.0,
+      "doc_id": 21610
+    },
+    {
+      "fecha": "2026-08-31",
+      "sku": "MCC",
+      "oficina": "PAT",
+      "tipo": "despacho",
+      "cantidad": 1.0,
+      "doc_id": 21611
+    },
+    {
+      "fecha": "2026-08-31",
+      "sku": "ÑC",
+      "oficina": "PAT",
+      "tipo": "venta",
+      "cantidad": 1.0,
+      "doc_id": 21604
+    },
+    {
+      "fecha": "2026-08-31",
+      "sku": "TFC",
+      "oficina": "PAT",
+      "tipo": "venta",
+      "cantidad": 1.0,
+      "doc_id": 21604
+    },
+    {
+      "fecha": "2026-08-31",
+      "sku": "ÑC",
+      "oficina": "PAT",
+      "tipo": "venta",
+      "cantidad": 1.0,
+      "doc_id": 21605
+    },
+    {
+      "fecha": "2026-08-31",
+      "sku": "CM",
+      "oficina": "PAT",
+      "tipo": "venta",
+      "cantidad": 1.0,
+      "doc_id": 21613
+    },
+    {
+      "fecha": "2026-08-31",
+      "sku": "RM",
+      "oficina": "PAT",
+      "tipo": "venta",
+      "cantidad": 1.0,
+      "doc_id": 21614
+    },
+    {
+      "fecha": "2026-08-31",
+      "sku": "CEN",
+      "oficina": "PAT",
+      "tipo": "venta",
+      "cantidad": 2.0,
+      "doc_id": 21615
+    },
+    {
+      "fecha": "2026-08-31",
+      "sku": "BA",
+      "oficina": "PAT",
+      "tipo": "venta",
+      "cantidad": 1.0,
+      "doc_id": 21616
+    },
+    {
+      "fecha": "2026-08-31",
+      "sku": "CJ",
+      "oficina": "PAT",
+      "tipo": "produccion",
+      "cantidad": 2.0,
+      "doc_id": 0,
+      "inferido": true
+    },
+    {
+      "fecha": "2026-08-31",
+      "sku": "RM",
+      "oficina": "PAT",
+      "tipo": "produccion",
+      "cantidad": 2.0,
+      "doc_id": 0,
+      "inferido": true
+    },
+    {
+      "fecha": "2026-08-31",
+      "sku": "LS",
+      "oficina": "PAT",
+      "tipo": "produccion",
+      "cantidad": 3.0,
+      "doc_id": 0,
+      "inferido": true
+    },
+    {
+      "fecha": "2026-08-31",
+      "sku": "PC",
+      "oficina": "VIT",
+      "tipo": "produccion",
+      "cantidad": 9.0,
+      "doc_id": 0,
+      "inferido": true
+    },
+    {
+      "fecha": "2026-08-31",
+      "sku": "TS",
+      "oficina": "PAT",
+      "tipo": "produccion",
+      "cantidad": 3.0,
+      "doc_id": 0,
+      "inferido": true
+    },
+    {
+      "fecha": "2026-08-31",
+      "sku": "ÑJ",
+      "oficina": "VIT",
+      "tipo": "produccion",
+      "cantidad": 11.0,
+      "doc_id": 0,
+      "inferido": true
+    },
+    {
+      "fecha": "2026-08-31",
+      "sku": "ÑJ",
+      "oficina": "PAT",
+      "tipo": "produccion",
+      "cantidad": 4.0,
+      "doc_id": 0,
+      "inferido": true
+    },
+    {
+      "fecha": "2026-08-31",
+      "sku": "MCC",
+      "oficina": "VIT",
+      "tipo": "produccion",
+      "cantidad": 1.0,
+      "doc_id": 0,
+      "inferido": true
+    },
+    {
+      "fecha": "2026-08-31",
+      "sku": "MCC",
+      "oficina": "PAT",
+      "tipo": "produccion",
+      "cantidad": 3.0,
+      "doc_id": 0,
+      "inferido": true
+    },
+    {
+      "fecha": "2026-08-31",
+      "sku": "ÑC",
+      "oficina": "PAT",
+      "tipo": "produccion",
+      "cantidad": 2.0,
+      "doc_id": 0,
+      "inferido": true
+    },
+    {
+      "fecha": "2026-08-31",
+      "sku": "RJ",
+      "oficina": "PAT",
+      "tipo": "produccion",
+      "cantidad": 1.0,
+      "doc_id": 0,
+      "inferido": true
     }
   ],
   "docs_ignorar": [
