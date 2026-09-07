@@ -26,7 +26,11 @@ GOOGLE_SERVICE_ACCOUNT_FILE = os.path.join(CARPETA, 'la-cocina-498520-9b115beec3
 BSALE_TOKEN   = os.environ.get('BSALE_TOKEN', '')
 # Hora de Chile siempre: en GitHub Actions (UTC) la corrida nocturna cae en el
 # día siguiente UTC y desplazaba la fecha del dashboard y los cálculos de venta.
-_HOY          = pd.Timestamp.now(tz='America/Santiago').normalize().tz_localize(None)
+# Se quita la zona horaria ANTES de normalizar. Al reves (normalize sobre un
+# timestamp con tz) pandas falla el domingo que Chile entra en horario de
+# verano: esa medianoche no existe y lanza "nonexistent time due to daylight
+# savings time". Paso el 06-09-2026 y tumbo la corrida entera del workflow.
+_HOY          = pd.Timestamp.now(tz='America/Santiago').tz_localize(None).normalize()
 FECHA_HOY     = _HOY
 FECHA_STR     = _HOY.strftime('%d/%m/%Y')
 

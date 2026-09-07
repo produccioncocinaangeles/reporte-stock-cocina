@@ -1,228 +1,224 @@
 {
-  "fecha": "2026-08-16",
+  "fecha": "2026-09-05",
   "stock": {
     "OP": {
+      "vit": 6,
+      "pat": 5
+    },
+    "RPP": {
+      "vit": 12,
+      "pat": 5
+    },
+    "MCL": {
+      "vit": 9,
+      "pat": 6
+    },
+    "CJ": {
+      "vit": 8,
+      "pat": 5
+    },
+    "CLC": {
+      "vit": 3,
+      "pat": 5
+    },
+    "MCJ": {
       "vit": 0,
       "pat": 0
     },
-    "RPP": {
-      "vit": 14,
-      "pat": 6
-    },
-    "MCL": {
-      "vit": 25,
-      "pat": 4
-    },
-    "CJ": {
-      "vit": 2,
-      "pat": 1
-    },
-    "CLC": {
-      "vit": 4,
-      "pat": 3
-    },
-    "MCJ": {
-      "vit": 11,
-      "pat": 2
-    },
     "RC": {
-      "vit": 1,
-      "pat": 1
+      "vit": 3,
+      "pat": 5
     },
     "LA": {
       "vit": 14,
-      "pat": 3
+      "pat": 6
     },
     "RM": {
-      "vit": 11,
-      "pat": 5
+      "vit": 9,
+      "pat": 3
     },
     "LCM": {
-      "vit": 9,
-      "pat": 0
-    },
-    "TLS": {
-      "vit": 2,
+      "vit": 0,
       "pat": 1
     },
+    "TLS": {
+      "vit": 7,
+      "pat": 0
+    },
     "CL": {
-      "vit": 0,
-      "pat": 3
+      "vit": 3,
+      "pat": 6
     },
     "LS": {
       "vit": 3,
-      "pat": 2
+      "pat": 4
     },
     "LJC": {
-      "vit": 1,
-      "pat": 0
+      "vit": 5,
+      "pat": 5
     },
     "PC": {
-      "vit": 4,
-      "pat": 6
+      "vit": 11,
+      "pat": 5
     },
     "MMR": {
-      "vit": 9,
+      "vit": 3,
       "pat": 5
     },
     "TS": {
-      "vit": 0,
-      "pat": 0
+      "vit": 3,
+      "pat": 4
     },
     "ÑJ": {
-      "vit": 2,
-      "pat": 1
+      "vit": 10,
+      "pat": 4
     },
     "TSA": {
-      "vit": 2,
-      "pat": 0
+      "vit": 6,
+      "pat": 1
     },
     "RB": {
       "vit": 3,
       "pat": 2
     },
     "CF": {
-      "vit": 10,
-      "pat": 4
+      "vit": 1,
+      "pat": 3
     },
     "RS": {
-      "vit": 0,
+      "vit": 2,
       "pat": 1
     },
     "FCT": {
-      "vit": 3,
-      "pat": 3
-    },
-    "PCM": {
       "vit": 0,
       "pat": 2
     },
+    "PCM": {
+      "vit": 4,
+      "pat": 4
+    },
     "ÑP": {
-      "vit": 6,
-      "pat": 3
+      "vit": 8,
+      "pat": 1
     },
     "TF": {
-      "vit": 9,
+      "vit": 4,
       "pat": 4
     },
     "MCC": {
-      "vit": 1,
+      "vit": 6,
       "pat": 0
     },
     "CAMA": {
       "vit": 11,
-      "pat": 9
+      "pat": 6
     },
     "TPP": {
-      "vit": 3,
-      "pat": 2
+      "vit": 1,
+      "pat": 0
     },
     "RA": {
-      "vit": 4,
-      "pat": 5
+      "vit": 7,
+      "pat": 6
     },
     "AS": {
-      "vit": 1,
-      "pat": 4
-    },
-    "PAC": {
-      "vit": 7,
+      "vit": 8,
       "pat": 5
     },
-    "EM": {
-      "vit": 7,
+    "PAC": {
+      "vit": 15,
       "pat": 4
     },
+    "EM": {
+      "vit": 0,
+      "pat": 5
+    },
     "ÑC": {
-      "vit": 3,
-      "pat": 3
+      "vit": 5,
+      "pat": 5
     },
     "EJ": {
-      "vit": 11,
+      "vit": 7,
       "pat": 6
     },
     "BAP": {
-      "vit": 3,
-      "pat": 6
+      "vit": 12,
+      "pat": 5
     },
     "MIGNON": {
-      "vit": 8,
-      "pat": 0
+      "vit": 12,
+      "pat": 3
     },
     "PV": {
       "vit": 2,
-      "pat": 0
+      "pat": 3
     },
     "TA": {
+      "vit": 12,
+      "pat": 6
+    },
+    "MMRM": {
+      "vit": 1,
+      "pat": 3
+    },
+    "LR": {
+      "vit": 0,
+      "pat": 1
+    },
+    "CP": {
+      "vit": 0,
+      "pat": 0
+    },
+    "LSA": {
       "vit": 1,
       "pat": 0
     },
-    "MMRM": {
-      "vit": 3,
-      "pat": 4
-    },
-    "LR": {
-      "vit": 3,
-      "pat": 3
-    },
-    "CP": {
-      "vit": 3,
-      "pat": 4
-    },
-    "LSA": {
-      "vit": 4,
-      "pat": 2
-    },
     "RJ": {
-      "vit": 3,
-      "pat": 3
+      "vit": 0,
+      "pat": 1
     },
     "CM": {
-      "vit": 9,
-      "pat": 5
-    },
-    "TCM": {
-      "vit": 2,
+      "vit": 1,
       "pat": 2
     },
+    "TCM": {
+      "vit": 5,
+      "pat": 4
+    },
     "PCP": {
-      "vit": 35,
-      "pat": 5
+      "vit": 76,
+      "pat": 7
     },
     "EC": {
-      "vit": 14,
+      "vit": 6,
       "pat": 6
     },
     "CC": {
-      "vit": 7,
-      "pat": 5
+      "vit": 1,
+      "pat": 4
     },
     "SSA": {
-      "vit": 2,
-      "pat": 2
-    },
-    "BAR": {
-      "vit": 0,
-      "pat": 2
+      "vit": 4,
+      "pat": 4
     },
     "LM": {
-      "vit": 0,
-      "pat": 2
+      "vit": 4,
+      "pat": 5
     },
     "CAC": {
-      "vit": 7,
-      "pat": 6
+      "vit": 6,
+      "pat": 5
     },
     "TPU": {
       "vit": 4,
-      "pat": 6
+      "pat": 2
     },
     "SA": {
-      "vit": 26,
-      "pat": 191
+      "vit": 21,
+      "pat": 184
     },
     "CAMAC": {
-      "vit": 6,
+      "vit": 3,
       "pat": 3
     }
   }
