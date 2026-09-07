@@ -454,14 +454,15 @@ def procesar():
         lote_sugerido = math.ceil(vel_t * 30)                 if vel_t > 0 else 0
         despacho      = max(0, math.ceil(vel_p * max(trepo,7)) - sp_hoy) if vel_p > 0 else 0
 
-        # Prioridad real: considera el despacho pendiente a Pataguas
-        vit_tras_despacho = max(0, sv_hoy - despacho)
-        dias_prod_real    = round(vit_tras_despacho / vel_t, 1) if vel_t > 0 else None
-
-        if   sv_hoy == 0:                                                estado = 'sin_stock'
-        elif dias_prod_real is not None and dias_prod_real <= 3:         estado = 'critico'
-        elif dias_prod_real is not None and dias_prod_real <= 7:         estado = 'bajo'
-        else:                                                            estado = 'ok'
+        # El semaforo mide dias de produccion: cuanto dura el stock de Vitacura
+        # al ritmo de venta de las dos tiendas (dias_prod), que es el numero que
+        # muestran los badges. No se descuenta el despacho pendiente a Pataguas
+        # — eso es informacion de despacho, no de produccion, y dejaba en 0 los
+        # dias de 11 productos con stock real, sin forma de priorizar entre ellos.
+        if   sv_hoy == 0:                                      estado = 'sin_stock'
+        elif dias_prod is not None and dias_prod <= 3:         estado = 'critico'
+        elif dias_prod is not None and dias_prod <= 7:         estado = 'bajo'
+        else:                                                  estado = 'ok'
 
         lts, prom_lote, n_lotes = lotes(dv)
 
@@ -3305,3 +3306,30 @@ if __name__ == '__main__':
     with open(archivo_vel, 'w', encoding='utf-8') as f:
         json.dump(vel, f, ensure_ascii=False)
     print(f'Velocidades: {archivo_vel}')
+
+    # Datos ya calculados para el correo diario (bsale_github.py).
+    # El correo NO recalcula nada ni vuelve a llamar a Bsale: consume esto tal
+    # cual, para que sus dias y su semaforo sean siempre los mismos que muestra
+    # el dashboard.
+    reporte = {
+        'fecha':      FECHA_STR,
+        'generado':   _HOY.isoformat(),
+        'productos': [
+            {
+                'sku':        d['sku'],
+                'nombre':     d['nombre'],
+                'cocinero':   d['cocinero'],
+                'vit':        d['vit'],
+                'pat':        d['pat'],
+                'total':      d['total'],
+                'dias':       d['dias_prod'],    # dura el stock de Vitacura al ritmo de las dos tiendas
+                'dias_total': d['dias_total'],   # (vit + pat) / velocidad total
+                'estado':     d['estado'],
+            }
+            for d in datos if d['estado'] != 'salsa'
+        ],
+    }
+    archivo_rep = os.path.join(CARPETA, 'datos_reporte.json')
+    with open(archivo_rep, 'w', encoding='utf-8') as f:
+        json.dump(reporte, f, ensure_ascii=False, indent=1)
+    print(f'Datos reporte: {archivo_rep} ({len(reporte["productos"])} productos)')
