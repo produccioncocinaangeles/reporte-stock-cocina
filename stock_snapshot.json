@@ -1,32 +1,32 @@
 {
-  "fecha": "2026-09-11",
+  "fecha": "2026-09-12",
   "stock": {
     "OP": {
-      "vit": 3,
-      "pat": 4
+      "vit": 2,
+      "pat": 2
     },
     "RPP": {
       "vit": 12,
       "pat": 4
     },
     "MCL": {
-      "vit": 4,
+      "vit": 3,
       "pat": 3
     },
     "CJ": {
-      "vit": 5,
+      "vit": 4,
       "pat": 4
     },
     "CLC": {
       "vit": 8,
-      "pat": 6
+      "pat": 5
     },
     "MCJ": {
       "vit": 13,
       "pat": 6
     },
     "RC": {
-      "vit": 3,
+      "vit": 2,
       "pat": 4
     },
     "LA": {
@@ -35,7 +35,7 @@
     },
     "RM": {
       "vit": 4,
-      "pat": 4
+      "pat": 2
     },
     "LCM": {
       "vit": 7,
@@ -67,34 +67,34 @@
     },
     "TS": {
       "vit": 2,
-      "pat": 4
+      "pat": 3
     },
     "ÑJ": {
-      "vit": 7,
+      "vit": 6,
       "pat": 5
     },
     "TSA": {
       "vit": 2,
-      "pat": 1
+      "pat": 0
     },
     "RB": {
-      "vit": 16,
-      "pat": 2
+      "vit": 13,
+      "pat": 1
     },
     "CF": {
       "vit": 7,
       "pat": 5
     },
     "RS": {
-      "vit": 1,
+      "vit": 0,
       "pat": 0
     },
     "FCT": {
-      "vit": 3,
+      "vit": 2,
       "pat": 2
     },
     "PCM": {
-      "vit": 1,
+      "vit": 4,
       "pat": 3
     },
     "ÑP": {
@@ -110,7 +110,7 @@
       "pat": 3
     },
     "CAMA": {
-      "vit": 14,
+      "vit": 12,
       "pat": 7
     },
     "TPP": {
@@ -126,7 +126,7 @@
       "pat": 5
     },
     "PAC": {
-      "vit": 7,
+      "vit": 6,
       "pat": 5
     },
     "EM": {
@@ -146,16 +146,16 @@
       "pat": 5
     },
     "MIGNON": {
-      "vit": 7,
-      "pat": 5
+      "vit": 6,
+      "pat": 4
     },
     "PV": {
-      "vit": 4,
-      "pat": 2
+      "vit": 3,
+      "pat": 0
     },
     "TA": {
-      "vit": 12,
-      "pat": 5
+      "vit": 11,
+      "pat": 4
     },
     "MMRM": {
       "vit": 1,
@@ -187,10 +187,10 @@
     },
     "PCP": {
       "vit": 63,
-      "pat": 13
+      "pat": 11
     },
     "EC": {
-      "vit": 4,
+      "vit": 3,
       "pat": 4
     },
     "CC": {
@@ -210,7 +210,7 @@
       "pat": 5
     },
     "TPU": {
-      "vit": 4,
+      "vit": 3,
       "pat": 2
     },
     "SA": {
