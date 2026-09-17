@@ -1,30 +1,25 @@
 {
-  "fecha": "2026-09-15",
+  "fecha": "2026-09-16",
   "entradas": [
-    {
-      "sku": "RPP",
-      "oficina": "PAT",
-      "cantidad": 2.0
-    },
-    {
-      "sku": "CJ",
-      "oficina": "PAT",
-      "cantidad": 1.0
-    },
     {
       "sku": "LA",
       "oficina": "PAT",
       "cantidad": 2.0
     },
     {
-      "sku": "LCM",
+      "sku": "RM",
+      "oficina": "VIT",
+      "cantidad": 9.0
+    },
+    {
+      "sku": "RM",
       "oficina": "PAT",
-      "cantidad": 3.0
+      "cantidad": 4.0
     },
     {
       "sku": "TLS",
       "oficina": "VIT",
-      "cantidad": 5.0
+      "cantidad": 9.0
     },
     {
       "sku": "TLS",
@@ -34,63 +29,79 @@
     {
       "sku": "TS",
       "oficina": "VIT",
-      "cantidad": 1.0
+      "cantidad": 22.0
     },
     {
-      "sku": "CF",
-      "oficina": "VIT",
-      "cantidad": 14.0
-    },
-    {
-      "sku": "RS",
-      "oficina": "VIT",
-      "cantidad": 5.0
-    },
-    {
-      "sku": "RS",
-      "oficina": "PAT",
-      "cantidad": 5.0
-    },
-    {
-      "sku": "MIGNON",
-      "oficina": "PAT",
-      "cantidad": 1.0
-    },
-    {
-      "sku": "PV",
+      "sku": "ÑJ",
       "oficina": "PAT",
       "cantidad": 2.0
     },
     {
-      "sku": "TA",
+      "sku": "RB",
+      "oficina": "PAT",
+      "cantidad": 6.0
+    },
+    {
+      "sku": "RS",
       "oficina": "VIT",
       "cantidad": 3.0
     },
     {
-      "sku": "LSA",
+      "sku": "PAC",
       "oficina": "VIT",
-      "cantidad": 6.0
+      "cantidad": 17.0
     },
     {
-      "sku": "TCM",
+      "sku": "EM",
+      "oficina": "VIT",
+      "cantidad": 9.0
+    },
+    {
+      "sku": "EM",
       "oficina": "PAT",
       "cantidad": 1.0
     },
     {
-      "sku": "PCP",
+      "sku": "ÑC",
+      "oficina": "VIT",
+      "cantidad": 1.0
+    },
+    {
+      "sku": "EJ",
+      "oficina": "PAT",
+      "cantidad": 1.0
+    },
+    {
+      "sku": "LR",
+      "oficina": "VIT",
+      "cantidad": 5.0
+    },
+    {
+      "sku": "CP",
       "oficina": "PAT",
       "cantidad": 5.0
     },
     {
-      "sku": "TPU",
-      "oficina": "VIT",
-      "cantidad": 7.0
-    },
-    {
-      "sku": "TPU",
+      "sku": "LSA",
       "oficina": "PAT",
       "cantidad": 3.0
     }
   ],
-  "salidas": []
+  "salidas": [
+    {
+      "sku": "PCM",
+      "oficina": "VIT",
+      "cantidad": 1.0
+    },
+    {
+      "sku": "MCC",
+      "oficina": "VIT",
+      "cantidad": 1.0
+    },
+    {
+      "sku": "BAP",
+      "oficina": "VIT",
+      "cantidad": 1.0
+    }
+  ]
 }
