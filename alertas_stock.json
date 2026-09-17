@@ -1,107 +1,41 @@
 {
-  "fecha": "2026-09-16",
+  "fecha": "2026-09-17",
   "entradas": [
     {
-      "sku": "LA",
-      "oficina": "PAT",
-      "cantidad": 2.0
+      "sku": "MCL",
+      "oficina": "VIT",
+      "cantidad": 3.0
+    },
+    {
+      "sku": "MCJ",
+      "oficina": "VIT",
+      "cantidad": 1.0
     },
     {
       "sku": "RM",
       "oficina": "VIT",
-      "cantidad": 9.0
-    },
-    {
-      "sku": "RM",
-      "oficina": "PAT",
-      "cantidad": 4.0
-    },
-    {
-      "sku": "TLS",
-      "oficina": "VIT",
-      "cantidad": 9.0
-    },
-    {
-      "sku": "TLS",
-      "oficina": "PAT",
-      "cantidad": 2.0
+      "cantidad": 1.0
     },
     {
       "sku": "TS",
       "oficina": "VIT",
-      "cantidad": 22.0
-    },
-    {
-      "sku": "ÑJ",
-      "oficina": "PAT",
-      "cantidad": 2.0
-    },
-    {
-      "sku": "RB",
-      "oficina": "PAT",
-      "cantidad": 6.0
+      "cantidad": 1.0
     },
     {
       "sku": "RS",
       "oficina": "VIT",
-      "cantidad": 3.0
+      "cantidad": 2.0
     },
-    {
-      "sku": "PAC",
-      "oficina": "VIT",
-      "cantidad": 17.0
-    },
-    {
-      "sku": "EM",
-      "oficina": "VIT",
-      "cantidad": 9.0
-    },
-    {
-      "sku": "EM",
-      "oficina": "PAT",
-      "cantidad": 1.0
-    },
-    {
-      "sku": "ÑC",
-      "oficina": "VIT",
-      "cantidad": 1.0
-    },
-    {
-      "sku": "EJ",
-      "oficina": "PAT",
-      "cantidad": 1.0
-    },
-    {
-      "sku": "LR",
-      "oficina": "VIT",
-      "cantidad": 5.0
-    },
-    {
-      "sku": "CP",
-      "oficina": "PAT",
-      "cantidad": 5.0
-    },
-    {
-      "sku": "LSA",
-      "oficina": "PAT",
-      "cantidad": 3.0
-    }
-  ],
-  "salidas": [
     {
       "sku": "PCM",
       "oficina": "VIT",
-      "cantidad": 1.0
+      "cantidad": 6.0
     },
     {
-      "sku": "MCC",
+      "sku": "EM",
       "oficina": "VIT",
-      "cantidad": 1.0
-    },
-    {
-      "sku": "BAP",
-      "oficina": "VIT",
-      "cantidad": 1.0
+      "cantidad": 3.0
     }
-  ]
+  ],
+  "salidas": []
 }
