@@ -1,11 +1,5 @@
 {
-  "fecha": "2026-09-18",
-  "entradas": [
-    {
-      "sku": "PCM",
-      "oficina": "VIT",
-      "cantidad": 1.0
-    }
-  ],
+  "fecha": "2026-09-19",
+  "entradas": [],
   "salidas": []
 }
