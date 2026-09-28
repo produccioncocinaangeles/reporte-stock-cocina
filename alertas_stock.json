@@ -1,22 +1,5 @@
 {
-  "fecha": "2026-09-26",
-  "entradas": [
-    {
-      "sku": "TSA",
-      "oficina": "VIT",
-      "cantidad": 7.0
-    },
-    {
-      "sku": "EC",
-      "oficina": "VIT",
-      "cantidad": 4.0
-    }
-  ],
-  "salidas": [
-    {
-      "sku": "MIGNON",
-      "oficina": "VIT",
-      "cantidad": 7.0
-    }
-  ]
+  "fecha": "2026-09-27",
+  "entradas": [],
+  "salidas": []
 }
