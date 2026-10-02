@@ -1,40 +1,20 @@
 {
-  "fecha": "2026-09-30",
+  "fecha": "2026-10-01",
   "entradas": [
     {
-      "sku": "OP",
-      "oficina": "VIT",
-      "cantidad": 5.0
-    },
-    {
-      "sku": "MCL",
-      "oficina": "VIT",
-      "cantidad": 7.0
-    },
-    {
-      "sku": "CJ",
-      "oficina": "VIT",
-      "cantidad": 6.0
-    },
-    {
-      "sku": "ÑJ",
-      "oficina": "PAT",
-      "cantidad": 2.0
-    },
-    {
-      "sku": "PAC",
-      "oficina": "VIT",
-      "cantidad": 25.0
-    },
-    {
-      "sku": "BAP",
-      "oficina": "VIT",
-      "cantidad": 16.0
-    },
-    {
-      "sku": "LR",
+      "sku": "LCM",
       "oficina": "VIT",
       "cantidad": 10.0
+    },
+    {
+      "sku": "CAMA",
+      "oficina": "VIT",
+      "cantidad": 20.0
+    },
+    {
+      "sku": "CC",
+      "oficina": "VIT",
+      "cantidad": 9.0
     }
   ],
   "salidas": []
