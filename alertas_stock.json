@@ -1,20 +1,20 @@
 {
-  "fecha": "2026-10-01",
+  "fecha": "2026-10-02",
   "entradas": [
     {
-      "sku": "LCM",
+      "sku": "FCT",
       "oficina": "VIT",
-      "cantidad": 10.0
+      "cantidad": 2.0
+    },
+    {
+      "sku": "FCT",
+      "oficina": "PAT",
+      "cantidad": 2.0
     },
     {
       "sku": "CAMA",
-      "oficina": "VIT",
-      "cantidad": 20.0
-    },
-    {
-      "sku": "CC",
-      "oficina": "VIT",
-      "cantidad": 9.0
+      "oficina": "PAT",
+      "cantidad": 5.0
     }
   ],
   "salidas": []
