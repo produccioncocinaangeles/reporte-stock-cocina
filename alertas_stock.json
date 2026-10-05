@@ -1,31 +1,32 @@
 {
-  "fecha": "2026-10-03",
+  "fecha": "2026-10-04",
   "entradas": [
     {
-      "sku": "CLC",
-      "oficina": "VIT",
-      "cantidad": 18.0
-    },
-    {
-      "sku": "RB",
-      "oficina": "VIT",
-      "cantidad": 21.0
-    },
-    {
-      "sku": "FCT",
-      "oficina": "VIT",
-      "cantidad": 2.0
-    },
-    {
-      "sku": "FCT",
+      "sku": "MCL",
       "oficina": "PAT",
       "cantidad": 1.0
     },
     {
-      "sku": "EM",
+      "sku": "RB",
       "oficina": "VIT",
-      "cantidad": 7.0
+      "cantidad": 2.0
+    },
+    {
+      "sku": "PV",
+      "oficina": "PAT",
+      "cantidad": 2.0
+    },
+    {
+      "sku": "LR",
+      "oficina": "PAT",
+      "cantidad": 3.0
     }
   ],
-  "salidas": []
+  "salidas": [
+    {
+      "sku": "MCC",
+      "oficina": "PAT",
+      "cantidad": 1.0
+    }
+  ]
 }
