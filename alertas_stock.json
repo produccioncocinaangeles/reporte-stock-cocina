@@ -1,32 +1,26 @@
 {
-  "fecha": "2026-10-04",
+  "fecha": "2026-10-05",
   "entradas": [
     {
-      "sku": "MCL",
+      "sku": "CLC",
       "oficina": "PAT",
-      "cantidad": 1.0
+      "cantidad": 4.0
     },
     {
-      "sku": "RB",
-      "oficina": "VIT",
-      "cantidad": 2.0
-    },
-    {
-      "sku": "PV",
+      "sku": "LCM",
       "oficina": "PAT",
       "cantidad": 2.0
     },
     {
-      "sku": "LR",
+      "sku": "PAC",
       "oficina": "PAT",
       "cantidad": 3.0
+    },
+    {
+      "sku": "EM",
+      "oficina": "PAT",
+      "cantidad": 2.0
     }
   ],
-  "salidas": [
-    {
-      "sku": "MCC",
-      "oficina": "PAT",
-      "cantidad": 1.0
-    }
-  ]
+  "salidas": []
 }
