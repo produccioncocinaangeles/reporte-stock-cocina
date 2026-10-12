@@ -1,21 +1,5 @@
 {
-  "fecha": "2026-10-10",
-  "entradas": [
-    {
-      "sku": "MCL",
-      "oficina": "PAT",
-      "cantidad": 1.0
-    },
-    {
-      "sku": "MMR",
-      "oficina": "VIT",
-      "cantidad": 16.0
-    },
-    {
-      "sku": "MCC",
-      "oficina": "VIT",
-      "cantidad": 27.0
-    }
-  ],
+  "fecha": "2026-10-11",
+  "entradas": [],
   "salidas": []
 }
