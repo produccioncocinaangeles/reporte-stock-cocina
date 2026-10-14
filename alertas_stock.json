@@ -1,5 +1,66 @@
 {
-  "fecha": "2026-10-12",
-  "entradas": [],
+  "fecha": "2026-10-13",
+  "entradas": [
+    {
+      "sku": "MCL",
+      "oficina": "PAT",
+      "cantidad": 2.0
+    },
+    {
+      "sku": "CL",
+      "oficina": "PAT",
+      "cantidad": 5.0
+    },
+    {
+      "sku": "ÑJ",
+      "oficina": "VIT",
+      "cantidad": 5.0
+    },
+    {
+      "sku": "ÑJ",
+      "oficina": "PAT",
+      "cantidad": 3.0
+    },
+    {
+      "sku": "RB",
+      "oficina": "PAT",
+      "cantidad": 3.0
+    },
+    {
+      "sku": "RS",
+      "oficina": "PAT",
+      "cantidad": 3.0
+    },
+    {
+      "sku": "FCT",
+      "oficina": "VIT",
+      "cantidad": 1.0
+    },
+    {
+      "sku": "MCC",
+      "oficina": "PAT",
+      "cantidad": 4.0
+    },
+    {
+      "sku": "CAMA",
+      "oficina": "VIT",
+      "cantidad": 20.0
+    },
+    {
+      "sku": "ÑC",
+      "oficina": "PAT",
+      "cantidad": 3.0
+    },
+    {
+      "sku": "PV",
+      "oficina": "PAT",
+      "cantidad": 1.0
+    },
+    {
+      "sku": "PCP",
+      "oficina": "PAT",
+      "cantidad": 5.0
+    }
+  ],
   "salidas": []
 }
