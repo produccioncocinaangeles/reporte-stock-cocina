@@ -1,15 +1,20 @@
 {
-  "fecha": "2026-10-14",
+  "fecha": "2026-10-15",
   "entradas": [
     {
-      "sku": "ÑJ",
+      "sku": "ÑP",
       "oficina": "VIT",
-      "cantidad": 3.0
+      "cantidad": 9.0
     },
     {
-      "sku": "FCT",
+      "sku": "TF",
       "oficina": "VIT",
-      "cantidad": 1.0
+      "cantidad": 7.0
+    },
+    {
+      "sku": "TPP",
+      "oficina": "VIT",
+      "cantidad": 10.0
     }
   ],
   "salidas": []
