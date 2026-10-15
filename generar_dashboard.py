@@ -19,6 +19,11 @@ ARCHIVO_VIT   = os.path.join(CARPETA, 'consolidado_productos_vitacura.xlsx')
 ARCHIVO_PAT   = os.path.join(CARPETA, 'consolidado_productos_pataguas.xlsx')
 ARCHIVO_JSON  = os.path.join(CARPETA, 'historial.json')
 ARCHIVO_HTML  = os.path.join(CARPETA, 'dashboard.html')
+# Metas del plan de producción de diciembre (lo vendido el diciembre anterior +
+# lo que se dejó de vender por quiebres). Si no existe, la pestaña queda vacía.
+ARCHIVO_META_DIC = os.path.join(CARPETA, 'meta_diciembre.json')
+# Stock de Bsale de todos los productos, lo guarda procesar() para reusarlo
+STOCK_BSALE = {}
 # Recetas: Google Sheet "La Cocina - Recetas", leída vía cuenta de servicio
 # (compartida con esa cuenta como Editor — ver crear_planilla_recetas.py).
 RECETAS_SHEET_ID = '1bzRCgI5Cs0mIvjnFvfJZiZ6K3DaNU8D69jvo0vhU49g'
@@ -422,7 +427,9 @@ def procesar():
         pat = leer(ARCHIVO_PAT)
 
     print("Obteniendo stock desde Bsale...")
+    global STOCK_BSALE
     sb = bsale_stock()
+    STOCK_BSALE = sb
     if not sb:
         print("  Warning: sin datos Bsale")
     else:
@@ -1816,8 +1823,8 @@ function toggleDarkMode(){
   localStorage.setItem('theme', activo ? 'dark' : 'light');
 }
 
-var VISTAS = ['vista-resumen','vista-productos','vista-guias','vista-analisis','vista-recetas','vista-rendimiento'];
-var NAVS   = ['nav-resumen','nav-productos','nav-guias','nav-analisis','nav-recetas','nav-rendimiento'];
+var VISTAS = ['vista-resumen','vista-productos','vista-guias','vista-analisis','vista-recetas','vista-rendimiento','vista-diciembre'];
+var NAVS   = ['nav-resumen','nav-productos','nav-guias','nav-analisis','nav-recetas','nav-rendimiento','nav-diciembre'];
 function switchVista(vistaId, navId, cb){
   VISTAS.forEach(function(v){document.getElementById(v).style.display='none';});
   NAVS.forEach(function(n){document.getElementById(n).classList.remove('nav-active');});
@@ -1850,6 +1857,157 @@ function mostrarRendimiento(){
     }
     renderRendimiento();
   });
+}
+
+// ── Diciembre: meta del mes − ventas de diciembre − stock = falta producir ──
+var DIC_F = 'falta', DIC_O = '', DIC_C = '', DIC_SORT = {k:'falta', dir:-1};
+var DIC_STOP = {de:1,del:1,la:1,el:1,los:1,las:1,con:1,y:1,a:1,al:1,en:1,para:1};
+function mostrarDiciembre(){ switchVista('vista-diciembre','nav-diciembre', renderDiciembre); }
+function setDicFiltro(b){
+  DIC_F = b.getAttribute('data-f');
+  document.querySelectorAll('#dic-chips-estado .chip').forEach(function(c){ c.classList.toggle('chip-active', c===b); });
+  renderDiciembre();
+}
+function setDicOrigen(b){
+  DIC_O = b.getAttribute('data-o');
+  document.querySelectorAll('#dic-chips-origen .chip').forEach(function(c){ c.classList.toggle('chip-active', c===b); });
+  renderDiciembre();
+}
+function setDicCocinero(b){
+  DIC_C = b.getAttribute('data-c');
+  renderDiciembre();
+}
+function dicChipsCocinero(D){
+  // Un chip por cocinero con lo que le falta producir; proveedor y sin asignar al final
+  var orden = Object.keys(D.por_cocinero).sort(function(a,b){
+    var ra = (a==='PROVEEDOR'?2:a==='SIN ASIGNAR'?1:0), rb = (b==='PROVEEDOR'?2:b==='SIN ASIGNAR'?1:0);
+    return ra - rb || a.localeCompare(b, 'es');
+  });
+  var chip = function(c, txt){
+    return '<button class="chip'+(DIC_C===c?' chip-active':'')+'" data-c="'+c+'" onclick="setDicCocinero(this)">'+txt+'</button>';
+  };
+  document.getElementById('dic-chips-cocinero').innerHTML = chip('', '👨‍🍳 Todos')
+    + orden.map(function(c){
+        var x = D.por_cocinero[c];
+        return chip(c, tituloCase(c)+' <b>'+Number(x.falta).toLocaleString('es-CL')+'</b>');
+      }).join('');
+}
+function setDicOrden(k){
+  // Texto: primero A→Z. Números: primero de menor a mayor. Segundo clic invierte.
+  if(DIC_SORT.k === k){ DIC_SORT.dir = -DIC_SORT.dir; } else { DIC_SORT.k = k; DIC_SORT.dir = 1; }
+  renderDiciembre();
+}
+function dicPalabras(q){
+  return norm(q || '').split(' ').map(function(w){ return w.replace(/[^a-z0-9]/g,''); })
+    .filter(function(w){ return w && !DIC_STOP[w]; });
+}
+function renderDiciembre(){
+  var nota = document.getElementById('dic-nota');
+  var D = DIC_DATA;
+  if(!D){
+    nota.innerHTML = 'No hay plan de diciembre cargado (falta el archivo <b>meta_diciembre.json</b>).';
+    document.getElementById('dic-metricas').innerHTML = '';
+    document.getElementById('dic-tabla').innerHTML = '';
+    return;
+  }
+  var T = D.tot;
+  var fmt = function(n){ return Number(n).toLocaleString('es-CL'); };
+  nota.innerHTML = D.antes_de_diciembre
+    ? '<b>Producción de diciembre '+D.anio+'.</b> La meta de cada producto es lo vendido el diciembre anterior más lo que se dejó de vender por quiebres. '
+      +'<b>Falta producir</b> = meta − stock de hoy en Bsale. Ojo: antes del 1 de diciembre, parte de ese stock todavía se va a vender en noviembre, '
+      +'así que la cifra exacta es la del 1 de diciembre. <b>Próxima semana</b> = lo que falta para vender del 1 al '+D.hasta_dia+' de diciembre.'
+    : '<b>Producción de diciembre '+D.anio+'.</b> <b>Falta producir</b> = meta − lo ya vendido en diciembre − stock de hoy en Bsale. '
+      +'<b>Próxima semana</b> = lo que falta para cubrir las ventas hasta el '+D.hasta_dia+' de diciembre. Se actualiza todos los días.';
+  var pct = T.meta ? Math.round(T.vendido / T.meta * 100) : 0;
+  document.getElementById('dic-metricas').innerHTML =
+     '<div class="metrica"><div class="metrica-label">Meta del mes</div>'
+    +'<div class="metrica-valor activo">'+fmt(T.meta)+'</div>'
+    +'<div class="metrica-sub">'+T.productos+' productos · '+T.cubiertos+' ya cubiertos</div></div>'
+    +'<div class="metrica"><div class="metrica-label">Vendido en diciembre</div>'
+    +'<div class="metrica-valor activo">'+fmt(T.vendido)+'</div>'
+    +'<div class="metrica-sub">'+pct+'% de la meta</div></div>'
+    +'<div class="metrica"><div class="metrica-label">Falta producir</div>'
+    +'<div class="metrica-valor activo" style="color:var(--warn-text)">'+fmt(T.falta_cocina)+'</div>'
+    +'<div class="metrica-sub">cocina · y '+fmt(T.falta_prov)+' por comprar a proveedor</div></div>'
+    +'<div class="metrica"><div class="metrica-label">Para la próxima semana</div>'
+    +'<div class="metrica-valor activo" style="color:var(--danger-text)">'+fmt(T.proxima)+'</div>'
+    +'<div class="metrica-sub">para vender hasta el '+D.hasta_dia+' de dic. · enviar a Pataguas '+fmt(T.enviar_pat)+'</div></div>';
+
+  dicChipsCocinero(D);
+  var ws = dicPalabras(document.getElementById('dic-buscar').value);
+  var rs = D.filas.filter(function(x){
+    if(ws.length){
+      var h = norm(x.nombre+' '+x.sku);
+      if(!ws.every(function(w){ return h.indexOf(w) >= 0; })) return false;
+    } else {
+      if(DIC_F==='falta' && x.estado==='cubierto') return false;
+      if(DIC_F==='urgente' && !(x.proxima > 0)) return false;
+      if(DIC_F==='cubierto' && x.estado!=='cubierto') return false;
+    }
+    if(DIC_O==='cocina' && x.proveedor) return false;
+    if(DIC_O==='proveedor' && !x.proveedor) return false;
+    if(DIC_O==='navidad' && !x.navidad) return false;
+    if(DIC_C && x.cocinero!==DIC_C) return false;
+    return true;
+  });
+  var k = DIC_SORT.k, dir = DIC_SORT.dir;
+  rs.sort(function(a,b){
+    if(k==='cocinero') return dir * a.cocinero.localeCompare(b.cocinero, 'es', {sensitivity:'base'}) || a.nombre.localeCompare(b.nombre, 'es');
+    if(k==='nombre') return dir * a.nombre.localeCompare(b.nombre, 'es', {sensitivity:'base'});
+    return dir * (a[k] - b[k]) || a.nombre.localeCompare(b.nombre, 'es');
+  });
+
+  var EST = {
+    sin_stock: '<span class="badge danger">sin stock</span>',
+    urgente:   '<span class="badge warning">próxima semana</span>',
+    pendiente: '<span class="badge neutral">más adelante</span>',
+    cubierto:  '<span class="badge ok">cubierto</span>'
+  };
+  var th = function(key, txt, der){
+    var on = DIC_SORT.k===key, flecha = on ? (DIC_SORT.dir>0 ? ' ▲' : ' ▼') : '';
+    return '<th style="cursor:pointer;white-space:nowrap'+(der?';text-align:right':'')+(on?';color:var(--ok-text)':'')+'" onclick="setDicOrden(\\''+key+'\\')">'+txt+flecha+'</th>';
+  };
+  var num = function(v, extra){
+    return '<td style="text-align:right'+(extra||'')+'"'+(v ? '' : ' class="num-zero"')+'>'+fmt(v)+'</td>';
+  };
+  var filas = rs.map(function(x){
+    var tags = (x.proveedor ? ' <span class="sku-tag" style="color:var(--info-text);font-size:10px">PROVEEDOR</span>' : '')
+             + (x.navidad ? ' <span class="sku-tag" style="color:var(--danger-text);font-size:10px">NAVIDAD</span>' : '');
+    return '<tr><td><b>'+tituloCase(x.nombre)+'</b> <span class="sku-tag" style="color:#aaa;font-size:10px">'+x.sku+'</span>'+tags+'</td>'
+      + '<td style="white-space:nowrap'+(x.cocinero==='SIN ASIGNAR'?';color:var(--danger-text)':'')+'">'+(x.cocinero==='PROVEEDOR'?'—':tituloCase(x.cocinero))+'</td>'
+      + num(x.meta) + num(x.vendido) + num(x.queda)
+      + num(x.stock_vit) + num(x.stock_pat)
+      + num(x.falta, ';font-weight:700;font-size:15px')
+      + num(x.enviar_pat) + num(x.proxima, ';font-weight:600')
+      + '<td style="white-space:nowrap">'+EST[x.estado]+'</td></tr>';
+  }).join('');
+  var sum = function(c){ return rs.reduce(function(a,x){ return a + x[c]; }, 0); };
+  var pie = rs.length
+    ? '<tr style="border-top:2px solid var(--border-color)"><td><b>Total ('+rs.length+' productos)</b></td><td></td>'
+      + num(sum('meta'),';font-weight:700') + num(sum('vendido'),';font-weight:700') + num(sum('queda'),';font-weight:700')
+      + num(sum('stock_vit'),';font-weight:700') + num(sum('stock_pat'),';font-weight:700')
+      + num(sum('falta'),';font-weight:800;font-size:15px') + num(sum('enviar_pat'),';font-weight:700')
+      + num(sum('proxima'),';font-weight:700') + '<td></td></tr>'
+    : '<tr><td colspan="11" style="padding:20px;color:#94a3b8">No hay productos que coincidan.</td></tr>';
+  var orden = (k==='nombre'||k==='cocinero' ? (dir>0?'A a la Z':'Z a la A') : (dir>0?'de menor a mayor':'de mayor a menor'));
+  document.getElementById('dic-tabla').innerHTML =
+     '<details class="tabla-ayuda"><summary>ℹ️ ¿Cómo leer esta tabla?</summary><ul>'
+    +'<li><strong>Meta:</strong> unidades a vender en diciembre (lo vendido el diciembre anterior + lo perdido por quiebres + 10% en los que se quebraron).</li>'
+    +'<li><strong>Queda:</strong> meta − lo ya vendido en diciembre.</li>'
+    +'<li><strong>Falta producir:</strong> queda − stock de Vitacura y Pataguas. En productos de proveedor es lo que falta comprar.</li>'
+    +'<li><strong>Enviar a Pataguas:</strong> lo que Pataguas necesita para su parte de la meta y no tiene en stock.</li>'
+    +'<li><strong>Próxima semana:</strong> lo que falta para cubrir las ventas hasta el '+D.hasta_dia+' de diciembre. Es lo más urgente.</li>'
+    +'<li><strong>Cocinero:</strong> quién lo produce. Los chips de arriba muestran cuánto le falta producir a cada uno. <span style="color:var(--danger-text)">Sin asignar</span> = producto que todavía no tiene cocinero.</li>'
+    +'<li>Toca el título de una columna para ordenar. La búsqueda no distingue tildes y mira todos los productos.</li>'
+    +'</ul></details>'
+    +'<div style="font-size:11px;color:#94a3b8;margin:4px 0 8px">'+rs.length+' productos · ordenado por '
+    +({nombre:'producto',cocinero:'cocinero',meta:'meta',vendido:'vendido',queda:'queda',stock_vit:'stock Vitacura',stock_pat:'stock Pataguas',falta:'falta producir',enviar_pat:'enviar a Pataguas',proxima:'próxima semana'})[k]
+    +' ('+orden+')'+(ws.length ? ' · la búsqueda ignora el filtro de estado' : '')+'</div>'
+    +'<table class="rend-tabla"><thead><tr>'
+    + th('nombre','Producto') + th('cocinero','Cocinero') + th('meta','Meta',1) + th('vendido','Vendido',1) + th('queda','Queda',1)
+    + th('stock_vit','Stock Vit.',1) + th('stock_pat','Stock Pat.',1) + th('falta','Falta producir',1)
+    + th('enviar_pat','Enviar a Pat.',1) + th('proxima','Próx. semana',1) + '<th>Estado</th>'
+    +'</tr></thead><tbody>'+filas+pie+'</tbody></table>';
 }
 
 // ── Producción: planificador semanal con recetas ─────────────
@@ -3304,6 +3462,7 @@ HTML_TEMPLATE = """<!DOCTYPE html>
   <button class="navtab" id="nav-analisis" onclick="mostrarAnalisis()">Análisis</button>
   <button class="navtab" id="nav-recetas" onclick="mostrarRecetas()">Producción</button>
   <button class="navtab" id="nav-rendimiento" onclick="mostrarRendimiento()">Rendimiento</button>
+  <button class="navtab" id="nav-diciembre" onclick="mostrarDiciembre()">Diciembre</button>
 </nav>
 
 <!-- VISTA RESUMEN -->
@@ -3505,6 +3664,36 @@ HTML_TEMPLATE = """<!DOCTYPE html>
   </div>
 </div>
 
+<!-- VISTA DICIEMBRE (meta del mes − ventas de diciembre − stock = lo que falta producir) -->
+<div id="vista-diciembre" style="display:none">
+  <div class="rend-nota" id="dic-nota"></div>
+  <div class="metricas" id="dic-metricas"></div>
+  <div class="toolbar">
+    <div class="search-wrap">
+      <span class="search-ico">🔍</span>
+      <input type="text" id="dic-buscar" placeholder="Buscar producto o código..." oninput="renderDiciembre()">
+    </div>
+    <div class="chips" id="dic-chips-estado">
+      <button class="chip chip-active" data-f="falta" onclick="setDicFiltro(this)">Falta producir</button>
+      <button class="chip" data-f="urgente" onclick="setDicFiltro(this)">Para la próxima semana</button>
+      <button class="chip" data-f="cubierto" onclick="setDicFiltro(this)">Cubiertos</button>
+      <button class="chip" data-f="todos" onclick="setDicFiltro(this)">Todos</button>
+    </div>
+    <div class="chips" id="dic-chips-origen">
+      <button class="chip chip-active" data-o="" onclick="setDicOrigen(this)">Cocina y proveedor</button>
+      <button class="chip" data-o="cocina" onclick="setDicOrigen(this)">Cocina</button>
+      <button class="chip" data-o="proveedor" onclick="setDicOrigen(this)">Proveedor</button>
+      <button class="chip" data-o="navidad" onclick="setDicOrigen(this)">Solo Navidad</button>
+    </div>
+    <div class="chips" id="dic-chips-cocinero"></div>
+  </div>
+  <div class="ana-section" style="padding:12px">
+    <div class="tabla-wrap table-container-responsive">
+      <div id="dic-tabla"></div>
+    </div>
+  </div>
+</div>
+
 <!-- VISTA PRODUCCIÓN (planificador semanal con recetas) -->
 <div id="vista-recetas" style="display:none">
   <div class="prod-explica">
@@ -3586,15 +3775,114 @@ const DATA = DATA_PLACEHOLDER;
 const ALERTAS = ALERTAS_PLACEHOLDER;
 const ANA_DATA = ANA_DATA_PLACEHOLDER;
 const PROD_DATA = PROD_DATA_PLACEHOLDER;
+const DIC_DATA = DIC_DATA_PLACEHOLDER;
 JS_PLACEHOLDER
 </script>
 </body>
 </html>"""
 
-def generar_html(datos, fecha_str, analisis=None, ultimo_update_str=None, produccion=None):
+# ─── PRODUCCIÓN DE DICIEMBRE ─────────────────────────────────
+# Meta del mes (meta_diciembre.json) menos lo ya vendido en diciembre menos el
+# stock actual de Bsale = lo que falta producir (o comprar, si es de proveedor).
+# Antes del 1 de diciembre no hay ventas que descontar: falta = meta − stock.
+def calcular_diciembre_desde(meta, ventas, stock, hoy):
+    """Cálculo puro. ventas: {(sku, 'VIT'|'PAT'): unidades vendidas en diciembre}.
+    stock: {sku: {'vit': n, 'pat': n}}. hoy: pd.Timestamp sin zona horaria."""
+    anio   = meta['anio']
+    tramos = meta['tramos']
+    ini    = pd.Timestamp(anio, 12, 1)
+    fin    = pd.Timestamp(anio, 12, 31)
+    # Tramo que hay que dejar cubierto: el siguiente al de hoy (antes de
+    # diciembre, el primero; desde el 25, el último).
+    if hoy < ini:
+        hasta = 0
+    elif hoy > fin:
+        hasta = len(tramos) - 1
+    else:
+        actual = next(i for i, t in enumerate(tramos) if t['desde'] <= hoy.day <= t['hasta'])
+        hasta  = min(actual + 1, len(tramos) - 1)
+    t_hasta = tramos[hasta]
+
+    filas = []
+    for p in meta['productos']:
+        sku = p['sku']
+        vv  = ventas.get((sku, 'VIT'), 0); vp = ventas.get((sku, 'PAT'), 0)
+        st  = stock.get(sku, {'vit': 0, 'pat': 0})
+        sv  = max(0, st.get('vit', 0) or 0); spa = max(0, st.get('pat', 0) or 0)
+        vend  = vv + vp
+        queda = max(0, p['meta'] - vend)
+        falta = max(0, queda - sv - spa)
+        # Pataguas: su parte de la meta que todavía no tiene en su stock
+        enviar_pat = max(0, max(0, p['meta_pat'] - vp) - spa)
+        # Lo necesario para cubrir hasta el fin del próximo tramo
+        meta_hasta = sum(p['meta_tramo'][:hasta + 1])
+        proxima = max(0, round(meta_hasta - vend - sv - spa))
+        if falta <= 0:
+            estado = 'cubierto'
+        elif sv + spa <= 0:
+            estado = 'sin_stock'
+        elif proxima > 0:
+            estado = 'urgente'
+        else:
+            estado = 'pendiente'
+        # Cocinero: el del plan de diciembre si lo trae (productos de Navidad),
+        # si no el del resto del dashboard. Proveedor no tiene cocinero.
+        if p['proveedor']:
+            cocinero = 'PROVEEDOR'
+        else:
+            cocinero = p.get('cocinero') or COCINEROS.get(sku.upper()) or 'SIN ASIGNAR'
+        filas.append({
+            'sku': sku, 'nombre': p['nombre'], 'categoria': p['categoria'], 'cocinero': cocinero,
+            'navidad': p['navidad'], 'proveedor': p['proveedor'],
+            'meta': p['meta'], 'meta_vit': p['meta_vit'], 'meta_pat': p['meta_pat'],
+            'vendido': round(vend), 'queda': round(queda),
+            'stock_vit': round(sv), 'stock_pat': round(spa),
+            'falta': round(falta), 'enviar_pat': round(enviar_pat),
+            'proxima': proxima, 'estado': estado,
+        })
+    tot = lambda k, f=lambda x: True: sum(x[k] for x in filas if f(x))
+    return {
+        'anio': anio,
+        'antes_de_diciembre': bool(hoy < ini),
+        'tramo_hasta': f"{t_hasta['desde']}–{t_hasta['hasta']} dic",
+        'hasta_dia': t_hasta['hasta'],
+        'filas': filas,
+        'tot': {
+            'meta': tot('meta'), 'vendido': tot('vendido'), 'queda': tot('queda'),
+            'stock': sum(x['stock_vit'] + x['stock_pat'] for x in filas),
+            'falta_cocina': tot('falta', lambda x: not x['proveedor']),
+            'falta_prov': tot('falta', lambda x: x['proveedor']),
+            'proxima': tot('proxima'), 'enviar_pat': tot('enviar_pat'),
+            'cubiertos': sum(1 for x in filas if x['estado'] == 'cubierto'),
+            'productos': len(filas),
+        },
+        'por_cocinero': {c: {'falta': tot('falta', lambda x: x['cocinero'] == c),
+                             'proxima': tot('proxima', lambda x: x['cocinero'] == c),
+                             'productos': sum(1 for x in filas if x['cocinero'] == c and x['falta'] > 0)}
+                         for c in sorted({x['cocinero'] for x in filas})},
+    }
+
+def calcular_diciembre(stock, hoy=None):
+    """Lee las metas y las ventas de diciembre del historial."""
+    if not os.path.exists(ARCHIVO_META_DIC):
+        return None
+    meta = json.load(open(ARCHIVO_META_DIC, encoding='utf-8'))
+    hoy  = hoy if hoy is not None else _HOY
+    ventas = {}
+    if os.path.exists(ARCHIVO_JSON):
+        prefijo = f"{meta['anio']}-12-"
+        with open(ARCHIVO_JSON, encoding='utf-8') as f:
+            for m in json.load(f).get('movimientos', []):
+                if m.get('tipo') == 'venta' and str(m.get('fecha', '')).startswith(prefijo):
+                    k = (str(m['sku']).strip().upper(), m['oficina'])
+                    ventas[k] = ventas.get(k, 0) + float(m.get('cantidad', 0) or 0)
+    return calcular_diciembre_desde(meta, ventas, stock, hoy)
+
+def generar_html(datos, fecha_str, analisis=None, ultimo_update_str=None, produccion=None, diciembre=None):
     data_json    = json.dumps(datos, ensure_ascii=False)
     prod_json = json.dumps(produccion or {'meses': [], 'cocineros': [], 'por_mes': {}}, ensure_ascii=False)
     analisis_json = json.dumps(analisis or {}, ensure_ascii=False)
+    dic_json = json.dumps(diciembre, ensure_ascii=False) if diciembre else 'null'
     # Alertas de cuadratura del día (las escribe actualizar_diario.py)
     archivo_alertas = os.path.join(CARPETA, 'alertas_stock.json')
     if os.path.exists(archivo_alertas):
@@ -3606,6 +3894,7 @@ def generar_html(datos, fecha_str, analisis=None, ultimo_update_str=None, produc
     html = html.replace('CSS_PLACEHOLDER',            CSS)
     html = html.replace('ANA_DATA_PLACEHOLDER',       analisis_json)  # antes de DATA_PLACEHOLDER
     html = html.replace('PROD_DATA_PLACEHOLDER',      prod_json)
+    html = html.replace('DIC_DATA_PLACEHOLDER',       dic_json)
     html = html.replace('DATA_PLACEHOLDER',           data_json)
     html = html.replace('ALERTAS_PLACEHOLDER',        alertas_json)
     html = html.replace('JS_PLACEHOLDER',             js_final)
@@ -3636,7 +3925,10 @@ if __name__ == '__main__':
     print(f'\nGenerando HTML con {len(datos)} productos...')
     produccion = calcular_produccion()
     print('  Meses con produccion: ' + str(len(produccion.get('meses', []))))
-    html = generar_html(datos, FECHA_STR, analisis, ultimo_update_str, produccion)
+    diciembre = calcular_diciembre(STOCK_BSALE)
+    if diciembre:
+        print(f"  Diciembre: {diciembre['tot']['productos']} productos, falta producir {diciembre['tot']['falta_cocina']} u")
+    html = generar_html(datos, FECHA_STR, analisis, ultimo_update_str, produccion, diciembre)
     with open(ARCHIVO_HTML, 'w', encoding='utf-8') as f:
         f.write(html)
     print(f'Dashboard: {ARCHIVO_HTML}')

@@ -1,0 +1,2097 @@
+{
+ "anio": 2026,
+ "generado": "2026-10-15",
+ "regla": "meta = venta dic 2025 + venta perdida por quiebre + 10% en quebrados; sin descontar stock; sin tendencia anual",
+ "tramos": [
+  {
+   "id": "S1",
+   "desde": 1,
+   "hasta": 7
+  },
+  {
+   "id": "S2",
+   "desde": 8,
+   "hasta": 13
+  },
+  {
+   "id": "S3",
+   "desde": 14,
+   "hasta": 19
+  },
+  {
+   "id": "PK",
+   "desde": 20,
+   "hasta": 24
+  },
+  {
+   "id": "PO",
+   "desde": 25,
+   "hasta": 31
+  }
+ ],
+ "productos": [
+  {
+   "sku": "RB",
+   "nombre": "ROAST BEEF",
+   "categoria": "PLATOS DE FONDO",
+   "navidad": false,
+   "proveedor": false,
+   "vendido_dic_anterior": 146,
+   "perdido_dic_anterior": 14.4,
+   "meta": 177,
+   "meta_vit": 132,
+   "meta_pat": 45,
+   "meta_tramo": [
+    15.8,
+    17.0,
+    8.5,
+    103.0,
+    32.7
+   ]
+  },
+  {
+   "sku": "PCP",
+   "nombre": "PATE CON PERAS",
+   "categoria": "APERITIVO",
+   "navidad": false,
+   "proveedor": false,
+   "vendido_dic_anterior": 127,
+   "perdido_dic_anterior": 19.1,
+   "meta": 161,
+   "meta_vit": 76,
+   "meta_pat": 85,
+   "meta_tramo": [
+    22.8,
+    26.6,
+    41.8,
+    58.3,
+    11.4
+   ]
+  },
+  {
+   "sku": "CEN",
+   "nombre": "Centolla ½ kilo",
+   "categoria": "GOURMET",
+   "navidad": false,
+   "proveedor": true,
+   "vendido_dic_anterior": 0,
+   "perdido_dic_anterior": 0,
+   "meta": 153,
+   "meta_vit": 0,
+   "meta_pat": 153,
+   "meta_tramo": [
+    19.6,
+    17.7,
+    27.1,
+    68.5,
+    20.0
+   ]
+  },
+  {
+   "sku": "PAC",
+   "nombre": "MILHOJAS DE PAPAS",
+   "categoria": "PLATOS DE FONDO",
+   "navidad": false,
+   "proveedor": false,
+   "vendido_dic_anterior": 131,
+   "perdido_dic_anterior": 0,
+   "meta": 131,
+   "meta_vit": 105,
+   "meta_pat": 26,
+   "meta_tramo": [
+    10.0,
+    5.0,
+    12.0,
+    92.0,
+    12.0
+   ]
+  },
+  {
+   "sku": "CAMA",
+   "nombre": "CAMARONES APANADOS",
+   "categoria": "APERITIVO",
+   "navidad": false,
+   "proveedor": false,
+   "vendido_dic_anterior": 114,
+   "perdido_dic_anterior": 0,
+   "meta": 114,
+   "meta_vit": 47,
+   "meta_pat": 67,
+   "meta_tramo": [
+    16.0,
+    10.0,
+    16.0,
+    45.0,
+    27.0
+   ]
+  },
+  {
+   "sku": "SA",
+   "nombre": "SALSA EN FRASCO",
+   "categoria": "APERITIVO",
+   "navidad": false,
+   "proveedor": false,
+   "vendido_dic_anterior": 89,
+   "perdido_dic_anterior": 8.5,
+   "meta": 108,
+   "meta_vit": 55,
+   "meta_pat": 53,
+   "meta_tramo": [
+    13.3,
+    8.5,
+    21.8,
+    48.5,
+    15.8
+   ]
+  },
+  {
+   "sku": "MCL",
+   "nombre": "MINI CHUPE LOCO",
+   "categoria": "APERITIVO",
+   "navidad": false,
+   "proveedor": false,
+   "vendido_dic_anterior": 66,
+   "perdido_dic_anterior": 29.1,
+   "meta": 105,
+   "meta_vit": 50,
+   "meta_pat": 55,
+   "meta_tramo": [
+    17.5,
+    17.5,
+    28.6,
+    35.0,
+    6.4
+   ]
+  },
+  {
+   "sku": "LF",
+   "nombre": "LOCOS EN FRASCO",
+   "categoria": "APERITIVO",
+   "navidad": false,
+   "proveedor": true,
+   "vendido_dic_anterior": 79,
+   "perdido_dic_anterior": 8.7,
+   "meta": 97,
+   "meta_vit": 51,
+   "meta_pat": 46,
+   "meta_tramo": [
+    13.5,
+    11.1,
+    24.6,
+    29.5,
+    18.4
+   ]
+  },
+  {
+   "sku": "EPL",
+   "nombre": "EMPANADA PINO LOCO",
+   "categoria": "APERITIVOS",
+   "navidad": false,
+   "proveedor": false,
+   "vendido_dic_anterior": 0,
+   "perdido_dic_anterior": 0,
+   "meta": 92,
+   "meta_vit": 67,
+   "meta_pat": 25,
+   "meta_tramo": [
+    11.8,
+    10.7,
+    16.3,
+    41.2,
+    12.0
+   ],
+   "cocinero": "CAROLINA"
+  },
+  {
+   "sku": "CL",
+   "nombre": "CARPACCIO DE LOCOS",
+   "categoria": "APERITIVO",
+   "navidad": false,
+   "proveedor": false,
+   "vendido_dic_anterior": 68,
+   "perdido_dic_anterior": 10.5,
+   "meta": 87,
+   "meta_vit": 45,
+   "meta_pat": 42,
+   "meta_tramo": [
+    15.4,
+    6.4,
+    9.0,
+    39.7,
+    16.6
+   ]
+  },
+  {
+   "sku": "CLC",
+   "nombre": "CHUPE LOCO CAMARON GRANDE",
+   "categoria": "PLATOS DE FONDO",
+   "navidad": false,
+   "proveedor": false,
+   "vendido_dic_anterior": 70,
+   "perdido_dic_anterior": 3.4,
+   "meta": 81,
+   "meta_vit": 34,
+   "meta_pat": 47,
+   "meta_tramo": [
+    17.4,
+    10.4,
+    13.9,
+    24.3,
+    15.0
+   ]
+  },
+  {
+   "sku": "LIBRO",
+   "nombre": "LIBRO LA COCINA DE ANGELES ALAMOS - Recetas para celebrar",
+   "categoria": "GOURMET",
+   "navidad": false,
+   "proveedor": true,
+   "vendido_dic_anterior": 77,
+   "perdido_dic_anterior": 0,
+   "meta": 77,
+   "meta_vit": 34,
+   "meta_pat": 43,
+   "meta_tramo": [
+    33.0,
+    20.0,
+    8.0,
+    13.0,
+    3.0
+   ]
+  },
+  {
+   "sku": "MCJ",
+   "nombre": "MINI CHUPE JAIBA",
+   "categoria": "APERITIVO",
+   "navidad": false,
+   "proveedor": false,
+   "vendido_dic_anterior": 53,
+   "perdido_dic_anterior": 12.4,
+   "meta": 72,
+   "meta_vit": 30,
+   "meta_pat": 42,
+   "meta_tramo": [
+    16.3,
+    9.5,
+    12.2,
+    23.1,
+    10.9
+   ]
+  },
+  {
+   "sku": "TLS",
+   "nombre": "TEQUEÑOS LOMO SALTADO",
+   "categoria": "APERITIVO",
+   "navidad": false,
+   "proveedor": false,
+   "vendido_dic_anterior": 51,
+   "perdido_dic_anterior": 10.7,
+   "meta": 68,
+   "meta_vit": 29,
+   "meta_pat": 39,
+   "meta_tramo": [
+    12.0,
+    10.7,
+    10.7,
+    26.7,
+    8.0
+   ]
+  },
+  {
+   "sku": "LR",
+   "nombre": "LOMO RELLENO",
+   "categoria": "PLATOS DE FONDO",
+   "navidad": false,
+   "proveedor": false,
+   "vendido_dic_anterior": 45,
+   "perdido_dic_anterior": 15.3,
+   "meta": 67,
+   "meta_vit": 61,
+   "meta_pat": 6,
+   "meta_tramo": [
+    1.5,
+    3.0,
+    3.0,
+    56.6,
+    3.0
+   ]
+  },
+  {
+   "sku": "MIGNON",
+   "nombre": "MIGNON DE POLLO",
+   "categoria": "PLATOS DE FONDO",
+   "navidad": false,
+   "proveedor": false,
+   "vendido_dic_anterior": 55,
+   "perdido_dic_anterior": 5.8,
+   "meta": 67,
+   "meta_vit": 32,
+   "meta_pat": 35,
+   "meta_tramo": [
+    7.3,
+    4.9,
+    21.9,
+    25.6,
+    7.3
+   ]
+  },
+  {
+   "sku": "PN",
+   "nombre": "PANQUEQUE NATURAL",
+   "categoria": "APERITIVO",
+   "navidad": false,
+   "proveedor": true,
+   "vendido_dic_anterior": 24,
+   "perdido_dic_anterior": 35.2,
+   "meta": 66,
+   "meta_vit": 36,
+   "meta_pat": 30,
+   "meta_tramo": [
+    8.2,
+    24.8,
+    19.2,
+    11.0,
+    2.8
+   ]
+  },
+  {
+   "sku": "RM",
+   "nombre": "ROLLO MECHADA",
+   "categoria": "PLATOS DE FONDO",
+   "navidad": false,
+   "proveedor": false,
+   "vendido_dic_anterior": 50,
+   "perdido_dic_anterior": 9.2,
+   "meta": 66,
+   "meta_vit": 27,
+   "meta_pat": 39,
+   "meta_tramo": [
+    10.6,
+    10.6,
+    18.5,
+    14.5,
+    11.9
+   ]
+  },
+  {
+   "sku": "FCT",
+   "nombre": "FILETE CHAMPIÑON TOCINO",
+   "categoria": "PLATOS DE FONDO",
+   "navidad": false,
+   "proveedor": false,
+   "vendido_dic_anterior": 49,
+   "perdido_dic_anterior": 6.0,
+   "meta": 61,
+   "meta_vit": 48,
+   "meta_pat": 13,
+   "meta_tramo": [
+    0.0,
+    0.0,
+    10.0,
+    49.8,
+    1.2
+   ]
+  },
+  {
+   "sku": "PC",
+   "nombre": "PURE DE CAMOTE",
+   "categoria": "PLATOS DE FONDO",
+   "navidad": false,
+   "proveedor": false,
+   "vendido_dic_anterior": 49,
+   "perdido_dic_anterior": 3.5,
+   "meta": 58,
+   "meta_vit": 51,
+   "meta_pat": 7,
+   "meta_tramo": [
+    4.7,
+    5.9,
+    8.3,
+    34.3,
+    4.7
+   ]
+  },
+  {
+   "sku": "BURMA",
+   "nombre": "BURMA CRACKERS",
+   "categoria": "GOURMET",
+   "navidad": false,
+   "proveedor": true,
+   "vendido_dic_anterior": 50,
+   "perdido_dic_anterior": 1.4,
+   "meta": 57,
+   "meta_vit": 10,
+   "meta_pat": 47,
+   "meta_tramo": [
+    18.2,
+    11.4,
+    9.1,
+    13.7,
+    4.6
+   ]
+  },
+  {
+   "sku": "RS",
+   "nombre": "ROLLO SALMON",
+   "categoria": "PLATOS DE FONDO",
+   "navidad": false,
+   "proveedor": false,
+   "vendido_dic_anterior": 38,
+   "perdido_dic_anterior": 13.1,
+   "meta": 57,
+   "meta_vit": 27,
+   "meta_pat": 30,
+   "meta_tramo": [
+    9.0,
+    15.0,
+    21.0,
+    12.0,
+    0.0
+   ]
+  },
+  {
+   "sku": "TFC",
+   "nombre": "TRONCO FRAMBUESA CREMA",
+   "categoria": "NAVIDAD",
+   "navidad": false,
+   "proveedor": true,
+   "vendido_dic_anterior": 49,
+   "perdido_dic_anterior": 2.3,
+   "meta": 57,
+   "meta_vit": 34,
+   "meta_pat": 23,
+   "meta_tramo": [
+    2.3,
+    7.0,
+    11.6,
+    34.9,
+    1.2
+   ]
+  },
+  {
+   "sku": "EPC",
+   "nombre": "EMPANADA PINO CARNE",
+   "categoria": "APERITIVOS",
+   "navidad": false,
+   "proveedor": true,
+   "vendido_dic_anterior": 0,
+   "perdido_dic_anterior": 0,
+   "meta": 56,
+   "meta_vit": 45,
+   "meta_pat": 11,
+   "meta_tramo": [
+    7.2,
+    6.5,
+    9.9,
+    25.1,
+    7.3
+   ]
+  },
+  {
+   "sku": "JGN",
+   "nombre": "JAMON GLASEADO",
+   "categoria": "PLATOS DE FONDO",
+   "navidad": true,
+   "proveedor": false,
+   "vendido_dic_anterior": 44,
+   "perdido_dic_anterior": 4.0,
+   "meta": 53,
+   "meta_vit": 44,
+   "meta_pat": 9,
+   "meta_tramo": [
+    0.0,
+    1.2,
+    9.6,
+    38.5,
+    3.6
+   ],
+   "cocinero": "JESÚS"
+  },
+  {
+   "sku": "TA",
+   "nombre": "TARTARO ATUN",
+   "categoria": "APERITIVO",
+   "navidad": false,
+   "proveedor": false,
+   "vendido_dic_anterior": 29,
+   "perdido_dic_anterior": 18.8,
+   "meta": 53,
+   "meta_vit": 24,
+   "meta_pat": 29,
+   "meta_tramo": [
+    9.1,
+    14.6,
+    0.0,
+    25.6,
+    3.7
+   ]
+  },
+  {
+   "sku": "EJ",
+   "nombre": "EMPANADITAS JAMON SERRANO",
+   "categoria": "APERITIVO",
+   "navidad": false,
+   "proveedor": false,
+   "vendido_dic_anterior": 45,
+   "perdido_dic_anterior": 0.9,
+   "meta": 51,
+   "meta_vit": 21,
+   "meta_pat": 30,
+   "meta_tramo": [
+    6.8,
+    5.7,
+    6.8,
+    24.9,
+    6.8
+   ]
+  },
+  {
+   "sku": "FC",
+   "nombre": "FLAN DE CALUGA PN",
+   "categoria": "POSTRE",
+   "navidad": false,
+   "proveedor": true,
+   "vendido_dic_anterior": 39,
+   "perdido_dic_anterior": 6.1,
+   "meta": 50,
+   "meta_vit": 23,
+   "meta_pat": 27,
+   "meta_tramo": [
+    0.0,
+    9.0,
+    7.7,
+    24.4,
+    9.0
+   ]
+  },
+  {
+   "sku": "POND",
+   "nombre": "PONDERACION",
+   "categoria": "DULCE",
+   "navidad": false,
+   "proveedor": true,
+   "vendido_dic_anterior": 27,
+   "perdido_dic_anterior": 18.1,
+   "meta": 50,
+   "meta_vit": 24,
+   "meta_pat": 26,
+   "meta_tramo": [
+    1.9,
+    9.3,
+    9.3,
+    25.9,
+    3.7
+   ]
+  },
+  {
+   "sku": "GHD",
+   "nombre": "GALLETAS EL HORNO DE DOMINGA",
+   "categoria": "POSTRE",
+   "navidad": false,
+   "proveedor": true,
+   "vendido_dic_anterior": 39,
+   "perdido_dic_anterior": 4.1,
+   "meta": 48,
+   "meta_vit": 30,
+   "meta_pat": 18,
+   "meta_tramo": [
+    2.5,
+    7.4,
+    25.8,
+    9.8,
+    2.5
+   ]
+  },
+  {
+   "sku": "TMF",
+   "nombre": "TORTA MERENGE FRAMBUESA PN",
+   "categoria": "POSTRE",
+   "navidad": false,
+   "proveedor": true,
+   "vendido_dic_anterior": 39,
+   "perdido_dic_anterior": 2.8,
+   "meta": 46,
+   "meta_vit": 29,
+   "meta_pat": 17,
+   "meta_tramo": [
+    3.5,
+    4.7,
+    5.9,
+    27.1,
+    4.7
+   ]
+  },
+  {
+   "sku": "TS",
+   "nombre": "TARTARO SALMON",
+   "categoria": "APERITIVO",
+   "navidad": false,
+   "proveedor": false,
+   "vendido_dic_anterior": 46,
+   "perdido_dic_anterior": 0,
+   "meta": 46,
+   "meta_vit": 17,
+   "meta_pat": 29,
+   "meta_tramo": [
+    5.0,
+    5.0,
+    6.0,
+    18.0,
+    12.0
+   ]
+  },
+  {
+   "sku": "CF",
+   "nombre": "CARPACCIO DE FILETE",
+   "categoria": "APERITIVO",
+   "navidad": false,
+   "proveedor": false,
+   "vendido_dic_anterior": 23,
+   "perdido_dic_anterior": 17.6,
+   "meta": 45,
+   "meta_vit": 20,
+   "meta_pat": 25,
+   "meta_tramo": [
+    11.7,
+    9.8,
+    2.0,
+    21.5,
+    0.0
+   ]
+  },
+  {
+   "sku": "LA",
+   "nombre": "LOMITO ACARAMELADO",
+   "categoria": "PLATOS DE FONDO",
+   "navidad": false,
+   "proveedor": false,
+   "vendido_dic_anterior": 35,
+   "perdido_dic_anterior": 4.8,
+   "meta": 44,
+   "meta_vit": 24,
+   "meta_pat": 20,
+   "meta_tramo": [
+    8.8,
+    2.5,
+    7.5,
+    16.3,
+    8.8
+   ]
+  },
+  {
+   "sku": "MCC",
+   "nombre": "MINI CHUPE CAMARON",
+   "categoria": "APERITIVO",
+   "navidad": false,
+   "proveedor": false,
+   "vendido_dic_anterior": 3,
+   "perdido_dic_anterior": 36.1,
+   "meta": 44,
+   "meta_vit": 27,
+   "meta_pat": 17,
+   "meta_tramo": [
+    5.6,
+    5.1,
+    7.8,
+    19.7,
+    5.8
+   ]
+  },
+  {
+   "sku": "RDF",
+   "nombre": "ROLLITOS DE FILETE",
+   "categoria": "APERITIVOS",
+   "navidad": true,
+   "proveedor": false,
+   "vendido_dic_anterior": 44,
+   "perdido_dic_anterior": 0,
+   "meta": 44,
+   "meta_vit": 31,
+   "meta_pat": 13,
+   "meta_tramo": [
+    0.0,
+    0.0,
+    9.0,
+    26.0,
+    9.0
+   ],
+   "cocinero": "CAROLINA"
+  },
+  {
+   "sku": "BAP",
+   "nombre": "BERENJENAS A LA PARMESANA",
+   "categoria": "PLATOS DE FONDO",
+   "navidad": false,
+   "proveedor": false,
+   "vendido_dic_anterior": 43,
+   "perdido_dic_anterior": 0,
+   "meta": 43,
+   "meta_vit": 28,
+   "meta_pat": 15,
+   "meta_tramo": [
+    2.0,
+    3.0,
+    6.0,
+    20.0,
+    12.0
+   ]
+  },
+  {
+   "sku": "CC",
+   "nombre": "CHUPE CENTOLLA GRANDE",
+   "categoria": "PLATOS DE FONDO",
+   "navidad": false,
+   "proveedor": false,
+   "vendido_dic_anterior": 43,
+   "perdido_dic_anterior": 0,
+   "meta": 43,
+   "meta_vit": 29,
+   "meta_pat": 14,
+   "meta_tramo": [
+    2.0,
+    3.0,
+    7.0,
+    25.0,
+    6.0
+   ]
+  },
+  {
+   "sku": "MMR",
+   "nombre": "MIX MASITAS RELLENAS",
+   "categoria": "APERITIVO",
+   "navidad": false,
+   "proveedor": false,
+   "vendido_dic_anterior": 32,
+   "perdido_dic_anterior": 6.3,
+   "meta": 43,
+   "meta_vit": 24,
+   "meta_pat": 19,
+   "meta_tramo": [
+    4.0,
+    5.4,
+    8.1,
+    21.5,
+    4.0
+   ]
+  },
+  {
+   "sku": "TP",
+   "nombre": "TRONCO MERENGUE PISTACHO",
+   "categoria": "NAVIDAD",
+   "navidad": false,
+   "proveedor": true,
+   "vendido_dic_anterior": 37,
+   "perdido_dic_anterior": 1.0,
+   "meta": 42,
+   "meta_vit": 27,
+   "meta_pat": 15,
+   "meta_tramo": [
+    1.1,
+    4.5,
+    11.4,
+    20.4,
+    4.5
+   ]
+  },
+  {
+   "sku": "FW",
+   "nombre": "FILETE WELLINGTON",
+   "categoria": "PLATOS DE FONDO",
+   "navidad": true,
+   "proveedor": false,
+   "vendido_dic_anterior": 32,
+   "perdido_dic_anterior": 4.8,
+   "meta": 41,
+   "meta_vit": 26,
+   "meta_pat": 15,
+   "meta_tramo": [
+    0.0,
+    0.0,
+    6.4,
+    29.5,
+    5.1
+   ],
+   "cocinero": "JESÚS"
+  },
+  {
+   "sku": "MMRM",
+   "nombre": "MIX MASITAS RELLENAS DEL MAR",
+   "categoria": "APERITIVO",
+   "navidad": false,
+   "proveedor": false,
+   "vendido_dic_anterior": 34,
+   "perdido_dic_anterior": 2.5,
+   "meta": 41,
+   "meta_vit": 22,
+   "meta_pat": 19,
+   "meta_tramo": [
+    8.4,
+    3.6,
+    4.8,
+    14.5,
+    9.6
+   ]
+  },
+  {
+   "sku": "CJ",
+   "nombre": "CHUPE JAIBA GRANDE",
+   "categoria": "PLATOS DE FONDO",
+   "navidad": false,
+   "proveedor": false,
+   "vendido_dic_anterior": 35,
+   "perdido_dic_anterior": 0.5,
+   "meta": 40,
+   "meta_vit": 22,
+   "meta_pat": 18,
+   "meta_tramo": [
+    5.7,
+    5.7,
+    9.1,
+    12.6,
+    6.9
+   ]
+  },
+  {
+   "sku": "MRN",
+   "nombre": "MASITAS RELLENAS NAVIDAD",
+   "categoria": "APERITIVOS",
+   "navidad": true,
+   "proveedor": false,
+   "vendido_dic_anterior": 40,
+   "perdido_dic_anterior": 0,
+   "meta": 40,
+   "meta_vit": 30,
+   "meta_pat": 10,
+   "meta_tramo": [
+    0.0,
+    2.0,
+    10.0,
+    24.0,
+    4.0
+   ],
+   "cocinero": "ADRIANA"
+  },
+  {
+   "sku": "TL",
+   "nombre": "TRONCO MERENGUE LUCUMA",
+   "categoria": "NAVIDAD",
+   "navidad": false,
+   "proveedor": true,
+   "vendido_dic_anterior": 35,
+   "perdido_dic_anterior": 0.5,
+   "meta": 40,
+   "meta_vit": 25,
+   "meta_pat": 15,
+   "meta_tramo": [
+    4.6,
+    1.1,
+    8.0,
+    18.3,
+    8.0
+   ]
+  },
+  {
+   "sku": "AR",
+   "nombre": "ARROZ ROJO",
+   "categoria": "PLATOS DE FONDO",
+   "navidad": true,
+   "proveedor": false,
+   "vendido_dic_anterior": 37,
+   "perdido_dic_anterior": 0,
+   "meta": 37,
+   "meta_vit": 32,
+   "meta_pat": 5,
+   "meta_tramo": [
+    0.0,
+    0.0,
+    2.0,
+    32.0,
+    3.0
+   ],
+   "cocinero": "CÉSAR"
+  },
+  {
+   "sku": "CP",
+   "nombre": "CARPACCIO PULPO CON SALSA AL OLIVO",
+   "categoria": "APERITIVO",
+   "navidad": false,
+   "proveedor": false,
+   "vendido_dic_anterior": 36,
+   "perdido_dic_anterior": 0,
+   "meta": 36,
+   "meta_vit": 25,
+   "meta_pat": 11,
+   "meta_tramo": [
+    3.0,
+    2.0,
+    7.0,
+    16.0,
+    8.0
+   ]
+  },
+  {
+   "sku": "EC",
+   "nombre": "EMPANADITAS CAMARON",
+   "categoria": "APERITIVO",
+   "navidad": false,
+   "proveedor": false,
+   "vendido_dic_anterior": 28,
+   "perdido_dic_anterior": 4.6,
+   "meta": 36,
+   "meta_vit": 13,
+   "meta_pat": 23,
+   "meta_tramo": [
+    1.3,
+    2.6,
+    0.0,
+    24.4,
+    7.7
+   ]
+  },
+  {
+   "sku": "OP",
+   "nombre": "OSTIONES A LA PARMESANA",
+   "categoria": "APERITIVO",
+   "navidad": false,
+   "proveedor": false,
+   "vendido_dic_anterior": 22,
+   "perdido_dic_anterior": 10.0,
+   "meta": 36,
+   "meta_vit": 15,
+   "meta_pat": 21,
+   "meta_tramo": [
+    18.0,
+    1.6,
+    3.3,
+    11.5,
+    1.6
+   ]
+  },
+  {
+   "sku": "EM",
+   "nombre": "EMPANADITAS MECHADA",
+   "categoria": "APERITIVO",
+   "navidad": false,
+   "proveedor": false,
+   "vendido_dic_anterior": 34,
+   "perdido_dic_anterior": 0,
+   "meta": 34,
+   "meta_vit": 11,
+   "meta_pat": 23,
+   "meta_tramo": [
+    1.0,
+    6.0,
+    3.0,
+    16.0,
+    8.0
+   ]
+  },
+  {
+   "sku": "ADM",
+   "nombre": "ALIÑO DE MOSTAZA",
+   "categoria": "APERITIVOS",
+   "navidad": true,
+   "proveedor": false,
+   "vendido_dic_anterior": 29,
+   "perdido_dic_anterior": 0.4,
+   "meta": 33,
+   "meta_vit": 33,
+   "meta_pat": 0,
+   "meta_tramo": [
+    0.0,
+    1.1,
+    6.8,
+    22.8,
+    2.3
+   ],
+   "cocinero": "ADRIANA"
+  },
+  {
+   "sku": "CDL",
+   "nombre": "CRUMBLE DE LIMON PN",
+   "categoria": "POSTRE",
+   "navidad": false,
+   "proveedor": true,
+   "vendido_dic_anterior": 29,
+   "perdido_dic_anterior": 0.5,
+   "meta": 33,
+   "meta_vit": 16,
+   "meta_pat": 17,
+   "meta_tramo": [
+    6.8,
+    1.1,
+    2.3,
+    12.5,
+    10.2
+   ]
+  },
+  {
+   "sku": "GALETTE",
+   "nombre": "GALETTE CAPRESSE",
+   "categoria": "APERITIVOS",
+   "navidad": true,
+   "proveedor": true,
+   "vendido_dic_anterior": 27,
+   "perdido_dic_anterior": 3.0,
+   "meta": 33,
+   "meta_vit": 23,
+   "meta_pat": 10,
+   "meta_tramo": [
+    0.0,
+    1.2,
+    2.4,
+    29.3,
+    0.0
+   ]
+  },
+  {
+   "sku": "ADC",
+   "nombre": "ALIÑO DE CILANTRO",
+   "categoria": "APERITIVOS",
+   "navidad": true,
+   "proveedor": false,
+   "vendido_dic_anterior": 32,
+   "perdido_dic_anterior": 0,
+   "meta": 32,
+   "meta_vit": 32,
+   "meta_pat": 0,
+   "meta_tramo": [
+    0.0,
+    0.0,
+    7.0,
+    24.0,
+    1.0
+   ],
+   "cocinero": "ADRIANA"
+  },
+  {
+   "sku": "BADIAC",
+   "nombre": "BADIA ALIÑO CHICO",
+   "categoria": "GOURMET",
+   "navidad": false,
+   "proveedor": true,
+   "vendido_dic_anterior": 27,
+   "perdido_dic_anterior": 2.0,
+   "meta": 32,
+   "meta_vit": 4,
+   "meta_pat": 28,
+   "meta_tramo": [
+    3.6,
+    2.4,
+    15.4,
+    8.3,
+    2.4
+   ]
+  },
+  {
+   "sku": "ÑJ",
+   "nombre": "ÑOQUIS CON JAMON SERRANO",
+   "categoria": "PLATOS DE FONDO",
+   "navidad": false,
+   "proveedor": false,
+   "vendido_dic_anterior": 22,
+   "perdido_dic_anterior": 5.4,
+   "meta": 31,
+   "meta_vit": 17,
+   "meta_pat": 14,
+   "meta_tramo": [
+    4.2,
+    4.2,
+    9.9,
+    8.5,
+    4.2
+   ]
+  },
+  {
+   "sku": "CBN",
+   "nombre": "CAJA BOLITA NUEZ 18 UNID PN",
+   "categoria": "POSTRE",
+   "navidad": false,
+   "proveedor": true,
+   "vendido_dic_anterior": 25,
+   "perdido_dic_anterior": 1.8,
+   "meta": 30,
+   "meta_vit": 7,
+   "meta_pat": 23,
+   "meta_tramo": [
+    6.0,
+    2.4,
+    3.6,
+    14.4,
+    3.6
+   ]
+  },
+  {
+   "sku": "CDM",
+   "nombre": "CRUMBLE DE MANZANA PN",
+   "categoria": "POSTRE",
+   "navidad": false,
+   "proveedor": true,
+   "vendido_dic_anterior": 29,
+   "perdido_dic_anterior": 0,
+   "meta": 29,
+   "meta_vit": 14,
+   "meta_pat": 15,
+   "meta_tramo": [
+    0.0,
+    3.0,
+    1.0,
+    16.0,
+    9.0
+   ]
+  },
+  {
+   "sku": "RA",
+   "nombre": "ROLLO ALCACHOFA",
+   "categoria": "PLATOS DE FONDO",
+   "navidad": false,
+   "proveedor": false,
+   "vendido_dic_anterior": 22,
+   "perdido_dic_anterior": 4.1,
+   "meta": 29,
+   "meta_vit": 14,
+   "meta_pat": 15,
+   "meta_tramo": [
+    6.6,
+    2.6,
+    7.9,
+    10.5,
+    1.3
+   ]
+  },
+  {
+   "sku": "MFT",
+   "nombre": "MASA FILO TRADICIONAL",
+   "categoria": "GOURMET",
+   "navidad": false,
+   "proveedor": true,
+   "vendido_dic_anterior": 0,
+   "perdido_dic_anterior": 0,
+   "meta": 28,
+   "meta_vit": 0,
+   "meta_pat": 28,
+   "meta_tramo": [
+    3.6,
+    3.2,
+    5.0,
+    12.5,
+    3.7
+   ]
+  },
+  {
+   "sku": "TIRAS",
+   "nombre": "TIRADITO SALMON",
+   "categoria": "APERITIVO",
+   "navidad": false,
+   "proveedor": true,
+   "vendido_dic_anterior": 15,
+   "perdido_dic_anterior": 9.6,
+   "meta": 28,
+   "meta_vit": 12,
+   "meta_pat": 16,
+   "meta_tramo": [
+    3.7,
+    7.5,
+    7.5,
+    9.3,
+    0.0
+   ]
+  },
+  {
+   "sku": "C1K",
+   "nombre": "CAMARONES, 1 KILO",
+   "categoria": "APERITIVO",
+   "navidad": false,
+   "proveedor": true,
+   "vendido_dic_anterior": 13,
+   "perdido_dic_anterior": 11.5,
+   "meta": 27,
+   "meta_vit": 4,
+   "meta_pat": 23,
+   "meta_tramo": [
+    3.5,
+    3.1,
+    4.8,
+    12.1,
+    3.5
+   ]
+  },
+  {
+   "sku": "LCM",
+   "nombre": "LASAÑA CARNE MECHADA",
+   "categoria": "PLATOS DE FONDO",
+   "navidad": false,
+   "proveedor": false,
+   "vendido_dic_anterior": 16,
+   "perdido_dic_anterior": 7.1,
+   "meta": 26,
+   "meta_vit": 15,
+   "meta_pat": 11,
+   "meta_tramo": [
+    8.1,
+    1.6,
+    1.6,
+    8.1,
+    6.5
+   ]
+  },
+  {
+   "sku": "MPAS",
+   "nombre": "MINI PASTELERA",
+   "categoria": "APERITIVOS",
+   "navidad": false,
+   "proveedor": false,
+   "vendido_dic_anterior": 0,
+   "perdido_dic_anterior": 0,
+   "meta": 26,
+   "meta_vit": 17,
+   "meta_pat": 9,
+   "meta_tramo": [
+    3.3,
+    3.0,
+    4.6,
+    11.6,
+    3.4
+   ],
+   "cocinero": "JESÚS"
+  },
+  {
+   "sku": "PCM",
+   "nombre": "PASTEL DE CHOCLO",
+   "categoria": "PLATOS DE FONDO",
+   "navidad": false,
+   "proveedor": false,
+   "vendido_dic_anterior": 15,
+   "perdido_dic_anterior": 8.4,
+   "meta": 26,
+   "meta_vit": 9,
+   "meta_pat": 17,
+   "meta_tramo": [
+    6.9,
+    0.0,
+    5.2,
+    12.1,
+    1.7
+   ]
+  },
+  {
+   "sku": "PV",
+   "nombre": "CAJA POSTRES EN VASITOS",
+   "categoria": "POSTRES",
+   "navidad": false,
+   "proveedor": false,
+   "vendido_dic_anterior": 20,
+   "perdido_dic_anterior": 2.9,
+   "meta": 26,
+   "meta_vit": 7,
+   "meta_pat": 19,
+   "meta_tramo": [
+    7.8,
+    3.9,
+    2.6,
+    7.8,
+    3.9
+   ]
+  },
+  {
+   "sku": "RPP",
+   "nombre": "ROLLO POLLO PIMENTON",
+   "categoria": "PLATOS DE FONDO",
+   "navidad": false,
+   "proveedor": false,
+   "vendido_dic_anterior": 11,
+   "perdido_dic_anterior": 12.5,
+   "meta": 26,
+   "meta_vit": 11,
+   "meta_pat": 15,
+   "meta_tramo": [
+    3.3,
+    3.0,
+    4.6,
+    11.6,
+    3.4
+   ]
+  },
+  {
+   "sku": "SC",
+   "nombre": "SAQUITOS DE CAMARON",
+   "categoria": "APERITIVOS",
+   "navidad": true,
+   "proveedor": false,
+   "vendido_dic_anterior": 25,
+   "perdido_dic_anterior": 0,
+   "meta": 25,
+   "meta_vit": 17,
+   "meta_pat": 8,
+   "meta_tramo": [
+    0.0,
+    0.0,
+    6.0,
+    16.0,
+    3.0
+   ],
+   "cocinero": "CÉSAR"
+  },
+  {
+   "sku": "ÑC",
+   "nombre": "ÑOQUIS DE CAMARON",
+   "categoria": "PLATOS DE FONDO",
+   "navidad": false,
+   "proveedor": false,
+   "vendido_dic_anterior": 22,
+   "perdido_dic_anterior": 0.5,
+   "meta": 25,
+   "meta_vit": 9,
+   "meta_pat": 16,
+   "meta_tramo": [
+    2.3,
+    2.3,
+    8.0,
+    12.5,
+    0.0
+   ]
+  },
+  {
+   "sku": "CSR",
+   "nombre": "CAMARONES SALSA ROSADA",
+   "categoria": "APERITIVOS",
+   "navidad": true,
+   "proveedor": false,
+   "vendido_dic_anterior": 24,
+   "perdido_dic_anterior": 0,
+   "meta": 24,
+   "meta_vit": 24,
+   "meta_pat": 0,
+   "meta_tramo": [
+    0.0,
+    1.0,
+    5.0,
+    18.0,
+    0.0
+   ],
+   "cocinero": "CÉSAR"
+  },
+  {
+   "sku": "RC",
+   "nombre": "ROLLO CAMARON",
+   "categoria": "PLATOS DE FONDO",
+   "navidad": false,
+   "proveedor": false,
+   "vendido_dic_anterior": 12,
+   "perdido_dic_anterior": 9.5,
+   "meta": 24,
+   "meta_vit": 10,
+   "meta_pat": 14,
+   "meta_tramo": [
+    3.1,
+    2.8,
+    4.3,
+    10.8,
+    3.1
+   ]
+  },
+  {
+   "sku": "RJ",
+   "nombre": "ROLLO JAMON SERRANO",
+   "categoria": "PLATOS DE FONDO",
+   "navidad": false,
+   "proveedor": false,
+   "vendido_dic_anterior": 12,
+   "perdido_dic_anterior": 9.2,
+   "meta": 24,
+   "meta_vit": 11,
+   "meta_pat": 13,
+   "meta_tramo": [
+    3.1,
+    2.8,
+    4.3,
+    10.8,
+    3.1
+   ]
+  },
+  {
+   "sku": "TPU",
+   "nombre": "TEQUEÑOS DE PULPO CON SALSA",
+   "categoria": "APERITIVOS",
+   "navidad": false,
+   "proveedor": false,
+   "vendido_dic_anterior": 12,
+   "perdido_dic_anterior": 8.8,
+   "meta": 23,
+   "meta_vit": 16,
+   "meta_pat": 7,
+   "meta_tramo": [
+    2.9,
+    2.7,
+    4.1,
+    10.3,
+    3.0
+   ]
+  },
+  {
+   "sku": "TBN",
+   "nombre": "TORTA BOLITA NUEZ PN",
+   "categoria": "POSTRE",
+   "navidad": false,
+   "proveedor": true,
+   "vendido_dic_anterior": 19,
+   "perdido_dic_anterior": 0.5,
+   "meta": 22,
+   "meta_vit": 10,
+   "meta_pat": 12,
+   "meta_tramo": [
+    5.8,
+    4.6,
+    1.2,
+    8.1,
+    2.3
+   ]
+  },
+  {
+   "sku": "CM",
+   "nombre": "CARNE MECHADA",
+   "categoria": "PLATOS DE FONDO",
+   "navidad": false,
+   "proveedor": false,
+   "vendido_dic_anterior": 12,
+   "perdido_dic_anterior": 6.9,
+   "meta": 21,
+   "meta_vit": 13,
+   "meta_pat": 8,
+   "meta_tramo": [
+    2.7,
+    2.4,
+    3.7,
+    9.4,
+    2.7
+   ]
+  },
+  {
+   "sku": "TCM",
+   "nombre": "TALLARINES CARNE MECHADA",
+   "categoria": "PLATOS DE FONDO",
+   "navidad": false,
+   "proveedor": false,
+   "vendido_dic_anterior": 16,
+   "perdido_dic_anterior": 2.4,
+   "meta": 21,
+   "meta_vit": 9,
+   "meta_pat": 12,
+   "meta_tramo": [
+    2.6,
+    6.6,
+    5.2,
+    6.6,
+    0.0
+   ]
+  },
+  {
+   "sku": "AS",
+   "nombre": "ARROZ SALVAJE",
+   "categoria": "ACOMPAÑAMIENTO",
+   "navidad": false,
+   "proveedor": false,
+   "vendido_dic_anterior": 0,
+   "perdido_dic_anterior": 0,
+   "meta": 20,
+   "meta_vit": 17,
+   "meta_pat": 3,
+   "meta_tramo": [
+    2.6,
+    2.3,
+    3.5,
+    9.0,
+    2.6
+   ]
+  },
+  {
+   "sku": "TSA",
+   "nombre": "TALLARINES SALMON AHUMADO",
+   "categoria": "PLATOS DE FONDO",
+   "navidad": false,
+   "proveedor": false,
+   "vendido_dic_anterior": 10,
+   "perdido_dic_anterior": 7.8,
+   "meta": 20,
+   "meta_vit": 16,
+   "meta_pat": 4,
+   "meta_tramo": [
+    2.6,
+    2.3,
+    3.5,
+    9.0,
+    2.6
+   ]
+  },
+  {
+   "sku": "BOCA",
+   "nombre": "BOCANBOCA",
+   "categoria": "GOURMET",
+   "navidad": false,
+   "proveedor": true,
+   "vendido_dic_anterior": 16,
+   "perdido_dic_anterior": 0.5,
+   "meta": 19,
+   "meta_vit": 0,
+   "meta_pat": 19,
+   "meta_tramo": [
+    1.2,
+    2.4,
+    9.5,
+    3.6,
+    2.4
+   ]
+  },
+  {
+   "sku": "CHF",
+   "nombre": "CHEESECAKE FRAMBUESA PN",
+   "categoria": "POSTRE",
+   "navidad": false,
+   "proveedor": true,
+   "vendido_dic_anterior": 19,
+   "perdido_dic_anterior": 0,
+   "meta": 19,
+   "meta_vit": 12,
+   "meta_pat": 7,
+   "meta_tramo": [
+    4.0,
+    1.0,
+    2.0,
+    8.0,
+    4.0
+   ]
+  },
+  {
+   "sku": "ORZO",
+   "nombre": "ORZO",
+   "categoria": "GOURMET",
+   "navidad": false,
+   "proveedor": true,
+   "vendido_dic_anterior": 17,
+   "perdido_dic_anterior": 0.1,
+   "meta": 19,
+   "meta_vit": 7,
+   "meta_pat": 12,
+   "meta_tramo": [
+    2.2,
+    2.2,
+    4.5,
+    4.5,
+    5.6
+   ]
+  },
+  {
+   "sku": "PE",
+   "nombre": "PANQUEQUE ESPINACA",
+   "categoria": "APERITIVO",
+   "navidad": false,
+   "proveedor": true,
+   "vendido_dic_anterior": 7,
+   "perdido_dic_anterior": 9.6,
+   "meta": 19,
+   "meta_vit": 7,
+   "meta_pat": 12,
+   "meta_tramo": [
+    2.4,
+    2.2,
+    3.4,
+    8.5,
+    2.5
+   ]
+  },
+  {
+   "sku": "TPP",
+   "nombre": "TALLARINES POLLO PIMENTÓN",
+   "categoria": "PLATOS DE FONDO",
+   "navidad": false,
+   "proveedor": false,
+   "vendido_dic_anterior": 8,
+   "perdido_dic_anterior": 9.1,
+   "meta": 19,
+   "meta_vit": 6,
+   "meta_pat": 13,
+   "meta_tramo": [
+    2.4,
+    2.2,
+    3.4,
+    8.5,
+    2.5
+   ]
+  },
+  {
+   "sku": "TCF",
+   "nombre": "TORTA CALUGA FRAMBUESA PN",
+   "categoria": "POSTRE",
+   "navidad": false,
+   "proveedor": true,
+   "vendido_dic_anterior": 16,
+   "perdido_dic_anterior": 0.3,
+   "meta": 18,
+   "meta_vit": 10,
+   "meta_pat": 8,
+   "meta_tramo": [
+    1.1,
+    1.1,
+    1.1,
+    10.1,
+    4.5
+   ]
+  },
+  {
+   "sku": "CAC",
+   "nombre": "CHOCLO A LA CREMA",
+   "categoria": "PLATOS DE FONDO",
+   "navidad": false,
+   "proveedor": false,
+   "vendido_dic_anterior": 0,
+   "perdido_dic_anterior": 0,
+   "meta": 17,
+   "meta_vit": 8,
+   "meta_pat": 9,
+   "meta_tramo": [
+    2.2,
+    2.0,
+    3.0,
+    7.6,
+    2.2
+   ]
+  },
+  {
+   "sku": "MIELG",
+   "nombre": "MIEL DE GRANADA",
+   "categoria": "GOURMET",
+   "navidad": false,
+   "proveedor": true,
+   "vendido_dic_anterior": 0,
+   "perdido_dic_anterior": 0,
+   "meta": 17,
+   "meta_vit": 0,
+   "meta_pat": 17,
+   "meta_tramo": [
+    2.2,
+    2.0,
+    3.0,
+    7.6,
+    2.2
+   ]
+  },
+  {
+   "sku": "P",
+   "nombre": "PACK PONDERACIONES PN",
+   "categoria": "POSTRE",
+   "navidad": false,
+   "proveedor": true,
+   "vendido_dic_anterior": 13,
+   "perdido_dic_anterior": 1.0,
+   "meta": 16,
+   "meta_vit": 8,
+   "meta_pat": 8,
+   "meta_tramo": [
+    2.0,
+    1.9,
+    2.8,
+    7.2,
+    2.1
+   ]
+  },
+  {
+   "sku": "TF",
+   "nombre": "TARTARO FILETE",
+   "categoria": "APERITIVO",
+   "navidad": false,
+   "proveedor": false,
+   "vendido_dic_anterior": 10,
+   "perdido_dic_anterior": 4.0,
+   "meta": 16,
+   "meta_vit": 5,
+   "meta_pat": 11,
+   "meta_tramo": [
+    2.0,
+    1.9,
+    2.8,
+    7.2,
+    2.1
+   ]
+  },
+  {
+   "sku": "ÑP",
+   "nombre": "ÑOQUIS PESTO TOMATE CHERRY",
+   "categoria": "PLATOS DE FONDO",
+   "navidad": false,
+   "proveedor": false,
+   "vendido_dic_anterior": 11,
+   "perdido_dic_anterior": 2.7,
+   "meta": 16,
+   "meta_vit": 7,
+   "meta_pat": 9,
+   "meta_tramo": [
+    2.0,
+    1.9,
+    2.8,
+    7.2,
+    2.1
+   ]
+  },
+  {
+   "sku": "THF",
+   "nombre": "TORTA HOJARASCA CREMA FRAMBUESA MANJAR LECHE CONDENSADA",
+   "categoria": "POSTRES",
+   "navidad": false,
+   "proveedor": true,
+   "vendido_dic_anterior": 0,
+   "perdido_dic_anterior": 0,
+   "meta": 14,
+   "meta_vit": 8,
+   "meta_pat": 6,
+   "meta_tramo": [
+    1.8,
+    1.6,
+    2.5,
+    6.3,
+    1.8
+   ]
+  },
+  {
+   "sku": "BBR",
+   "nombre": "BABY BACK RIBS",
+   "categoria": "PLATOS DE FONDO",
+   "navidad": false,
+   "proveedor": true,
+   "vendido_dic_anterior": 9,
+   "perdido_dic_anterior": 2.3,
+   "meta": 13,
+   "meta_vit": 2,
+   "meta_pat": 11,
+   "meta_tramo": [
+    1.7,
+    1.5,
+    2.3,
+    5.8,
+    1.7
+   ]
+  },
+  {
+   "sku": "LJC",
+   "nombre": "LASAÑA JAIBA CAMARON",
+   "categoria": "PLATOS DE FONDO",
+   "navidad": false,
+   "proveedor": false,
+   "vendido_dic_anterior": 10,
+   "perdido_dic_anterior": 1.3,
+   "meta": 13,
+   "meta_vit": 4,
+   "meta_pat": 9,
+   "meta_tramo": [
+    1.7,
+    1.5,
+    2.3,
+    5.8,
+    1.7
+   ]
+  },
+  {
+   "sku": "LS",
+   "nombre": "LOMO SALTADO",
+   "categoria": "PLATOS DE FONDO",
+   "navidad": false,
+   "proveedor": false,
+   "vendido_dic_anterior": 8,
+   "perdido_dic_anterior": 2.5,
+   "meta": 12,
+   "meta_vit": 7,
+   "meta_pat": 5,
+   "meta_tramo": [
+    1.5,
+    1.4,
+    2.1,
+    5.4,
+    1.6
+   ]
+  },
+  {
+   "sku": "ZEITUN",
+   "nombre": "BIDON ACEITE DE OLIVA  5 LTS",
+   "categoria": "GOURMET",
+   "navidad": false,
+   "proveedor": true,
+   "vendido_dic_anterior": 8,
+   "perdido_dic_anterior": 2.7,
+   "meta": 12,
+   "meta_vit": 2,
+   "meta_pat": 10,
+   "meta_tramo": [
+    1.5,
+    1.4,
+    2.1,
+    5.4,
+    1.6
+   ]
+  },
+  {
+   "sku": "THM",
+   "nombre": "TORTA HOJARASCA MANJAR LECHE CONDENSADA",
+   "categoria": "POSTRE",
+   "navidad": false,
+   "proveedor": true,
+   "vendido_dic_anterior": 7,
+   "perdido_dic_anterior": 2.2,
+   "meta": 11,
+   "meta_vit": 5,
+   "meta_pat": 6,
+   "meta_tramo": [
+    1.4,
+    1.3,
+    2.0,
+    4.9,
+    1.4
+   ]
+  },
+  {
+   "sku": "LSA",
+   "nombre": "LASAÑA SALMÓN",
+   "categoria": "PLATOS DE FONDO",
+   "navidad": false,
+   "proveedor": false,
+   "vendido_dic_anterior": 6,
+   "perdido_dic_anterior": 2.5,
+   "meta": 10,
+   "meta_vit": 1,
+   "meta_pat": 9,
+   "meta_tramo": [
+    1.3,
+    1.2,
+    1.8,
+    4.5,
+    1.3
+   ]
+  },
+  {
+   "sku": "PP",
+   "nombre": "PANQUEQUE PIMENTON",
+   "categoria": "APERITIVO",
+   "navidad": false,
+   "proveedor": true,
+   "vendido_dic_anterior": 8,
+   "perdido_dic_anterior": 0.3,
+   "meta": 10,
+   "meta_vit": 3,
+   "meta_pat": 7,
+   "meta_tramo": [
+    1.3,
+    1.2,
+    1.8,
+    4.5,
+    1.3
+   ]
+  },
+  {
+   "sku": "RAB",
+   "nombre": "REDUCCION DE ACETO BALSAMICO",
+   "categoria": "GOURMET",
+   "navidad": false,
+   "proveedor": true,
+   "vendido_dic_anterior": 10,
+   "perdido_dic_anterior": 0,
+   "meta": 10,
+   "meta_vit": 0,
+   "meta_pat": 10,
+   "meta_tramo": [
+    1.3,
+    1.2,
+    1.8,
+    4.5,
+    1.3
+   ]
+  },
+  {
+   "sku": "TCH",
+   "nombre": "TORTA CHOCOLATE MANJAR PN",
+   "categoria": "POSTRE",
+   "navidad": false,
+   "proveedor": true,
+   "vendido_dic_anterior": 8,
+   "perdido_dic_anterior": 0.5,
+   "meta": 10,
+   "meta_vit": 6,
+   "meta_pat": 4,
+   "meta_tramo": [
+    1.3,
+    1.2,
+    1.8,
+    4.5,
+    1.3
+   ]
+  },
+  {
+   "sku": "LM",
+   "nombre": "LASAÑA MEDITERRANEA",
+   "categoria": "PLATOS DE FONDO",
+   "navidad": false,
+   "proveedor": false,
+   "vendido_dic_anterior": 6,
+   "perdido_dic_anterior": 1.4,
+   "meta": 9,
+   "meta_vit": 3,
+   "meta_pat": 6,
+   "meta_tramo": [
+    1.2,
+    1.0,
+    1.6,
+    4.0,
+    1.2
+   ]
+  },
+  {
+   "sku": "CSA",
+   "nombre": "CHOCOLATE SEMI AMARGO",
+   "categoria": "GOURMET",
+   "navidad": false,
+   "proveedor": true,
+   "vendido_dic_anterior": 5,
+   "perdido_dic_anterior": 1.6,
+   "meta": 8,
+   "meta_vit": 2,
+   "meta_pat": 6,
+   "meta_tramo": [
+    1.0,
+    0.9,
+    1.4,
+    3.6,
+    1.0
+   ]
+  },
+  {
+   "sku": "FLOR",
+   "nombre": "FLOR DE SAL",
+   "categoria": "GOURMET",
+   "navidad": false,
+   "proveedor": true,
+   "vendido_dic_anterior": 1,
+   "perdido_dic_anterior": 4.6,
+   "meta": 7,
+   "meta_vit": 0,
+   "meta_pat": 7,
+   "meta_tramo": [
+    0.9,
+    0.8,
+    1.2,
+    3.1,
+    0.9
+   ]
+  },
+  {
+   "sku": "PRALINE",
+   "nombre": "PRALINE DE ALMENDRAS",
+   "categoria": "GOURMET",
+   "navidad": false,
+   "proveedor": true,
+   "vendido_dic_anterior": 3,
+   "perdido_dic_anterior": 1.7,
+   "meta": 6,
+   "meta_vit": 0,
+   "meta_pat": 6,
+   "meta_tramo": [
+    0.8,
+    0.7,
+    1.1,
+    2.7,
+    0.8
+   ]
+  },
+  {
+   "sku": "BADIAG",
+   "nombre": "BADIA ALIÑO GRANDE",
+   "categoria": "GOURMET",
+   "navidad": false,
+   "proveedor": true,
+   "vendido_dic_anterior": 1,
+   "perdido_dic_anterior": 3.3,
+   "meta": 5,
+   "meta_vit": 0,
+   "meta_pat": 5,
+   "meta_tramo": [
+    0.6,
+    0.6,
+    0.9,
+    2.2,
+    0.7
+   ]
+  },
+  {
+   "sku": "BA",
+   "nombre": "ALMENDRA EN BASTONCITOS",
+   "categoria": "GOURMET",
+   "navidad": false,
+   "proveedor": true,
+   "vendido_dic_anterior": 0,
+   "perdido_dic_anterior": 0,
+   "meta": 3,
+   "meta_vit": 0,
+   "meta_pat": 3,
+   "meta_tramo": [
+    0.4,
+    0.3,
+    0.5,
+    1.3,
+    0.4
+   ]
+  },
+  {
+   "sku": "SAL",
+   "nombre": "SAL EN ESCAMAS",
+   "categoria": "GOURMET",
+   "navidad": false,
+   "proveedor": true,
+   "vendido_dic_anterior": 1,
+   "perdido_dic_anterior": 1.0,
+   "meta": 3,
+   "meta_vit": 0,
+   "meta_pat": 3,
+   "meta_tramo": [
+    0.4,
+    0.3,
+    0.5,
+    1.3,
+    0.4
+   ]
+  },
+  {
+   "sku": "TABLAN",
+   "nombre": "TABLA NEGRA",
+   "categoria": "REGALOS Y TABLAS",
+   "navidad": false,
+   "proveedor": true,
+   "vendido_dic_anterior": 0,
+   "perdido_dic_anterior": 0,
+   "meta": 3,
+   "meta_vit": 0,
+   "meta_pat": 3,
+   "meta_tramo": [
+    0.4,
+    0.3,
+    0.5,
+    1.3,
+    0.4
+   ]
+  },
+  {
+   "sku": "PESTO",
+   "nombre": "PESTO SIN AJO",
+   "categoria": "GOURMET",
+   "navidad": false,
+   "proveedor": true,
+   "vendido_dic_anterior": 1,
+   "perdido_dic_anterior": 0,
+   "meta": 1,
+   "meta_vit": 0,
+   "meta_pat": 1,
+   "meta_tramo": [
+    0.1,
+    0.1,
+    0.2,
+    0.4,
+    0.1
+   ]
+  }
+ ]
+}
