@@ -19,6 +19,11 @@ ARCHIVO_VIT   = os.path.join(CARPETA, 'consolidado_productos_vitacura.xlsx')
 ARCHIVO_PAT   = os.path.join(CARPETA, 'consolidado_productos_pataguas.xlsx')
 ARCHIVO_JSON  = os.path.join(CARPETA, 'historial.json')
 ARCHIVO_HTML  = os.path.join(CARPETA, 'dashboard.html')
+# Metas del plan de producción de diciembre (lo vendido el diciembre anterior +
+# lo que se dejó de vender por quiebres). Si no existe, la pestaña queda vacía.
+ARCHIVO_META_DIC = os.path.join(CARPETA, 'meta_diciembre.json')
+# Stock de Bsale de todos los productos, lo guarda procesar() para reusarlo
+STOCK_BSALE = {}
 # Recetas: Google Sheet "La Cocina - Recetas", leída vía cuenta de servicio
 # (compartida con esa cuenta como Editor — ver crear_planilla_recetas.py).
 RECETAS_SHEET_ID = '1bzRCgI5Cs0mIvjnFvfJZiZ6K3DaNU8D69jvo0vhU49g'
@@ -70,6 +75,26 @@ COCINEROS = {
     'TCM':'ADRIANA','PCP':'JESÚS','EC':'CAROLINA','CC':'JESÚS','SSA':'JESÚS',
     'LM':'ADRIANA','CAC':'JESÚS','TPU':'ADRIANA','SA':'ADRIANA',
     'CAMAC':'CÉSAR',
+}
+# Salsas (12-ago-2026): no existen en Bsale (sin SKU propio, sin stock trackeado
+# ahí) pero acompañan a un plato específico 1 a 1. Adriana las prepara a todas,
+# sin importar quién cocine el plato. Cuando varias filas comparten la misma
+# salsa (ej. Olivo, Nikkei) el mínimo se calcula sumando esos platos.
+# Se decidió (entrevista 12-ago-2026) NO repartir por tipo la venta de "SALSA EN
+# FRASCO" (SKU SA, genérica): no hay forma de saber qué tipo se vendió suelto.
+# En su lugar el colchón semanal ya cubre esa venta en agregado (~613% de lo
+# vendido como frasco en los últimos ~27 semanas de historial — chequeado con
+# datos reales, no es un supuesto sin validar).
+SALSAS = {
+    'SLS-AJI': {'nombre': 'SALSA AJÍ AMARILLO',      'skus': ['TLS']},
+    'SLS-ACE': {'nombre': 'SALSA ACEVICHADA',        'skus': ['CL']},
+    'SLS-MYM': {'nombre': 'SALSA MOSTAZA Y MIEL',    'skus': ['RB']},
+    'SLS-OLI': {'nombre': 'SALSA AL OLIVO',          'skus': ['CP', 'TPU']},
+    'SLS-AGR': {'nombre': 'SALSA AGRIDULCE',         'skus': ['CAMA']},
+    'SLS-PES': {'nombre': 'SALSA PESTO DE RÚCULA',   'skus': ['CF']},
+    'SLS-MAL': {'nombre': 'SALSA MOSTAZA ALIMONADA', 'skus': ['TF']},
+    'SLS-ACR': {'nombre': 'SALSA ACARAMELADA',       'skus': ['LA']},
+    'SLS-NIK': {'nombre': 'SALSA NIKKEI',            'skus': ['TA', 'TS']},
 }
 MAPA = {
     'OSTION A LA PARMESANA':'OP','OSTIÓN A LA PARMESANA':'OP','OSTIONES A LA PARMESANA':'OP',
@@ -402,7 +427,9 @@ def procesar():
         pat = leer(ARCHIVO_PAT)
 
     print("Obteniendo stock desde Bsale...")
+    global STOCK_BSALE
     sb = bsale_stock()
+    STOCK_BSALE = sb
     if not sb:
         print("  Warning: sin datos Bsale")
     else:
@@ -455,10 +482,10 @@ def procesar():
         despacho      = max(0, math.ceil(vel_p * max(trepo,7)) - sp_hoy) if vel_p > 0 else 0
 
         # El semaforo mide dias de produccion: cuanto dura el stock de Vitacura
-        # al ritmo de venta de las dos tiendas (dias_prod), que es el numero que
-        # muestran los badges. No se descuenta el despacho pendiente a Pataguas
-        # — eso es informacion de despacho, no de produccion, y dejaba en 0 los
-        # dias de 11 productos con stock real, sin forma de priorizar entre ellos.
+        # al ritmo de venta de las dos tiendas (dias_prod). No se descuenta el
+        # despacho pendiente a Pataguas — eso es informacion de despacho, no de
+        # produccion, y dejaba en 0 los dias de 11 productos, sin forma de
+        # distinguir cual era mas urgente.
         if   sv_hoy == 0:                                      estado = 'sin_stock'
         elif dias_prod is not None and dias_prod <= 3:         estado = 'critico'
         elif dias_prod is not None and dias_prod <= 7:         estado = 'bajo'
@@ -490,9 +517,53 @@ def procesar():
         })
         print(f"  OK {sku} - {NOMBRES[sku][:30]}")
 
-    orden = {'sin_stock':0,'critico':1,'bajo':2,'ok':3}
+    print("Calculando salsas...")
+    resultados += calcular_salsas(resultados, recetas)
+
+    orden = {'sin_stock':0,'critico':1,'bajo':2,'ok':3,'salsa':4}
     resultados.sort(key=lambda x: (orden[x['estado']], x['dias_prod'] if x['dias_prod'] is not None else 9999))
     return resultados
+
+def buffer_semanal(vel):
+    """Una semana de venta promedio, misma lógica que sugSemana() en JS
+    (Math.max(1, Math.round(vel*7)) si hay algo de ritmo, si no 0)."""
+    if vel <= 0:
+        return 0
+    return max(1, round(vel * 7))
+
+def calcular_salsas(resultados, recetas):
+    """Salsas: no tienen SKU ni stock en Bsale, se derivan del stock/velocidad
+    de los platos que las usan. Mínimo sugerido por sucursal = stock actual del
+    plato + una semana de venta promedio (colchón que en agregado también cubre
+    la venta de "SALSA EN FRASCO" genérica, sin desglose por tipo — ver SALSAS
+    arriba). Cuando varios platos comparten salsa se suman. Sin semáforo: son
+    tarjetas informativas, no alertas de stock real."""
+    por_sku = {r['sku']: r for r in resultados}
+    salsas = []
+    for salsa_sku, info in SALSAS.items():
+        platos = [por_sku[s] for s in info['skus'] if s in por_sku]
+        if not platos:
+            continue
+        sug_vit = sum(p['vit'] + buffer_semanal(p['vel_vit']) for p in platos)
+        sug_pat = sum(p['pat'] + buffer_semanal(p['vel_pat']) for p in platos)
+        salsas.append({
+            'sku': salsa_sku, 'nombre': info['nombre'], 'cocinero': 'ADRIANA',
+            'vit': sug_vit, 'pat': sug_pat, 'total': sug_vit + sug_pat,
+            'vel_vit': 0.0, 'vel_pat': 0.0, 'vel_total': 0.0,
+            'dias_vit': None, 'dias_pat': None, 'dias_total': None, 'dias_prod': None,
+            'estado': 'salsa', 'alerta_dist': False,
+            'tiempo_repo': 0, 'pto_reorden': 0,
+            'lote_sugerido': 0, 'despacho_sug': 0,
+            'total_vit': 0, 'total_pat': 0,
+            'dias_stock_vit': 0, 'dias_stock_pat': 0,
+            'n_lotes': 0, 'prom_lote': 0,
+            'periodos_sin_stock_vit': [],
+            'lotes': [], 'movs': [], 'ventas_mes': [],
+            'receta': recetas.get(salsa_sku, []),
+            'platos_asociados': [p['nombre'] for p in platos],
+        })
+        print(f"  OK {salsa_sku} - {info['nombre'][:30]} (Vit {sug_vit} / Pat {sug_pat})")
+    return salsas
 
 ARCHIVO_HIST_PROY = os.path.join(CARPETA, 'historial_proyecciones.json')
 
@@ -793,6 +864,79 @@ def calcular_analisis():
         'ritmo': ritmo,
     }
 
+# ─── Rendimiento de producción por cocinero ─────────────────
+# Solo se cuenta la producción de VITACURA: ahí está la cocina. Las "producciones"
+# que el detector infiere en Pataguas son casi siempre la llegada de un despacho
+# de Vitacura (88% de esas unidades calzan con una guía de ±1 día — medido sobre
+# el historial completo el 19-ago-2026), así que sumarlas contaría dos veces el
+# mismo plato e inflaría el rendimiento de los cocineros.
+def calcular_produccion():
+    vacio = {'meses': [], 'cocineros': [], 'por_mes': {}}
+    if not os.path.exists(ARCHIVO_JSON):
+        return vacio
+    try:
+        with open(ARCHIVO_JSON, encoding='utf-8') as f:
+            movs = json.load(f).get('movimientos', [])
+    except Exception as e:
+        print(f'  calcular_produccion error: {e}')
+        return vacio
+
+    prod = [m for m in movs
+            if m.get('tipo') == 'produccion' and m.get('oficina') == 'VIT'
+            and m.get('sku') in NOMBRES]
+    if not prod:
+        return vacio
+
+    meses = sorted({m['fecha'][:7] for m in prod})[-12:]
+    cocineros = sorted({c for c in COCINEROS.values()})
+
+    por_mes = {}
+    for mes in meses:
+        delmes = [m for m in prod if m['fecha'][:7] == mes]
+        total  = sum(m['cantidad'] for m in delmes)
+        if total <= 0:
+            continue
+
+        # Agregado por (cocinero, sku): unidades y número de tandas
+        acum = {}
+        for m in delmes:
+            coc = COCINEROS.get(m['sku'], 'SIN ASIGNAR')
+            k   = (coc, m['sku'])
+            if k not in acum:
+                acum[k] = {'unidades': 0.0, 'tandas': 0, 'dias': set()}
+            acum[k]['unidades'] += m['cantidad']
+            acum[k]['tandas']   += 1
+            acum[k]['dias'].add(m['fecha'])
+
+        detalle = sorted(
+            [{'sku': sku, 'nombre': NOMBRES[sku], 'cocinero': coc,
+              'unidades': int(round(v['unidades'])), 'tandas': v['tandas']}
+             for (coc, sku), v in acum.items()],
+            key=lambda d: -d['unidades'])
+
+        por_coc = {}
+        for d in detalle:
+            c = por_coc.setdefault(d['cocinero'],
+                                   {'unidades': 0, 'productos': 0, 'tandas': 0, 'top': []})
+            c['unidades']  += d['unidades']
+            c['productos'] += 1
+            c['tandas']    += d['tandas']
+        for coc, c in por_coc.items():
+            c['top'] = [{'nombre': d['nombre'], 'unidades': d['unidades']}
+                        for d in detalle if d['cocinero'] == coc][:3]
+            c['dias'] = len({f for (cc, sku), v in acum.items() if cc == coc for f in v['dias']})
+
+        por_mes[mes] = {
+            'total':        int(round(total)),
+            'dias':         len({m['fecha'] for m in delmes}),
+            'productos':    len({m['sku'] for m in delmes}),
+            'por_cocinero': por_coc,
+            'detalle':      detalle,
+        }
+
+    return {'meses': [m for m in meses if m in por_mes],
+            'cocineros': cocineros, 'por_mes': por_mes}
+
 # ─── HTML (sin f-string para evitar conflictos con JS) ───────
 CSS = """
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
@@ -910,6 +1054,7 @@ select,input[type=text],input[type=number]{font-size:13px;font-weight:500;paddin
 .card.critico{border-left:6px solid #f97316}
 .card.bajo{border-left:6px solid #facc15}
 .card.ok{border-left:6px solid #e2e8f0}
+.card.salsa{border-left:6px solid #60a5fa}
 @media (hover:hover) and (pointer:fine){
   .card:hover{box-shadow:var(--shadow-lg);transform:translateY(-2px)}
 }
@@ -936,6 +1081,7 @@ select,input[type=text],input[type=number]{font-size:13px;font-weight:500;paddin
 .badge.danger{color:var(--danger-text);text-transform:lowercase}
 .badge.warning{color:var(--warn-text);text-transform:lowercase}
 .badge.ok{color:var(--ok-text);text-transform:lowercase}
+.badge.neutral{color:var(--info-text);text-transform:lowercase}
 .badge-cobertura{color:#475569}
 .badge-cobertura.alerta{color:var(--danger-text)}
 .badge-despacho.completo{color:#16a34a}
@@ -984,6 +1130,7 @@ select,input[type=text],input[type=number]{font-size:13px;font-weight:500;paddin
 .insight b{color:var(--text-color);font-weight:600}
 .insight-warn{background:var(--warn-bg);border:1px solid var(--warn-border);border-radius:12px;padding:14px 16px;font-size:12px;color:var(--warn-text);line-height:1.8;margin-bottom:10px}
 .insight-ok{background:var(--ok-bg);border:1px solid var(--ok-border);border-radius:12px;padding:14px 16px;font-size:12px;color:var(--ok-text);line-height:1.8;margin-bottom:10px}
+.insight-neutral{background:var(--info-bg);border:1px solid var(--info-border);border-radius:12px;padding:14px 16px;font-size:12px;color:var(--info-text);line-height:1.8;margin-bottom:10px}
 .insight-peligro{background:var(--danger-bg);border:1px solid var(--danger-border);border-radius:12px;padding:14px 16px;font-size:12px;color:var(--danger-text);line-height:1.8;margin-bottom:10px}
 .periodo-chip{display:inline-block;font-size:10px;padding:2px 8px;border-radius:4px;background:var(--danger-bg);color:var(--danger-text);margin:2px}
 .lote-card{background:var(--card-bg);border:1px solid var(--neutral-border);border-radius:10px;padding:10px 12px;font-size:11px;margin-bottom:6px;box-shadow:var(--shadow-sm);transition:transform 160ms var(--ease-out),box-shadow 160ms var(--ease-out)}
@@ -1072,6 +1219,39 @@ select,input[type=text],input[type=number]{font-size:13px;font-weight:500;paddin
 .lista-scroll{max-height:380px;overflow-y:auto}
 .grid-etiquetas{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:12px}
 .etiqueta-item{display:flex;align-items:center;justify-content:space-between;background:var(--neutral-bg);border:1px solid var(--neutral-border);border-radius:8px;padding:8px 12px;font-size:12px;font-weight:500}
+.grupo-tienda{display:flex;align-items:center;gap:8px;font-size:11px;font-weight:700;letter-spacing:0.04em;text-transform:uppercase;color:#64748b;margin:14px 0 8px}
+.grupo-tienda:first-child{margin-top:2px}
+.grupo-tienda::after{content:'';flex:1;height:1px;background:var(--neutral-border)}
+.grupo-tienda .grupo-count{font-weight:600;letter-spacing:0;text-transform:none;color:#94a3b8}
+/* ── Rendimiento de producción por cocinero ───────────── */
+.rend-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:16px;margin:0 20px 24px}
+.rend-card{background:var(--card-bg);border-radius:12px;padding:20px;box-shadow:var(--shadow-sm);border:var(--card-border);transition:transform 160ms var(--ease-out),box-shadow 160ms var(--ease-out)}
+@media (hover:hover) and (pointer:fine){
+  .rend-card:hover{transform:translateY(-2px);box-shadow:var(--shadow-lg)}
+}
+.rend-card-head{display:flex;align-items:baseline;justify-content:space-between;gap:8px;margin-bottom:2px}
+.rend-nombre{font-size:14px;font-weight:700;letter-spacing:-0.01em;color:var(--text-color)}
+.rend-pct{font-size:11px;font-weight:700;color:#94a3b8}
+.rend-valor{font-size:32px;font-weight:800;line-height:1.1;letter-spacing:-0.02em;color:var(--text-color)}
+.rend-valor span{font-size:13px;font-weight:600;color:#94a3b8;margin-left:4px}
+.rend-barra{height:6px;border-radius:3px;background:var(--neutral-bg);overflow:hidden;margin:10px 0 12px}
+.rend-barra-fill{height:100%;border-radius:3px;background:var(--system-green);transition:width 420ms var(--ease-out)}
+.rend-meta{font-size:11px;color:#94a3b8;margin-bottom:10px}
+.rend-delta{font-size:11px;font-weight:700}
+.rend-top{border-top:1px solid var(--neutral-border);padding-top:10px}
+.rend-top-item{display:flex;justify-content:space-between;gap:8px;font-size:12px;padding:3px 0;color:#64748b}
+.rend-top-item b{color:var(--text-color);font-weight:600;flex-shrink:0}
+.rend-top-nombre{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;text-transform:lowercase}
+.rend-top-nombre::first-letter{text-transform:uppercase}
+.rend-nota{font-size:12px;color:#64748b;line-height:1.5;margin:0 20px 16px;padding:12px 14px;background:var(--neutral-bg);border-radius:10px;border:1px solid var(--neutral-border)}
+.rend-tabla{width:100%;border-collapse:collapse;font-size:12px}
+.rend-tabla th{text-align:left;font-size:10px;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:0.06em;padding:8px 10px;border-bottom:1px solid var(--neutral-border)}
+.rend-tabla td{padding:8px 10px;border-bottom:1px solid var(--neutral-border)}
+.rend-tabla tr:last-child td{border-bottom:none}
+.rend-evo{display:flex;align-items:flex-end;gap:3px;height:38px;margin-top:8px}
+.rend-evo-bar{flex:1;background:rgba(16,185,129,0.22);border-radius:2px 2px 0 0;min-height:2px}  /* verde translucido en vez de --neutral-border: esa variable no cambia en
+     modo oscuro y las barras inactivas quedaban brillando sobre la tarjeta */
+.rend-evo-bar.act{background:var(--system-green)}
 /* ── Grid de KPIs del Resumen ──────────────────────────────── */
 .grid-resumen-kpis{display:grid;grid-template-columns:repeat(6,1fr);gap:16px;margin:0 20px 24px}
 .card-kpi-individual{background:var(--card-bg);border-radius:12px;padding:16px;box-shadow:var(--shadow-sm);border:var(--card-border);text-align:center;transition:transform 160ms var(--ease-out),box-shadow 160ms var(--ease-out)}
@@ -1321,6 +1501,7 @@ function badgeCls(p){
 
 // ── Píldora compacta de cobertura (esquina superior derecha) ──
 function badgeCobertura(p){
+  if(p.estado==='salsa') return ''; // sugerencia, no hay cobertura real que medir
   const dias = (p.dias_total !== null && p.dias_total !== undefined)
     ? Math.round(p.dias_total) : (p.total>0 ? 999 : -1);
   const label = dias < 0 ? 'Sin stock' : dias >= 30 ? '+30 días' : dias+' días';
@@ -1429,7 +1610,7 @@ function buildAnalisis(p){
   // Stock actual
   const dvt = p.vit===0?'sin stock':(p.dias_vit!==null?Math.round(p.dias_vit)+'d':'—');
   const dpt = p.pat===0?'sin stock':(p.dias_pat!==null?Math.round(p.dias_pat)+'d':'—');
-  const uc  = p.estado==='sin_stock'||p.estado==='critico'?'insight-peligro':p.estado==='bajo'?'insight-warn':'insight-ok';
+  const uc  = p.estado==='sin_stock'||p.estado==='critico'?'insight-peligro':p.estado==='bajo'?'insight-warn':p.estado==='salsa'?'insight-neutral':'insight-ok';
   h += '<div class="'+uc+'"><b>📦 Stock actual</b><br>'
     + 'Vitacura: <b>'+p.vit+' und</b> → '+dvt+' &nbsp;|&nbsp; Pataguas: <b>'+p.pat+' und</b> → '+dpt+'<br>'
     + 'Total: <b>'+p.total+' und</b> → <b>'+diasStr(p)+'</b> de cobertura</div>';
@@ -1541,19 +1722,22 @@ function renderCards(data, animate){
   const noRes = document.getElementById('no-res');
   if(!data.length){cont.innerHTML='';noRes.style.display='block';return;}
   noRes.style.display='none';
-  const EST_LBL = {sin_stock:'Sin stock', critico:'Crítico', bajo:'Bajo', ok:'OK'};
+  const EST_LBL = {sin_stock:'Sin stock', critico:'Crítico', bajo:'Bajo', ok:'OK', salsa:'Salsa'};
   cont.innerHTML = data.map(function(p,i){
     const alHtml = p.alerta_dist ? '<span class="badge badge-dist">⚠ Distribución</span>' : '';
-    const eCls = (p.estado==='sin_stock'||p.estado==='critico') ? 'danger' : p.estado==='bajo' ? 'warning' : 'ok';
+    const eCls = (p.estado==='sin_stock'||p.estado==='critico') ? 'danger' : p.estado==='bajo' ? 'warning' : p.estado==='salsa' ? 'neutral' : 'ok';
 
-    var estadoDotColor = (p.estado==='sin_stock'||p.estado==='critico') ? 'var(--danger-text)' : p.estado==='bajo' ? 'var(--warn-text)' : 'var(--ok-text)';
+    var estadoDotColor = (p.estado==='sin_stock'||p.estado==='critico') ? 'var(--danger-text)' : p.estado==='bajo' ? 'var(--warn-text)' : p.estado==='salsa' ? 'var(--info-text)' : 'var(--ok-text)';
     var revealCls = animate ? ' reveal' : '';
     var revealStyle = animate ? ' style="transition-delay:'+(Math.min(i,8)*40)+'ms"' : '';
+    var metaHtml = p.estado==='salsa'
+      ? p.sku+' · <span class="cap">'+p.cocinero+'</span> · Según stock de: '+(p.platos_asociados||[]).map(tituloCase).join(', ')
+      : p.sku+' · <span class="cap">'+p.cocinero+'</span> · Repo: '+p.tiempo_repo+'d · Reordenar en '+p.pto_reorden+' und';
     return '<div class="card '+p.estado+revealCls+'"'+revealStyle+'>'
       +'<div class="card-row" onclick="toggleCard('+i+')">'
       +  '<div class="card-info">'
       +    '<div class="card-nombre-row"><span class="estado-dot" style="background:'+estadoDotColor+'"></span><span class="card-nombre">'+tituloCase(p.nombre)+'</span> <span class="chevron" id="chev-'+i+'">▼</span></div>'
-      +    '<div class="card-meta">'+p.sku+' · <span class="cap">'+p.cocinero+'</span> · Repo: '+p.tiempo_repo+'d · Reordenar en '+p.pto_reorden+' und</div>'
+      +    '<div class="card-meta">'+metaHtml+'</div>'
       +    '<div class="card-badges">'+alHtml
       +      badgeCobertura(p)
       +      '<span class="badge '+eCls+'">'+EST_LBL[p.estado]+'</span>'
@@ -1639,8 +1823,8 @@ function toggleDarkMode(){
   localStorage.setItem('theme', activo ? 'dark' : 'light');
 }
 
-var VISTAS = ['vista-resumen','vista-productos','vista-guias','vista-analisis','vista-recetas'];
-var NAVS   = ['nav-resumen','nav-productos','nav-guias','nav-analisis','nav-recetas'];
+var VISTAS = ['vista-resumen','vista-productos','vista-guias','vista-analisis','vista-recetas','vista-rendimiento','vista-diciembre'];
+var NAVS   = ['nav-resumen','nav-productos','nav-guias','nav-analisis','nav-recetas','nav-rendimiento','nav-diciembre'];
 function switchVista(vistaId, navId, cb){
   VISTAS.forEach(function(v){document.getElementById(v).style.display='none';});
   NAVS.forEach(function(n){document.getElementById(n).classList.remove('nav-active');});
@@ -1666,6 +1850,165 @@ function mostrarAnalisis(){
   });
 }
 function mostrarRecetas(){ switchVista('vista-recetas','nav-recetas', function(){ renderProduccion(DATA); }); }
+function mostrarRendimiento(){
+  switchVista('vista-rendimiento','nav-rendimiento', function(){
+    if(!REND_MES && PROD_DATA.meses && PROD_DATA.meses.length > 0){
+      REND_MES = PROD_DATA.meses[PROD_DATA.meses.length - 1];
+    }
+    renderRendimiento();
+  });
+}
+
+// ── Diciembre: meta del mes − ventas de diciembre − stock = falta producir ──
+var DIC_F = 'falta', DIC_O = '', DIC_C = '', DIC_SORT = {k:'falta', dir:-1};
+var DIC_STOP = {de:1,del:1,la:1,el:1,los:1,las:1,con:1,y:1,a:1,al:1,en:1,para:1};
+function mostrarDiciembre(){ switchVista('vista-diciembre','nav-diciembre', renderDiciembre); }
+function setDicFiltro(b){
+  DIC_F = b.getAttribute('data-f');
+  document.querySelectorAll('#dic-chips-estado .chip').forEach(function(c){ c.classList.toggle('chip-active', c===b); });
+  renderDiciembre();
+}
+function setDicOrigen(b){
+  DIC_O = b.getAttribute('data-o');
+  document.querySelectorAll('#dic-chips-origen .chip').forEach(function(c){ c.classList.toggle('chip-active', c===b); });
+  renderDiciembre();
+}
+function setDicCocinero(b){
+  DIC_C = b.getAttribute('data-c');
+  renderDiciembre();
+}
+function dicChipsCocinero(D){
+  // Un chip por cocinero con lo que le falta producir; proveedor y sin asignar al final
+  var orden = Object.keys(D.por_cocinero).sort(function(a,b){
+    var ra = (a==='PROVEEDOR'?2:a==='SIN ASIGNAR'?1:0), rb = (b==='PROVEEDOR'?2:b==='SIN ASIGNAR'?1:0);
+    return ra - rb || a.localeCompare(b, 'es');
+  });
+  var chip = function(c, txt){
+    return '<button class="chip'+(DIC_C===c?' chip-active':'')+'" data-c="'+c+'" onclick="setDicCocinero(this)">'+txt+'</button>';
+  };
+  document.getElementById('dic-chips-cocinero').innerHTML = chip('', '👨‍🍳 Todos')
+    + orden.map(function(c){
+        var x = D.por_cocinero[c];
+        return chip(c, tituloCase(c)+' <b>'+Number(x.falta).toLocaleString('es-CL')+'</b>');
+      }).join('');
+}
+function setDicOrden(k){
+  // Texto: primero A→Z. Números: primero de menor a mayor. Segundo clic invierte.
+  if(DIC_SORT.k === k){ DIC_SORT.dir = -DIC_SORT.dir; } else { DIC_SORT.k = k; DIC_SORT.dir = 1; }
+  renderDiciembre();
+}
+function dicPalabras(q){
+  return norm(q || '').split(' ').map(function(w){ return w.replace(/[^a-z0-9]/g,''); })
+    .filter(function(w){ return w && !DIC_STOP[w]; });
+}
+function renderDiciembre(){
+  var nota = document.getElementById('dic-nota');
+  var D = DIC_DATA;
+  if(!D){
+    nota.innerHTML = 'No hay plan de diciembre cargado (falta el archivo <b>meta_diciembre.json</b>).';
+    document.getElementById('dic-metricas').innerHTML = '';
+    document.getElementById('dic-tabla').innerHTML = '';
+    return;
+  }
+  var T = D.tot;
+  var fmt = function(n){ return Number(n).toLocaleString('es-CL'); };
+  nota.innerHTML = D.antes_de_diciembre
+    ? '<b>Producción de diciembre '+D.anio+'.</b> La meta de cada producto es lo vendido el diciembre anterior más lo que se dejó de vender por quiebres. '
+      +'<b>Falta producir</b> = meta − stock de hoy en Bsale. Ojo: antes del 1 de diciembre, parte de ese stock todavía se va a vender en noviembre, '
+      +'así que la cifra exacta es la del 1 de diciembre. <b>Próxima semana</b> = lo que falta para vender del 1 al '+D.hasta_dia+' de diciembre.'
+    : '<b>Producción de diciembre '+D.anio+'.</b> <b>Falta producir</b> = meta − lo ya vendido en diciembre − stock de hoy en Bsale. '
+      +'<b>Próxima semana</b> = lo que falta para cubrir las ventas hasta el '+D.hasta_dia+' de diciembre. Se actualiza todos los días.';
+  var pct = T.meta ? Math.round(T.vendido / T.meta * 100) : 0;
+  document.getElementById('dic-metricas').innerHTML =
+     '<div class="metrica"><div class="metrica-label">Meta del mes</div>'
+    +'<div class="metrica-valor activo">'+fmt(T.meta)+'</div>'
+    +'<div class="metrica-sub">'+T.productos+' productos · '+T.cubiertos+' ya cubiertos</div></div>'
+    +'<div class="metrica"><div class="metrica-label">Vendido en diciembre</div>'
+    +'<div class="metrica-valor activo">'+fmt(T.vendido)+'</div>'
+    +'<div class="metrica-sub">'+pct+'% de la meta</div></div>'
+    +'<div class="metrica"><div class="metrica-label">Falta producir</div>'
+    +'<div class="metrica-valor activo" style="color:var(--warn-text)">'+fmt(T.falta_cocina)+'</div>'
+    +'<div class="metrica-sub">cocina · y '+fmt(T.falta_prov)+' por comprar a proveedor</div></div>'
+    +'<div class="metrica"><div class="metrica-label">Para la próxima semana</div>'
+    +'<div class="metrica-valor activo" style="color:var(--danger-text)">'+fmt(T.proxima)+'</div>'
+    +'<div class="metrica-sub">para vender hasta el '+D.hasta_dia+' de dic. · enviar a Pataguas '+fmt(T.enviar_pat)+'</div></div>';
+
+  dicChipsCocinero(D);
+  var ws = dicPalabras(document.getElementById('dic-buscar').value);
+  var rs = D.filas.filter(function(x){
+    if(ws.length){
+      var h = norm(x.nombre+' '+x.sku);
+      if(!ws.every(function(w){ return h.indexOf(w) >= 0; })) return false;
+    } else {
+      if(DIC_F==='falta' && x.estado==='cubierto') return false;
+      if(DIC_F==='urgente' && !(x.proxima > 0)) return false;
+      if(DIC_F==='cubierto' && x.estado!=='cubierto') return false;
+    }
+    if(DIC_O==='cocina' && x.proveedor) return false;
+    if(DIC_O==='proveedor' && !x.proveedor) return false;
+    if(DIC_O==='navidad' && !x.navidad) return false;
+    if(DIC_C && x.cocinero!==DIC_C) return false;
+    return true;
+  });
+  var k = DIC_SORT.k, dir = DIC_SORT.dir;
+  rs.sort(function(a,b){
+    if(k==='cocinero') return dir * a.cocinero.localeCompare(b.cocinero, 'es', {sensitivity:'base'}) || a.nombre.localeCompare(b.nombre, 'es');
+    if(k==='nombre') return dir * a.nombre.localeCompare(b.nombre, 'es', {sensitivity:'base'});
+    return dir * (a[k] - b[k]) || a.nombre.localeCompare(b.nombre, 'es');
+  });
+
+  var EST = {
+    sin_stock: '<span class="badge danger">sin stock</span>',
+    urgente:   '<span class="badge warning">próxima semana</span>',
+    pendiente: '<span class="badge neutral">más adelante</span>',
+    cubierto:  '<span class="badge ok">cubierto</span>'
+  };
+  var th = function(key, txt, der){
+    var on = DIC_SORT.k===key, flecha = on ? (DIC_SORT.dir>0 ? ' ▲' : ' ▼') : '';
+    return '<th style="cursor:pointer;white-space:nowrap'+(der?';text-align:right':'')+(on?';color:var(--ok-text)':'')+'" onclick="setDicOrden(\\''+key+'\\')">'+txt+flecha+'</th>';
+  };
+  var num = function(v, extra){
+    return '<td style="text-align:right'+(extra||'')+'"'+(v ? '' : ' class="num-zero"')+'>'+fmt(v)+'</td>';
+  };
+  var filas = rs.map(function(x){
+    var tags = (x.proveedor ? ' <span class="sku-tag" style="color:var(--info-text);font-size:10px">PROVEEDOR</span>' : '')
+             + (x.navidad ? ' <span class="sku-tag" style="color:var(--danger-text);font-size:10px">NAVIDAD</span>' : '');
+    return '<tr><td><b>'+tituloCase(x.nombre)+'</b> <span class="sku-tag" style="color:#aaa;font-size:10px">'+x.sku+'</span>'+tags+'</td>'
+      + '<td style="white-space:nowrap'+(x.cocinero==='SIN ASIGNAR'?';color:var(--danger-text)':'')+'">'+(x.cocinero==='PROVEEDOR'?'—':tituloCase(x.cocinero))+'</td>'
+      + num(x.meta) + num(x.vendido) + num(x.queda)
+      + num(x.stock_vit) + num(x.stock_pat)
+      + num(x.falta, ';font-weight:700;font-size:15px')
+      + num(x.enviar_pat) + num(x.proxima, ';font-weight:600')
+      + '<td style="white-space:nowrap">'+EST[x.estado]+'</td></tr>';
+  }).join('');
+  var sum = function(c){ return rs.reduce(function(a,x){ return a + x[c]; }, 0); };
+  var pie = rs.length
+    ? '<tr style="border-top:2px solid var(--border-color)"><td><b>Total ('+rs.length+' productos)</b></td><td></td>'
+      + num(sum('meta'),';font-weight:700') + num(sum('vendido'),';font-weight:700') + num(sum('queda'),';font-weight:700')
+      + num(sum('stock_vit'),';font-weight:700') + num(sum('stock_pat'),';font-weight:700')
+      + num(sum('falta'),';font-weight:800;font-size:15px') + num(sum('enviar_pat'),';font-weight:700')
+      + num(sum('proxima'),';font-weight:700') + '<td></td></tr>'
+    : '<tr><td colspan="11" style="padding:20px;color:#94a3b8">No hay productos que coincidan.</td></tr>';
+  var orden = (k==='nombre'||k==='cocinero' ? (dir>0?'A a la Z':'Z a la A') : (dir>0?'de menor a mayor':'de mayor a menor'));
+  document.getElementById('dic-tabla').innerHTML =
+     '<details class="tabla-ayuda"><summary>ℹ️ ¿Cómo leer esta tabla?</summary><ul>'
+    +'<li><strong>Meta:</strong> unidades a vender en diciembre (lo vendido el diciembre anterior + lo perdido por quiebres + 10% en los que se quebraron).</li>'
+    +'<li><strong>Queda:</strong> meta − lo ya vendido en diciembre.</li>'
+    +'<li><strong>Falta producir:</strong> queda − stock de Vitacura y Pataguas. En productos de proveedor es lo que falta comprar.</li>'
+    +'<li><strong>Enviar a Pataguas:</strong> lo que Pataguas necesita para su parte de la meta y no tiene en stock.</li>'
+    +'<li><strong>Próxima semana:</strong> lo que falta para cubrir las ventas hasta el '+D.hasta_dia+' de diciembre. Es lo más urgente.</li>'
+    +'<li><strong>Cocinero:</strong> quién lo produce. Los chips de arriba muestran cuánto le falta producir a cada uno. <span style="color:var(--danger-text)">Sin asignar</span> = producto que todavía no tiene cocinero.</li>'
+    +'<li>Toca el título de una columna para ordenar. La búsqueda no distingue tildes y mira todos los productos.</li>'
+    +'</ul></details>'
+    +'<div style="font-size:11px;color:#94a3b8;margin:4px 0 8px">'+rs.length+' productos · ordenado por '
+    +({nombre:'producto',cocinero:'cocinero',meta:'meta',vendido:'vendido',queda:'queda',stock_vit:'stock Vitacura',stock_pat:'stock Pataguas',falta:'falta producir',enviar_pat:'enviar a Pataguas',proxima:'próxima semana'})[k]
+    +' ('+orden+')'+(ws.length ? ' · la búsqueda ignora el filtro de estado' : '')+'</div>'
+    +'<table class="rend-tabla"><thead><tr>'
+    + th('nombre','Producto') + th('cocinero','Cocinero') + th('meta','Meta',1) + th('vendido','Vendido',1) + th('queda','Queda',1)
+    + th('stock_vit','Stock Vit.',1) + th('stock_pat','Stock Pat.',1) + th('falta','Falta producir',1)
+    + th('enviar_pat','Enviar a Pat.',1) + th('proxima','Próx. semana',1) + '<th>Estado</th>'
+    +'</tr></thead><tbody>'+filas+pie+'</tbody></table>';
+}
 
 // ── Producción: planificador semanal con recetas ─────────────
 // El usuario decide cuánto producir de cada producto (la sugerencia semanal es
@@ -1729,7 +2072,7 @@ function renderProduccion(data, animate){
       +    '<div class="card-nombre-row"><span class="card-nombre">'+tituloCase(p.nombre)+'</span> <span class="chevron" id="pchev-'+p.sku+'">▼</span></div>'
       +    '<div class="card-meta">'+meta+'</div>'
       +  '</div>'
-      +  '<span class="prod-sug" title="Ventas de una semana al ritmo actual">sug. '+sugSemana(p)+'/sem</span>'
+      +  (p.estado==='salsa' ? '' : '<span class="prod-sug" title="Ventas de una semana al ritmo actual">sug. '+sugSemana(p)+'/sem</span>')
       +  '<div class="stepper" onclick="event.stopPropagation()">'
       +    '<button type="button" data-sku="'+p.sku+'" onclick="prodPaso(this,-1)">−</button>'
       +    '<input type="number" min="0" inputmode="numeric" id="qty-'+p.sku+'" data-sku="'+p.sku+'" value="'+(val||'')+'" placeholder="0"'+(val?' class="tiene-valor"':'')+' oninput="prodSetQty(this)">'
@@ -2370,6 +2713,132 @@ function renderTablaContrib(d){
   document.getElementById('ana-tabla').innerHTML = ayuda + html;
 }
 
+// ── Rendimiento de producción por cocinero ──────────────────
+var REND_MES = '';
+
+function seleccionarMesRend(mes){
+  REND_MES = mes;
+  renderRendimiento();
+}
+
+function renderChipsRend(){
+  var meses = PROD_DATA.meses || [];
+  var html = '';
+  for(var i = meses.length - 1; i >= 0; i--){
+    var m = meses[i];
+    var cls = m === REND_MES ? 'chip chip-active' : 'chip';
+    html += '<button class="'+cls+'" data-mes="'+m+'" onclick="seleccionarMesRend(this.dataset.mes)">'+mesLabel(m)+'</button>';
+  }
+  document.getElementById('rend-chips').innerHTML = html;
+}
+
+function mesPrevioRend(mes){
+  var meses = PROD_DATA.meses || [];
+  var i = meses.indexOf(mes);
+  return i > 0 ? meses[i-1] : null;
+}
+
+function renderRendimiento(){
+  renderChipsRend();
+  var d = (PROD_DATA.por_mes || {})[REND_MES];
+  if(!d){
+    document.getElementById('rend-metricas').innerHTML = '';
+    document.getElementById('rend-cocineros').innerHTML =
+      '<div style="padding:24px 16px;color:#999;font-size:13px">Sin producción registrada en el período.</div>';
+    document.getElementById('rend-tabla').innerHTML = '';
+    return;
+  }
+
+  // Métricas del mes
+  var porDia = d.dias > 0 ? Math.round(d.total / d.dias) : 0;
+  document.getElementById('rend-metricas').innerHTML =
+     '<div class="metrica"><div class="metrica-label">Total producido</div>'
+    +'<div class="metrica-valor activo">'+d.total.toLocaleString('es-CL')+'</div>'
+    +'<div class="metrica-sub">unidades en '+mesLabel(REND_MES)+'</div></div>'
+    +'<div class="metrica"><div class="metrica-label">Días con producción</div>'
+    +'<div class="metrica-valor activo">'+d.dias+'</div>'
+    +'<div class="metrica-sub">'+porDia+' un. por día en promedio</div></div>'
+    +'<div class="metrica"><div class="metrica-label">Productos distintos</div>'
+    +'<div class="metrica-valor activo">'+d.productos+'</div>'
+    +'<div class="metrica-sub">recetas elaboradas</div></div>'
+    +'<div class="metrica"><div class="metrica-label">Cocineros activos</div>'
+    +'<div class="metrica-valor activo">'+Object.keys(d.por_cocinero).length+'</div>'
+    +'<div class="metrica-sub">con producción en el mes</div></div>';
+
+  // Tarjeta por cocinero, de mayor a menor
+  var prevKey = mesPrevioRend(REND_MES);
+  var prev    = prevKey ? (PROD_DATA.por_mes[prevKey] || {}).por_cocinero : null;
+  var lista = Object.keys(d.por_cocinero).map(function(c){
+    var o = d.por_cocinero[c]; o.nombre = c; return o;
+  }).sort(function(a,b){return b.unidades - a.unidades;});
+  var maxU = lista.length ? lista[0].unidades : 0;
+
+  document.getElementById('rend-cocineros').innerHTML = lista.map(function(c){
+    var pct   = d.total > 0 ? Math.round(c.unidades / d.total * 100) : 0;
+    var ancho = maxU > 0 ? Math.round(c.unidades / maxU * 100) : 0;
+
+    var delta = '';
+    if(prev && prev[c.nombre] && prev[c.nombre].unidades > 0){
+      var dif = Math.round((c.unidades - prev[c.nombre].unidades) / prev[c.nombre].unidades * 100);
+      var col = dif >= 0 ? 'var(--ok-text)' : 'var(--warn-text)';
+      delta = ' · <span class="rend-delta" style="color:'+col+'">'
+        +(dif>=0?'+':'')+dif+'% vs '+mesLabel(prevKey).split(' ')[0].toLowerCase()+'</span>';
+    }
+
+    // Evolución del cocinero mes a mes
+    var serie = (PROD_DATA.meses||[]).map(function(m){
+      var pm = PROD_DATA.por_mes[m];
+      return (pm && pm.por_cocinero[c.nombre]) ? pm.por_cocinero[c.nombre].unidades : 0;
+    });
+    var maxS = Math.max.apply(null, serie.concat([1]));
+    var evo = '<div class="rend-evo">'
+      + serie.map(function(v,i){
+          var act = PROD_DATA.meses[i] === REND_MES ? ' act' : '';
+          return '<div class="rend-evo-bar'+act+'" style="height:'+Math.max(2,Math.round(v/maxS*38))+'px"'
+            +' title="'+mesLabel(PROD_DATA.meses[i])+': '+v+' un."></div>';
+        }).join('')
+      + '</div>';
+
+    var top = c.top.map(function(t){
+      return '<div class="rend-top-item"><span class="rend-top-nombre">'+tituloCase(t.nombre)+'</span>'
+        +'<b>'+t.unidades+'</b></div>';
+    }).join('');
+
+    return '<div class="rend-card">'
+      +'<div class="rend-card-head"><span class="rend-nombre">'+tituloCase(c.nombre)+'</span>'
+      +'<span class="rend-pct">'+pct+'% del mes</span></div>'
+      +'<div class="rend-valor">'+c.unidades.toLocaleString('es-CL')+'<span>un.</span></div>'
+      +'<div class="rend-barra"><div class="rend-barra-fill" style="width:'+ancho+'%"></div></div>'
+      +'<div class="rend-meta">'+c.productos+' producto'+(c.productos===1?'':'s')
+      +' · '+c.dias+' día'+(c.dias===1?'':'s')+delta+'</div>'
+      +'<div class="rend-top">'+top+'</div>'
+      + evo
+      +'</div>';
+  }).join('');
+
+  // Tabla de detalle
+  var filas = d.detalle.map(function(r){
+    var pct = d.total > 0 ? (r.unidades / d.total * 100) : 0;
+    return '<tr><td class="rend-top-nombre">'+tituloCase(r.nombre)
+      +'<span class="sku-tag" style="color:#aaa;font-size:10px;margin-left:4px">'+r.sku+'</span></td>'
+      +'<td style="color:#64748b">'+tituloCase(r.cocinero)+'</td>'
+      +'<td style="text-align:right;font-weight:600">'+r.unidades+'</td>'
+      +'<td style="text-align:right;color:#94a3b8">'+r.tandas+'</td>'
+      +'<td style="text-align:right;color:#94a3b8">'+pct.toFixed(1)+'%</td></tr>';
+  }).join('');
+  document.getElementById('rend-tabla').innerHTML =
+     '<details class="tabla-ayuda"><summary>ℹ️ ¿Cómo leer esta tabla?</summary><ul>'
+    +'<li><strong>Unidades:</strong> total producido de ese plato en el mes, en Vitacura.</li>'
+    +'<li><strong>Tandas:</strong> en cuántas veces distintas se produjo. 60 unidades en 3 tandas '
+    +'son lotes grandes; 60 en 20 tandas es producción de a poco, casi diaria.</li>'
+    +'<li><strong>Cocinero:</strong> quien tiene asignada esa receta. Es una asignación fija por '
+    +'producto, no un registro de quién cocinó ese día en particular.</li>'
+    +'</ul></details>'
+    +'<table class="rend-tabla"><thead><tr><th>Producto</th><th>Cocinero</th>'
+    +'<th style="text-align:right">Unidades</th><th style="text-align:right">Tandas</th>'
+    +'<th style="text-align:right">% del mes</th></tr></thead><tbody>'+filas+'</tbody></table>';
+}
+
 // ── Alertas de cuadratura de stock ─────────────────────────
 function nombreSku(sku){
   var p = DATA.find(function(x){return x.sku===sku;});
@@ -2399,14 +2868,21 @@ function renderAlertas(){
     elSal.innerHTML = '';
   }
   if((ALERTAS.entradas||[]).length>0){
-    var items2 = ALERTAS.entradas.map(function(a){
-      return '<div class="etiqueta-item"><span class="res-item-nombre">'+tituloCase(nombreSku(a.sku))
-        +' <span style="color:#94a3b8;font-size:10px">('+(a.oficina==='VIT'?'Vitacura':'Pataguas')+')</span></span>'
-        +'<span style="color:var(--ok-text);font-weight:700;flex-shrink:0;margin-left:8px">+'+Math.round(a.cantidad)+' und</span></div>';
+    // Agrupadas por tienda: primero Vitacura, luego Pataguas
+    var grupos = [['VIT','Vitacura'],['PAT','Pataguas']];
+    var items2 = grupos.map(function(g){
+      var deTienda = ALERTAS.entradas.filter(function(a){return a.oficina===g[0];});
+      if(deTienda.length===0) return '';
+      var filas = deTienda.map(function(a){
+        return '<div class="etiqueta-item"><span class="res-item-nombre">'+tituloCase(nombreSku(a.sku))+'</span>'
+          +'<span style="color:var(--ok-text);font-weight:700;flex-shrink:0;margin-left:8px">+'+Math.round(a.cantidad)+' und</span></div>';
+      }).join('');
+      return '<div class="grupo-tienda">'+g[1]+' <span class="grupo-count">('+deTienda.length+')</span></div>'
+        +'<div class="grid-etiquetas">'+filas+'</div>';
     }).join('');
     elRec.innerHTML = '<div class="card-master"><div class="res-card-title">Recepciones detectadas — '+fechaES(ALERTAS.fecha||'')+'</div>'
       +'<div class="card-master-desc">El stock subió: se registraron como producción del día. Normal si hubo recepción.</div>'
-      +'<div class="lista-scroll"><div class="grid-etiquetas">'+items2+'</div></div></div>';
+      +'<div class="lista-scroll">'+items2+'</div></div>';
   } else {
     elRec.innerHTML = '<div class="card-master"><div class="res-card-title">Recepciones detectadas</div>'
       +'<div style="color:#94a3b8;font-size:13px;padding:8px 0">Sin recepciones hoy.</div></div>';
@@ -2500,7 +2976,7 @@ function buildMesesOpts(){
 }
 function renderRanking(){
   var mes = document.getElementById('r-mes').value;
-  var ranked = DATA.map(function(p){
+  var ranked = DATA.filter(function(p){return p.estado!=='salsa';}).map(function(p){
     var vit=0, pat=0;
     (p.ventas_mes||[]).forEach(function(m){
       if(!mes||m.mes===mes){vit+=m.vit; pat+=m.pat;}
@@ -2985,6 +3461,8 @@ HTML_TEMPLATE = """<!DOCTYPE html>
   <button class="navtab" id="nav-guias" onclick="mostrarGuias()">Guías</button>
   <button class="navtab" id="nav-analisis" onclick="mostrarAnalisis()">Análisis</button>
   <button class="navtab" id="nav-recetas" onclick="mostrarRecetas()">Producción</button>
+  <button class="navtab" id="nav-rendimiento" onclick="mostrarRendimiento()">Rendimiento</button>
+  <button class="navtab" id="nav-diciembre" onclick="mostrarDiciembre()">Diciembre</button>
 </nav>
 
 <!-- VISTA RESUMEN -->
@@ -3168,6 +3646,54 @@ HTML_TEMPLATE = """<!DOCTYPE html>
 
 </div>
 
+<!-- VISTA RENDIMIENTO (cuánto produjo cada cocinero por mes) -->
+<div id="vista-rendimiento" style="display:none">
+  <div class="ana-chips" id="rend-chips"></div>
+  <div class="rend-nota">
+    Unidades producidas en <strong>Vitacura</strong>, que es donde está la cocina. Cada plato se
+    atribuye al cocinero a cargo de esa receta. Las entradas de Pataguas no se cuentan: son
+    despachos que llegaron desde Vitacura, no producción nueva.
+  </div>
+  <div class="metricas" id="rend-metricas"></div>
+  <div class="rend-grid" id="rend-cocineros"></div>
+  <div class="ana-section ana-section-full">
+    <div class="ana-section-title">Detalle por producto</div>
+    <div class="tabla-wrap table-container-responsive">
+      <div id="rend-tabla"></div>
+    </div>
+  </div>
+</div>
+
+<!-- VISTA DICIEMBRE (meta del mes − ventas de diciembre − stock = lo que falta producir) -->
+<div id="vista-diciembre" style="display:none">
+  <div class="rend-nota" id="dic-nota"></div>
+  <div class="metricas" id="dic-metricas"></div>
+  <div class="toolbar">
+    <div class="search-wrap">
+      <span class="search-ico">🔍</span>
+      <input type="text" id="dic-buscar" placeholder="Buscar producto o código..." oninput="renderDiciembre()">
+    </div>
+    <div class="chips" id="dic-chips-estado">
+      <button class="chip chip-active" data-f="falta" onclick="setDicFiltro(this)">Falta producir</button>
+      <button class="chip" data-f="urgente" onclick="setDicFiltro(this)">Para la próxima semana</button>
+      <button class="chip" data-f="cubierto" onclick="setDicFiltro(this)">Cubiertos</button>
+      <button class="chip" data-f="todos" onclick="setDicFiltro(this)">Todos</button>
+    </div>
+    <div class="chips" id="dic-chips-origen">
+      <button class="chip chip-active" data-o="" onclick="setDicOrigen(this)">Cocina y proveedor</button>
+      <button class="chip" data-o="cocina" onclick="setDicOrigen(this)">Cocina</button>
+      <button class="chip" data-o="proveedor" onclick="setDicOrigen(this)">Proveedor</button>
+      <button class="chip" data-o="navidad" onclick="setDicOrigen(this)">Solo Navidad</button>
+    </div>
+    <div class="chips" id="dic-chips-cocinero"></div>
+  </div>
+  <div class="ana-section" style="padding:12px">
+    <div class="tabla-wrap table-container-responsive">
+      <div id="dic-tabla"></div>
+    </div>
+  </div>
+</div>
+
 <!-- VISTA PRODUCCIÓN (planificador semanal con recetas) -->
 <div id="vista-recetas" style="display:none">
   <div class="prod-explica">
@@ -3248,14 +3774,115 @@ HTML_TEMPLATE = """<!DOCTYPE html>
 const DATA = DATA_PLACEHOLDER;
 const ALERTAS = ALERTAS_PLACEHOLDER;
 const ANA_DATA = ANA_DATA_PLACEHOLDER;
+const PROD_DATA = PROD_DATA_PLACEHOLDER;
+const DIC_DATA = DIC_DATA_PLACEHOLDER;
 JS_PLACEHOLDER
 </script>
 </body>
 </html>"""
 
-def generar_html(datos, fecha_str, analisis=None, ultimo_update_str=None):
+# ─── PRODUCCIÓN DE DICIEMBRE ─────────────────────────────────
+# Meta del mes (meta_diciembre.json) menos lo ya vendido en diciembre menos el
+# stock actual de Bsale = lo que falta producir (o comprar, si es de proveedor).
+# Antes del 1 de diciembre no hay ventas que descontar: falta = meta − stock.
+def calcular_diciembre_desde(meta, ventas, stock, hoy):
+    """Cálculo puro. ventas: {(sku, 'VIT'|'PAT'): unidades vendidas en diciembre}.
+    stock: {sku: {'vit': n, 'pat': n}}. hoy: pd.Timestamp sin zona horaria."""
+    anio   = meta['anio']
+    tramos = meta['tramos']
+    ini    = pd.Timestamp(anio, 12, 1)
+    fin    = pd.Timestamp(anio, 12, 31)
+    # Tramo que hay que dejar cubierto: el siguiente al de hoy (antes de
+    # diciembre, el primero; desde el 25, el último).
+    if hoy < ini:
+        hasta = 0
+    elif hoy > fin:
+        hasta = len(tramos) - 1
+    else:
+        actual = next(i for i, t in enumerate(tramos) if t['desde'] <= hoy.day <= t['hasta'])
+        hasta  = min(actual + 1, len(tramos) - 1)
+    t_hasta = tramos[hasta]
+
+    filas = []
+    for p in meta['productos']:
+        sku = p['sku']
+        vv  = ventas.get((sku, 'VIT'), 0); vp = ventas.get((sku, 'PAT'), 0)
+        st  = stock.get(sku, {'vit': 0, 'pat': 0})
+        sv  = max(0, st.get('vit', 0) or 0); spa = max(0, st.get('pat', 0) or 0)
+        vend  = vv + vp
+        queda = max(0, p['meta'] - vend)
+        falta = max(0, queda - sv - spa)
+        # Pataguas: su parte de la meta que todavía no tiene en su stock
+        enviar_pat = max(0, max(0, p['meta_pat'] - vp) - spa)
+        # Lo necesario para cubrir hasta el fin del próximo tramo
+        meta_hasta = sum(p['meta_tramo'][:hasta + 1])
+        proxima = max(0, round(meta_hasta - vend - sv - spa))
+        if falta <= 0:
+            estado = 'cubierto'
+        elif sv + spa <= 0:
+            estado = 'sin_stock'
+        elif proxima > 0:
+            estado = 'urgente'
+        else:
+            estado = 'pendiente'
+        # Cocinero: el del plan de diciembre si lo trae (productos de Navidad),
+        # si no el del resto del dashboard. Proveedor no tiene cocinero.
+        if p['proveedor']:
+            cocinero = 'PROVEEDOR'
+        else:
+            cocinero = p.get('cocinero') or COCINEROS.get(sku.upper()) or 'SIN ASIGNAR'
+        filas.append({
+            'sku': sku, 'nombre': p['nombre'], 'categoria': p['categoria'], 'cocinero': cocinero,
+            'navidad': p['navidad'], 'proveedor': p['proveedor'],
+            'meta': p['meta'], 'meta_vit': p['meta_vit'], 'meta_pat': p['meta_pat'],
+            'vendido': round(vend), 'queda': round(queda),
+            'stock_vit': round(sv), 'stock_pat': round(spa),
+            'falta': round(falta), 'enviar_pat': round(enviar_pat),
+            'proxima': proxima, 'estado': estado,
+        })
+    tot = lambda k, f=lambda x: True: sum(x[k] for x in filas if f(x))
+    return {
+        'anio': anio,
+        'antes_de_diciembre': bool(hoy < ini),
+        'tramo_hasta': f"{t_hasta['desde']}–{t_hasta['hasta']} dic",
+        'hasta_dia': t_hasta['hasta'],
+        'filas': filas,
+        'tot': {
+            'meta': tot('meta'), 'vendido': tot('vendido'), 'queda': tot('queda'),
+            'stock': sum(x['stock_vit'] + x['stock_pat'] for x in filas),
+            'falta_cocina': tot('falta', lambda x: not x['proveedor']),
+            'falta_prov': tot('falta', lambda x: x['proveedor']),
+            'proxima': tot('proxima'), 'enviar_pat': tot('enviar_pat'),
+            'cubiertos': sum(1 for x in filas if x['estado'] == 'cubierto'),
+            'productos': len(filas),
+        },
+        'por_cocinero': {c: {'falta': tot('falta', lambda x: x['cocinero'] == c),
+                             'proxima': tot('proxima', lambda x: x['cocinero'] == c),
+                             'productos': sum(1 for x in filas if x['cocinero'] == c and x['falta'] > 0)}
+                         for c in sorted({x['cocinero'] for x in filas})},
+    }
+
+def calcular_diciembre(stock, hoy=None):
+    """Lee las metas y las ventas de diciembre del historial."""
+    if not os.path.exists(ARCHIVO_META_DIC):
+        return None
+    meta = json.load(open(ARCHIVO_META_DIC, encoding='utf-8'))
+    hoy  = hoy if hoy is not None else _HOY
+    ventas = {}
+    if os.path.exists(ARCHIVO_JSON):
+        prefijo = f"{meta['anio']}-12-"
+        with open(ARCHIVO_JSON, encoding='utf-8') as f:
+            for m in json.load(f).get('movimientos', []):
+                if m.get('tipo') == 'venta' and str(m.get('fecha', '')).startswith(prefijo):
+                    k = (str(m['sku']).strip().upper(), m['oficina'])
+                    ventas[k] = ventas.get(k, 0) + float(m.get('cantidad', 0) or 0)
+    return calcular_diciembre_desde(meta, ventas, stock, hoy)
+
+def generar_html(datos, fecha_str, analisis=None, ultimo_update_str=None, produccion=None, diciembre=None):
     data_json    = json.dumps(datos, ensure_ascii=False)
+    prod_json = json.dumps(produccion or {'meses': [], 'cocineros': [], 'por_mes': {}}, ensure_ascii=False)
     analisis_json = json.dumps(analisis or {}, ensure_ascii=False)
+    dic_json = json.dumps(diciembre, ensure_ascii=False) if diciembre else 'null'
     # Alertas de cuadratura del día (las escribe actualizar_diario.py)
     archivo_alertas = os.path.join(CARPETA, 'alertas_stock.json')
     if os.path.exists(archivo_alertas):
@@ -3266,6 +3893,8 @@ def generar_html(datos, fecha_str, analisis=None, ultimo_update_str=None):
     html = HTML_TEMPLATE
     html = html.replace('CSS_PLACEHOLDER',            CSS)
     html = html.replace('ANA_DATA_PLACEHOLDER',       analisis_json)  # antes de DATA_PLACEHOLDER
+    html = html.replace('PROD_DATA_PLACEHOLDER',      prod_json)
+    html = html.replace('DIC_DATA_PLACEHOLDER',       dic_json)
     html = html.replace('DATA_PLACEHOLDER',           data_json)
     html = html.replace('ALERTAS_PLACEHOLDER',        alertas_json)
     html = html.replace('JS_PLACEHOLDER',             js_final)
@@ -3294,7 +3923,12 @@ if __name__ == '__main__':
     except Exception:
         ultimo_update_str = FECHA_STR
     print(f'\nGenerando HTML con {len(datos)} productos...')
-    html = generar_html(datos, FECHA_STR, analisis, ultimo_update_str)
+    produccion = calcular_produccion()
+    print('  Meses con produccion: ' + str(len(produccion.get('meses', []))))
+    diciembre = calcular_diciembre(STOCK_BSALE)
+    if diciembre:
+        print(f"  Diciembre: {diciembre['tot']['productos']} productos, falta producir {diciembre['tot']['falta_cocina']} u")
+    html = generar_html(datos, FECHA_STR, analisis, ultimo_update_str, produccion, diciembre)
     with open(ARCHIVO_HTML, 'w', encoding='utf-8') as f:
         f.write(html)
     print(f'Dashboard: {ARCHIVO_HTML}')
@@ -3310,21 +3944,21 @@ if __name__ == '__main__':
     # Datos ya calculados para el correo diario (bsale_github.py).
     # El correo NO recalcula nada ni vuelve a llamar a Bsale: consume esto tal
     # cual, para que sus dias y su semaforo sean siempre los mismos que muestra
-    # el dashboard.
+    # el dashboard. Las salsas quedan fuera: no tienen stock real en Bsale.
     reporte = {
         'fecha':      FECHA_STR,
         'generado':   _HOY.isoformat(),
         'productos': [
             {
-                'sku':        d['sku'],
-                'nombre':     d['nombre'],
-                'cocinero':   d['cocinero'],
-                'vit':        d['vit'],
-                'pat':        d['pat'],
-                'total':      d['total'],
-                'dias':       d['dias_prod'],    # dura el stock de Vitacura al ritmo de las dos tiendas
-                'dias_total': d['dias_total'],   # (vit + pat) / velocidad total
-                'estado':     d['estado'],
+                'sku':            d['sku'],
+                'nombre':         d['nombre'],
+                'cocinero':       d['cocinero'],
+                'vit':            d['vit'],
+                'pat':            d['pat'],
+                'total':          d['total'],
+                'dias':           d['dias_prod'],       # dura el stock de Vitacura al ritmo de las dos tiendas
+                'dias_total':     d['dias_total'],       # (vit + pat) / velocidad total
+                'estado':         d['estado'],
             }
             for d in datos if d['estado'] != 'salsa'
         ],
