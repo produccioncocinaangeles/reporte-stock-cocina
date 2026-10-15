@@ -1,8 +1,13 @@
 {
-  "fecha": "2026-09-07",
+  "fecha": "2026-10-14",
   "entradas": [
     {
-      "sku": "RM",
+      "sku": "ÑJ",
+      "oficina": "VIT",
+      "cantidad": 3.0
+    },
+    {
+      "sku": "FCT",
       "oficina": "VIT",
       "cantidad": 1.0
     }
