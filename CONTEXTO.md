@@ -312,3 +312,21 @@ Visión completa del usuario, por etapas — cada una útil por sí sola:
 
 Dashboard de stock para la **pizzería delivery del hermano** del usuario,
 reutilizando la metodología de este proyecto (skill `analisis-stock-restaurante`).
+
+---
+
+## Estado al 16-oct-2026 — Stock en vivo
+
+- Al abrir el dashboard, la página pide el stock actual a un **Google Apps Script**
+  ("La Cocina - Stock en vivo", cuenta produccioncocinaangeles@gmail.com) que lee
+  Bsale en el momento, y recalcula en el navegador todo lo que depende del stock:
+  días de producción, semáforo, alerta de distribución, despacho sugerido y guías.
+  Header: "Stock en vivo · HH:MM"; si falla, quedan los datos de las 19:00.
+- Lo que depende del historial (velocidad, proyecciones, Análisis, Diciembre,
+  recepciones detectadas) sigue calculándose una vez al día en el workflow.
+- **Fórmulas duplicadas**: `procesar()` en Python y el recálculo en JS deben
+  cambiarse juntos (comentado en el código).
+- URL del script en `STOCK_LIVE_URL` (generar_dashboard.py). Token de Bsale en
+  Propiedades del script (`BSALE_TOKEN`), nunca en el repo. Código del script en
+  `reporte-stock-REDISENO/apps_script_stock/` (se publica con clasp).
+- Pendiente: pestaña Diciembre también usa stock (no se recalcula en vivo).

@@ -29,6 +29,10 @@ STOCK_BSALE = {}
 RECETAS_SHEET_ID = '1bzRCgI5Cs0mIvjnFvfJZiZ6K3DaNU8D69jvo0vhU49g'
 GOOGLE_SERVICE_ACCOUNT_FILE = os.path.join(CARPETA, 'la-cocina-498520-9b115beec377.json')
 BSALE_TOKEN   = os.environ.get('BSALE_TOKEN', '')
+# Stock en vivo: URL de la aplicación web de Google Apps Script (apps_script_stock/Code.gs).
+# Vacía = función desactivada, el dashboard queda como siempre (datos de las 19:00).
+# Ver INSTRUCCIONES_STOCK_EN_VIVO.md
+STOCK_LIVE_URL = 'https://script.google.com/macros/s/AKfycbyc_vjU6S4ROZELajjg_4BSrnc8izwGI5teWsbOPHGDPWS0tb9aTa0lvSIR2bJO3Fo/exec'
 # Hora de Chile siempre: en GitHub Actions (UTC) la corrida nocturna cae en el
 # día siguiente UTC y desplazaba la fecha del dashboard y los cálculos de venta.
 # Se quita la zona horaria ANTES de normalizar. Al reves (normalize sobre un
@@ -438,6 +442,10 @@ def procesar():
     recetas = leer_recetas()
     print(f"  {len(recetas)} productos con receta cargada" if recetas else "  Sin RECETAS_SHEET_ID configurado o sin datos (tab Recetas quedará vacío)")
 
+    # OJO: las fórmulas que dependen del stock (vit/pat/total, dias_*, estado,
+    # alerta_dist, despacho_sug, dias_sin_stock_vit y las salsas) están
+    # DUPLICADAS en el JS (recalcularConStock, "Stock en vivo"). Si cambias
+    # alguna aquí, cámbiala también allá, y viceversa.
     resultados = []
     for sku in NOMBRES:
         dv = vit[vit['SKU']==sku].copy()
@@ -479,7 +487,19 @@ def procesar():
         alerta = (sv_hoy==0 and sp_hoy>0 and vel_v>0) or (sp_hoy==0 and sv_hoy>0 and vel_p>0)
         pto_reorden   = math.ceil(vel_t * trepo)              if vel_t > 0 else 0
         lote_sugerido = math.ceil(vel_t * 30)                 if vel_t > 0 else 0
-        despacho      = max(0, math.ceil(vel_p * max(trepo,7)) - sp_hoy) if vel_p > 0 else 0
+        # Misma regla que la Guía de Despacho (estadoDespacho en JS, 7 días):
+        # lo que Pataguas necesita, limitado a lo que Vitacura puede mandar
+        # sin quedarse en cero (guarda su propia reserva de reposición).
+        nec_pat       = max(0, math.ceil(vel_p * max(trepo,7)) - sp_hoy) if vel_p > 0 else 0
+        reserva_vit   = math.ceil(vel_v * trepo)
+        despacho      = min(nec_pat, max(0, sv_hoy - reserva_vit))
+
+        # Días seguidos que Vitacura lleva sin stock (0 si hoy tiene)
+        dias_sin_vit = 0
+        if sv_hoy == 0 and sd_v:
+            for d in sorted(sd_v, reverse=True):
+                if sd_v[d] <= 0: dias_sin_vit += 1
+                else: break
 
         # El semaforo mide dias de produccion: cuanto dura el stock de Vitacura
         # al ritmo de venta de las dos tiendas (dias_prod). No se descuenta el
@@ -511,7 +531,7 @@ def procesar():
             'total_vit': tot_v, 'total_pat': tot_p,
             'dias_stock_vit': dsc_v, 'dias_stock_pat': dsc_p,
             'n_lotes': n_lotes, 'prom_lote': prom_lote,
-            'periodos_sin_stock_vit': per_v,
+            'periodos_sin_stock_vit': per_v, 'dias_sin_stock_vit': dias_sin_vit,
             'lotes': lts, 'movs': movimientos(dv, dp), 'ventas_mes': vm,
             'receta': recetas.get(sku, []),
         })
@@ -520,6 +540,10 @@ def procesar():
     print("Calculando salsas...")
     resultados += calcular_salsas(resultados, recetas)
 
+    # 'ord' = posición original (antes de ordenar). El stock en vivo del
+    # navegador re-ordena la lista y lo usa para desempatar igual que acá.
+    for i, r in enumerate(resultados):
+        r['ord'] = i
     orden = {'sin_stock':0,'critico':1,'bajo':2,'ok':3,'salsa':4}
     resultados.sort(key=lambda x: (orden[x['estado']], x['dias_prod'] if x['dias_prod'] is not None else 9999))
     return resultados
@@ -557,7 +581,7 @@ def calcular_salsas(resultados, recetas):
             'total_vit': 0, 'total_pat': 0,
             'dias_stock_vit': 0, 'dias_stock_pat': 0,
             'n_lotes': 0, 'prom_lote': 0,
-            'periodos_sin_stock_vit': [],
+            'periodos_sin_stock_vit': [], 'dias_sin_stock_vit': 0,
             'lotes': [], 'movs': [], 'ventas_mes': [],
             'receta': recetas.get(salsa_sku, []),
             'platos_asociados': [p['nombre'] for p in platos],
@@ -1504,7 +1528,7 @@ function badgeCobertura(p){
   if(p.estado==='salsa') return ''; // sugerencia, no hay cobertura real que medir
   const dias = (p.dias_total !== null && p.dias_total !== undefined)
     ? Math.round(p.dias_total) : (p.total>0 ? 999 : -1);
-  const label = dias < 0 ? 'Sin stock' : dias >= 30 ? '+30 días' : dias+' días';
+  const label = dias < 0 ? 'Sin stock' : 'Cobertura total: ' + (dias >= 30 ? '+30d' : dias+'d');
   const cls   = dias < 0 || dias <= 3 ? 'badge-cobertura alerta' : 'badge-cobertura';
   return '<span class="'+cls+'">'+label+'</span>';
 }
@@ -1580,7 +1604,7 @@ function buildAnalisis(p){
     + 'Así el ritmo refleja lo que de verdad se vende cuando hay disponible.</span><br><br>'
     + 'Vitacura: <b>'+p.total_vit+' und</b> vendidas en '+p.dias_stock_vit+' días con stock → <b>'+p.vel_vit.toFixed(3)+' und/día</b><br>'
     + 'Pataguas: <b>'+p.total_pat+' und</b> vendidas en '+p.dias_stock_pat+' días con stock → <b>'+p.vel_pat.toFixed(3)+' und/día</b><br>'
-    + 'Ritmo total: <b>'+vt.toFixed(3)+' und/día</b> → ≈<b>'+(vt*30).toFixed(0)+' und/mes</b> si nunca falta stock</div>';
+    + 'Ritmo total: <b>'+vt.toFixed(3)+' und/día</b> → ≈<b>'+Math.ceil(vt*30)+' und/mes</b> si nunca falta stock</div>';
 
   // Períodos sin stock Vitacura — consolidado por mes, detalle plegable
   const per = p.periodos_sin_stock_vit||[];
@@ -1699,7 +1723,7 @@ function textDias(dias, und){
   if(dias===null||dias===undefined) return "—";
   return Math.round(dias)+"d restantes";
 }
-function bloqueSucursal(label, dotColor, valor, dias){
+function bloqueSucursal(label, dotColor, valor, dias, diasSin){
   var cero = valor===0;
   var urg  = colorDias(dias, valor);
   // El color queda solo en el punto de estado; el dato en sí es siempre neutro.
@@ -1708,7 +1732,7 @@ function bloqueSucursal(label, dotColor, valor, dias){
   return '<div class="nicho">'
     +   '<div class="nicho-label"><span class="nicho-dot" style="background:'+dotColor+'"></span>'+label+'</div>'
     +   '<div class="nicho-valor stock-data'+(cero?' dato-cero':'')+'">'+valor+' <span class="nicho-unidad'+(cero?' dato-cero':'')+'">un</span></div>'
-    +   '<div class="nicho-dias'+(cero?' dato-cero':'')+'">'+statusDot+textDias(dias,valor)+'</div>'
+    +   '<div class="nicho-dias'+(cero?' dato-cero':'')+'">'+statusDot+textDias(dias,valor)+(cero && diasSin>0 ? ' · hace '+diasSin+(diasSin===1?' día':' días') : '')+'</div>'
     + '</div>';
 }
 // Lista actualmente pintada en la vista Productos. Los índices de las
@@ -1740,10 +1764,10 @@ function renderCards(data, animate){
       +    '<div class="card-meta">'+metaHtml+'</div>'
       +    '<div class="card-badges">'+alHtml
       +      badgeCobertura(p)
-      +      '<span class="badge '+eCls+'">'+EST_LBL[p.estado]+'</span>'
+      +      '<span class="badge '+eCls+'">'+(p.estado==='sin_stock' && p.pat>0 ? 'Sin stock Vitacura' : EST_LBL[p.estado])+'</span>'
       +    '</div>'
       +  '</div>'
-      +  bloqueSucursal('Vitacura','#3B6D11',p.vit,p.dias_vit)
+      +  bloqueSucursal('Vitacura','#3B6D11',p.vit,p.dias_vit,p.dias_sin_stock_vit)
       +  bloqueSucursal('Pataguas','#185FA5',p.pat,p.dias_pat)
       +'</div>'
       // El contenido del detalle (movimientos + análisis) se construye recién
@@ -3012,11 +3036,12 @@ function producir(p, dias){
   var pat_after   = Math.max(0, pat_need - vit_surplus);
   return Math.ceil(vit_need + pat_after);
 }
+// Días de la Guía de Producción = los mismos del semáforo, el Resumen y el
+// correo: cuánto dura el stock de Vitacura al ritmo de venta de las dos tiendas
+// (p.dias_prod, calculado en Python). Antes esta guía usaba su propia fórmula.
 function cobertura(p){
-  if(p.vel_total<=0) return 99999;
-  var dvit = p.vel_vit>0 ? p.vit/p.vel_vit : 99999;
-  var dtot = (p.vit+p.pat)/p.vel_total;
-  return Math.min(dvit, dtot);
+  if(p.vel_total<=0 || p.dias_prod===null || p.dias_prod===undefined) return 99999;
+  return p.dias_prod;
 }
 
 function renderGuiaProduccion(){
@@ -3194,10 +3219,9 @@ function estadoDespacho(p, dias){
   return {estado:estado, necesita:necesita, desp:desp};
 }
 
-function renderGuiaDespacho(){
-  const dias = parseInt(document.getElementById('d-dias').value)||7;
-  document.getElementById('d-dias-label').textContent = dias+' días';
-
+// Lista de la Guía de Despacho: la usan la pantalla y la impresión para que
+// siempre muestren exactamente lo mismo.
+function prodsDespacho(dias){
   // Se muestran TODOS los productos que se venden en Pataguas; los que no
   // necesitan nada salen marcados como "OK" para que la guía se explique sola.
   var prods = DATA.filter(function(p){return p.vel_pat>0;});
@@ -3209,6 +3233,14 @@ function renderGuiaDespacho(){
     var db = b.pat>0&&b.vel_pat>0 ? b.pat/b.vel_pat : 999;
     return da-db;
   });
+  return prods;
+}
+
+function renderGuiaDespacho(){
+  const dias = parseInt(document.getElementById('d-dias').value)||7;
+  document.getElementById('d-dias-label').textContent = dias+' días';
+
+  var prods = prodsDespacho(dias);
 
   var despachar = 0, producir = 0;
   var filas = prods.map(function(p){
@@ -3311,7 +3343,11 @@ var ROLLO_CSS = [
 ].join('');
 
 function abrirRollo(bodyHtml){
-  var win = window.open('','_blank','width=400,height:750');
+  var win = window.open('','_blank','width=400,height=750');
+  if(!win){
+    alert('El navegador bloqueó la ventana de impresión. Permite las ventanas emergentes de este sitio y vuelve a tocar Imprimir.');
+    return;
+  }
   var html = '<!DOCTYPE html><html><head><meta charset="utf-8"><title>La Cocina</title>'
     + '<style>' + ROLLO_CSS + '</style></head><body>' + bodyHtml
     + '<script>window.onload=function(){window.print();}<\\/script>'
@@ -3354,22 +3390,18 @@ function imprimirProduccion(){
 
 function imprimirDespacho(){
   var dias = parseInt(document.getElementById('d-dias').value)||7;
-  var prods = DATA.filter(function(p){
-    return p.vel_pat>0 && Math.max(0,Math.ceil(p.vel_pat*dias)-p.pat)>0;
-  });
-  prods.sort(function(a,b){
-    var da = a.pat>0&&a.vel_pat>0 ? a.pat/a.vel_pat : 0;
-    var db = b.pat>0&&b.vel_pat>0 ? b.pat/b.vel_pat : 0;
-    return da-db;
-  });
+  // La hoja impresa es para quien arma el envío: solo los productos que
+  // Vitacura SÍ puede mandar hoy (mismos cálculos que la pantalla, vía
+  // prodsDespacho/estadoDespacho). Los que hay que producir u OK no se imprimen.
+  var prods = prodsDespacho(dias).map(function(p){ return {p:p, e:estadoDespacho(p, dias)}; })
+    .filter(function(x){ return x.e.estado==='completo' || x.e.estado==='parcial'; });
 
-  var filas = prods.map(function(p){
-    var desp = Math.max(0, Math.ceil(p.vel_pat*dias)-p.pat);
+  var filas = prods.map(function(x){
     return '<tr>'
-      +'<td class="nom">'+p.nombre+'</td>'
-      +'<td class="r">'+p.vit+'</td>'
-      +'<td class="r">'+p.pat+'</td>'
-      +'<td class="r prod">+'+desp+'</td>'
+      +'<td class="nom">'+tituloCase(x.p.nombre)+'</td>'
+      +'<td class="r">'+x.p.vit+'</td>'
+      +'<td class="r">'+x.p.pat+'</td>'
+      +'<td class="r prod">+'+x.e.desp+'</td>'
       +'</tr>';
   }).join('');
 
@@ -3377,11 +3409,104 @@ function imprimirDespacho(){
     '<div class="logo">La Cocina</div>'
    +'<div class="sub">Despacho Vitacura → Pataguas · '+dias+' días</div>'
    +'<div class="fecha">FECHA_HOY_PLACEHOLDER</div>'
-   +'<table><thead><tr>'
-   +'<th>Producto</th><th class="r">VIT</th><th class="r">PAT</th><th class="r">Desp</th>'
-   +'</tr></thead><tbody>'+filas+'</tbody></table>'
+   +(prods.length
+      ? '<table><thead><tr>'
+       +'<th>Producto</th><th class="r">VIT</th><th class="r">PAT</th><th class="r">Desp</th>'
+       +'</tr></thead><tbody>'+filas+'</tbody></table>'
+      : '<div class="sub">No hay productos para despachar hoy.</div>')
    +'<div class="footer">'+prods.length+' productos a despachar</div>'
   );
+}
+
+// ── Stock en vivo ──────────────────────────────────────────
+// OJO: estas fórmulas están DUPLICADAS con procesar() y calcular_salsas() en
+// generar_dashboard.py. Si cambias una, cámbiala en AMBOS lados. La velocidad,
+// tiempo_repo, lotes y proyecciones NO se recalculan: vienen del historial y
+// se actualizan en la corrida nocturna. (Pestaña Diciembre: pendiente.)
+var STOCK_LIVE_URL = STOCK_LIVE_URL_PLACEHOLDER;
+
+// round() de Python: mitades al par (round(2.5)=2), exacto sobre el double.
+function pyRound(x, nd){
+  var s  = x.toFixed(100);
+  var ip = s.indexOf('.');
+  var trunc = s.slice(0, ip + 1 + nd);
+  if(!/^50*$/.test(s.slice(ip + 1 + nd))) return Number(x.toFixed(nd));
+  var digs = s.slice(0, ip) + s.slice(ip + 1, ip + 1 + nd);
+  if(parseInt(digs.slice(-1), 10) % 2 === 0) return Number(trunc);
+  return Number((Number(trunc) + 1 / Math.pow(10, nd)).toFixed(nd));
+}
+function bufferSemanal(vel){ return vel <= 0 ? 0 : Math.max(1, pyRound(vel * 7, 0)); }
+
+// stock = {SKU:{vit,pat}}. Modifica lista in situ y la deja ordenada como procesar().
+function recalcularConStock(lista, stock){
+  var porNombre = {};
+  lista.forEach(function(p){
+    if(p.estado === 'salsa') return;
+    var s = stock[p.sku] || {vit:0, pat:0};
+    if(s.vit === 0 && s.pat === 0) s = stock[p.sku.split('Ñ').join('N')] || {vit:0, pat:0};
+    var sv = s.vit, sp = s.pat;
+    var vv = p.vel_vit, vp = p.vel_pat, vt = vv + vp, tr = p.tiempo_repo;
+    p.vit = sv; p.pat = sp; p.total = sv + sp;
+    p.dias_vit   = (vv > 0 && sv > 0) ? pyRound(sv / vv, 1) : (sv === 0 ? 0 : null);
+    p.dias_pat   = (vp > 0 && sp > 0) ? pyRound(sp / vp, 1) : (sp === 0 ? 0 : null);
+    p.dias_total = vt > 0 ? pyRound(p.total / vt, 1) : null;
+    p.dias_prod  = (vt > 0 && sv > 0) ? pyRound(sv / vt, 1) : (sv === 0 ? 0 : null);
+    p.alerta_dist = (sv === 0 && sp > 0 && vv > 0) || (sp === 0 && sv > 0 && vp > 0);
+    var nec = vp > 0 ? Math.max(0, Math.ceil(vp * Math.max(tr, 7)) - sp) : 0;
+    var reserva = Math.ceil(vv * tr);
+    p.despacho_sug = Math.min(nec, Math.max(0, sv - reserva));
+    if(sv > 0) p.dias_sin_stock_vit = 0;      // si es 0, se conserva el valor horneado
+    if(sv === 0)                                     p.estado = 'sin_stock';
+    else if(p.dias_prod !== null && p.dias_prod <= 3) p.estado = 'critico';
+    else if(p.dias_prod !== null && p.dias_prod <= 7) p.estado = 'bajo';
+    else                                             p.estado = 'ok';
+    porNombre[p.nombre] = p;
+  });
+  lista.forEach(function(p){
+    if(p.estado !== 'salsa') return;
+    var platos = (p.platos_asociados || []).map(function(n){ return porNombre[n]; }).filter(Boolean);
+    p.vit = platos.reduce(function(a, q){ return a + q.vit + bufferSemanal(q.vel_vit); }, 0);
+    p.pat = platos.reduce(function(a, q){ return a + q.pat + bufferSemanal(q.vel_pat); }, 0);
+    p.total = p.vit + p.pat;
+  });
+  var orden = {sin_stock:0, critico:1, bajo:2, ok:3, salsa:4};
+  lista.sort(function(a, b){
+    if(orden[a.estado] !== orden[b.estado]) return orden[a.estado] - orden[b.estado];
+    var da = a.dias_prod === null ? 9999 : a.dias_prod, db = b.dias_prod === null ? 9999 : b.dias_prod;
+    if(da !== db) return da - db;
+    return a.ord - b.ord;
+  });
+  return lista;
+}
+
+function vistaVisible(id){ return document.getElementById(id).style.display !== 'none'; }
+function repintarTodo(){
+  filtrar();
+  renderResumen();
+  if(vistaVisible('vista-guias')){ renderGuiaProduccion(); renderGuiaDespacho(); }
+  if(vistaVisible('vista-recetas')) renderProduccion(DATA);
+}
+function iniciarStockEnVivo(){
+  if(!STOCK_LIVE_URL) return;
+  var aviso = document.getElementById('stock-aviso');
+  var ctrl = new AbortController();
+  var timer = setTimeout(function(){ ctrl.abort(); }, 25000);
+  fetch(STOCK_LIVE_URL, {signal: ctrl.signal})
+    .then(function(r){ return r.json(); })
+    .then(function(res){
+      clearTimeout(timer);
+      if(!res || !res.ok || !res.stock || !Object.keys(res.stock).length) throw new Error((res && res.error) || 'respuesta vacía');
+      recalcularConStock(DATA, res.stock);
+      var hora = res.hora || new Date().toLocaleTimeString('es-CL', {hour:'2-digit', minute:'2-digit'});
+      document.getElementById('fecha-act').textContent = 'Stock en vivo · ' + hora;
+      aviso.style.display = 'none';
+      repintarTodo();
+    })
+    .catch(function(e){
+      clearTimeout(timer);
+      aviso.style.display = '';
+      console.warn('Stock en vivo no disponible:', e);
+    });
 }
 
 // ── Init ───────────────────────────────────────────────────
@@ -3416,6 +3541,7 @@ updateMetricas();
 buildMesesOpts();
 renderResumen();
 initScrollReveal(document);
+iniciarStockEnVivo();
 """
 
 HTML_TEMPLATE = """<!DOCTYPE html>
@@ -3438,7 +3564,8 @@ HTML_TEMPLATE = """<!DOCTYPE html>
     <div><span class="logo-nombre">La Cocina</span><span class="logo-sub">· Control de Producción</span></div>
   </div>
   <div class="header-right">
-    <span class="fecha">Últ. act.: ULTIMO_UPDATE_PLACEHOLDER</span>
+    <span class="fecha" id="fecha-act">Últ. act.: ULTIMO_UPDATE_PLACEHOLDER</span>
+    <span class="fecha" id="stock-aviso" style="display:none" title="No se pudo leer el stock en vivo">· datos de las 19:00</span>
     <button class="btn-theme-toggle" aria-label="Cambiar modo de pantalla" onclick="toggleDarkMode()" style="background: none; border: none; cursor: pointer; padding: 8px; display: inline-flex; align-items: center; justify-content: center; border-radius: 50%; transition: background-color 0.2s, transform 0.2s; color: var(--system-green);">
       <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
         <circle cx="12" cy="12" r="4"></circle>
@@ -3890,6 +4017,7 @@ def generar_html(datos, fecha_str, analisis=None, ultimo_update_str=None, produc
     else:
         alertas_json = 'null'
     js_final  = JS.replace('FECHA_HOY_PLACEHOLDER', fecha_str)
+    js_final  = js_final.replace('STOCK_LIVE_URL_PLACEHOLDER', json.dumps(STOCK_LIVE_URL))
     html = HTML_TEMPLATE
     html = html.replace('CSS_PLACEHOLDER',            CSS)
     html = html.replace('ANA_DATA_PLACEHOLDER',       analisis_json)  # antes de DATA_PLACEHOLDER
