@@ -1,37 +1,5 @@
 {
-  "fecha": "2026-10-15",
-  "entradas": [
-    {
-      "sku": "MCJ",
-      "oficina": "VIT",
-      "cantidad": 1.0
-    },
-    {
-      "sku": "LCM",
-      "oficina": "VIT",
-      "cantidad": 1.0
-    },
-    {
-      "sku": "TLS",
-      "oficina": "VIT",
-      "cantidad": 6.0
-    },
-    {
-      "sku": "EM",
-      "oficina": "VIT",
-      "cantidad": 5.0
-    }
-  ],
-  "salidas": [
-    {
-      "sku": "MCL",
-      "oficina": "VIT",
-      "cantidad": 1.0
-    },
-    {
-      "sku": "TCM",
-      "oficina": "VIT",
-      "cantidad": 1.0
-    }
-  ]
+  "fecha": "2026-10-16",
+  "entradas": [],
+  "salidas": []
 }
