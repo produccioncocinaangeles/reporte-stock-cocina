@@ -29,6 +29,10 @@ STOCK_BSALE = {}
 RECETAS_SHEET_ID = '1bzRCgI5Cs0mIvjnFvfJZiZ6K3DaNU8D69jvo0vhU49g'
 GOOGLE_SERVICE_ACCOUNT_FILE = os.path.join(CARPETA, 'la-cocina-498520-9b115beec377.json')
 BSALE_TOKEN   = os.environ.get('BSALE_TOKEN', '')
+# Stock en vivo: URL de la aplicación web de Google Apps Script (apps_script_stock/Code.gs).
+# Vacía = función desactivada, el dashboard queda como siempre (datos de las 19:00).
+# Ver INSTRUCCIONES_STOCK_EN_VIVO.md
+STOCK_LIVE_URL = 'https://script.google.com/macros/s/AKfycbyc_vjU6S4ROZELajjg_4BSrnc8izwGI5teWsbOPHGDPWS0tb9aTa0lvSIR2bJO3Fo/exec'
 # Hora de Chile siempre: en GitHub Actions (UTC) la corrida nocturna cae en el
 # día siguiente UTC y desplazaba la fecha del dashboard y los cálculos de venta.
 # Se quita la zona horaria ANTES de normalizar. Al reves (normalize sobre un
@@ -438,6 +442,10 @@ def procesar():
     recetas = leer_recetas()
     print(f"  {len(recetas)} productos con receta cargada" if recetas else "  Sin RECETAS_SHEET_ID configurado o sin datos (tab Recetas quedará vacío)")
 
+    # OJO: las fórmulas que dependen del stock (vit/pat/total, dias_*, estado,
+    # alerta_dist, despacho_sug, dias_sin_stock_vit y las salsas) están
+    # DUPLICADAS en el JS (recalcularConStock, "Stock en vivo"). Si cambias
+    # alguna aquí, cámbiala también allá, y viceversa.
     resultados = []
     for sku in NOMBRES:
         dv = vit[vit['SKU']==sku].copy()
@@ -532,6 +540,10 @@ def procesar():
     print("Calculando salsas...")
     resultados += calcular_salsas(resultados, recetas)
 
+    # 'ord' = posición original (antes de ordenar). El stock en vivo del
+    # navegador re-ordena la lista y lo usa para desempatar igual que acá.
+    for i, r in enumerate(resultados):
+        r['ord'] = i
     orden = {'sin_stock':0,'critico':1,'bajo':2,'ok':3,'salsa':4}
     resultados.sort(key=lambda x: (orden[x['estado']], x['dias_prod'] if x['dias_prod'] is not None else 9999))
     return resultados
@@ -3406,6 +3418,97 @@ function imprimirDespacho(){
   );
 }
 
+// ── Stock en vivo ──────────────────────────────────────────
+// OJO: estas fórmulas están DUPLICADAS con procesar() y calcular_salsas() en
+// generar_dashboard.py. Si cambias una, cámbiala en AMBOS lados. La velocidad,
+// tiempo_repo, lotes y proyecciones NO se recalculan: vienen del historial y
+// se actualizan en la corrida nocturna. (Pestaña Diciembre: pendiente.)
+var STOCK_LIVE_URL = STOCK_LIVE_URL_PLACEHOLDER;
+
+// round() de Python: mitades al par (round(2.5)=2), exacto sobre el double.
+function pyRound(x, nd){
+  var s  = x.toFixed(100);
+  var ip = s.indexOf('.');
+  var trunc = s.slice(0, ip + 1 + nd);
+  if(!/^50*$/.test(s.slice(ip + 1 + nd))) return Number(x.toFixed(nd));
+  var digs = s.slice(0, ip) + s.slice(ip + 1, ip + 1 + nd);
+  if(parseInt(digs.slice(-1), 10) % 2 === 0) return Number(trunc);
+  return Number((Number(trunc) + 1 / Math.pow(10, nd)).toFixed(nd));
+}
+function bufferSemanal(vel){ return vel <= 0 ? 0 : Math.max(1, pyRound(vel * 7, 0)); }
+
+// stock = {SKU:{vit,pat}}. Modifica lista in situ y la deja ordenada como procesar().
+function recalcularConStock(lista, stock){
+  var porNombre = {};
+  lista.forEach(function(p){
+    if(p.estado === 'salsa') return;
+    var s = stock[p.sku] || {vit:0, pat:0};
+    if(s.vit === 0 && s.pat === 0) s = stock[p.sku.split('Ñ').join('N')] || {vit:0, pat:0};
+    var sv = s.vit, sp = s.pat;
+    var vv = p.vel_vit, vp = p.vel_pat, vt = vv + vp, tr = p.tiempo_repo;
+    p.vit = sv; p.pat = sp; p.total = sv + sp;
+    p.dias_vit   = (vv > 0 && sv > 0) ? pyRound(sv / vv, 1) : (sv === 0 ? 0 : null);
+    p.dias_pat   = (vp > 0 && sp > 0) ? pyRound(sp / vp, 1) : (sp === 0 ? 0 : null);
+    p.dias_total = vt > 0 ? pyRound(p.total / vt, 1) : null;
+    p.dias_prod  = (vt > 0 && sv > 0) ? pyRound(sv / vt, 1) : (sv === 0 ? 0 : null);
+    p.alerta_dist = (sv === 0 && sp > 0 && vv > 0) || (sp === 0 && sv > 0 && vp > 0);
+    var nec = vp > 0 ? Math.max(0, Math.ceil(vp * Math.max(tr, 7)) - sp) : 0;
+    var reserva = Math.ceil(vv * tr);
+    p.despacho_sug = Math.min(nec, Math.max(0, sv - reserva));
+    if(sv > 0) p.dias_sin_stock_vit = 0;      // si es 0, se conserva el valor horneado
+    if(sv === 0)                                     p.estado = 'sin_stock';
+    else if(p.dias_prod !== null && p.dias_prod <= 3) p.estado = 'critico';
+    else if(p.dias_prod !== null && p.dias_prod <= 7) p.estado = 'bajo';
+    else                                             p.estado = 'ok';
+    porNombre[p.nombre] = p;
+  });
+  lista.forEach(function(p){
+    if(p.estado !== 'salsa') return;
+    var platos = (p.platos_asociados || []).map(function(n){ return porNombre[n]; }).filter(Boolean);
+    p.vit = platos.reduce(function(a, q){ return a + q.vit + bufferSemanal(q.vel_vit); }, 0);
+    p.pat = platos.reduce(function(a, q){ return a + q.pat + bufferSemanal(q.vel_pat); }, 0);
+    p.total = p.vit + p.pat;
+  });
+  var orden = {sin_stock:0, critico:1, bajo:2, ok:3, salsa:4};
+  lista.sort(function(a, b){
+    if(orden[a.estado] !== orden[b.estado]) return orden[a.estado] - orden[b.estado];
+    var da = a.dias_prod === null ? 9999 : a.dias_prod, db = b.dias_prod === null ? 9999 : b.dias_prod;
+    if(da !== db) return da - db;
+    return a.ord - b.ord;
+  });
+  return lista;
+}
+
+function vistaVisible(id){ return document.getElementById(id).style.display !== 'none'; }
+function repintarTodo(){
+  filtrar();
+  renderResumen();
+  if(vistaVisible('vista-guias')){ renderGuiaProduccion(); renderGuiaDespacho(); }
+  if(vistaVisible('vista-recetas')) renderProduccion(DATA);
+}
+function iniciarStockEnVivo(){
+  if(!STOCK_LIVE_URL) return;
+  var aviso = document.getElementById('stock-aviso');
+  var ctrl = new AbortController();
+  var timer = setTimeout(function(){ ctrl.abort(); }, 25000);
+  fetch(STOCK_LIVE_URL, {signal: ctrl.signal})
+    .then(function(r){ return r.json(); })
+    .then(function(res){
+      clearTimeout(timer);
+      if(!res || !res.ok || !res.stock || !Object.keys(res.stock).length) throw new Error((res && res.error) || 'respuesta vacía');
+      recalcularConStock(DATA, res.stock);
+      var hora = res.hora || new Date().toLocaleTimeString('es-CL', {hour:'2-digit', minute:'2-digit'});
+      document.getElementById('fecha-act').textContent = 'Stock en vivo · ' + hora;
+      aviso.style.display = 'none';
+      repintarTodo();
+    })
+    .catch(function(e){
+      clearTimeout(timer);
+      aviso.style.display = '';
+      console.warn('Stock en vivo no disponible:', e);
+    });
+}
+
 // ── Init ───────────────────────────────────────────────────
 document.getElementById('f-cocinero').addEventListener('change', filtrar);
 var fBuscar = document.getElementById('f-buscar');
@@ -3438,6 +3541,7 @@ updateMetricas();
 buildMesesOpts();
 renderResumen();
 initScrollReveal(document);
+iniciarStockEnVivo();
 """
 
 HTML_TEMPLATE = """<!DOCTYPE html>
@@ -3460,7 +3564,8 @@ HTML_TEMPLATE = """<!DOCTYPE html>
     <div><span class="logo-nombre">La Cocina</span><span class="logo-sub">· Control de Producción</span></div>
   </div>
   <div class="header-right">
-    <span class="fecha">Últ. act.: ULTIMO_UPDATE_PLACEHOLDER</span>
+    <span class="fecha" id="fecha-act">Últ. act.: ULTIMO_UPDATE_PLACEHOLDER</span>
+    <span class="fecha" id="stock-aviso" style="display:none" title="No se pudo leer el stock en vivo">· datos de las 19:00</span>
     <button class="btn-theme-toggle" aria-label="Cambiar modo de pantalla" onclick="toggleDarkMode()" style="background: none; border: none; cursor: pointer; padding: 8px; display: inline-flex; align-items: center; justify-content: center; border-radius: 50%; transition: background-color 0.2s, transform 0.2s; color: var(--system-green);">
       <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
         <circle cx="12" cy="12" r="4"></circle>
@@ -3912,6 +4017,7 @@ def generar_html(datos, fecha_str, analisis=None, ultimo_update_str=None, produc
     else:
         alertas_json = 'null'
     js_final  = JS.replace('FECHA_HOY_PLACEHOLDER', fecha_str)
+    js_final  = js_final.replace('STOCK_LIVE_URL_PLACEHOLDER', json.dumps(STOCK_LIVE_URL))
     html = HTML_TEMPLATE
     html = html.replace('CSS_PLACEHOLDER',            CSS)
     html = html.replace('ANA_DATA_PLACEHOLDER',       analisis_json)  # antes de DATA_PLACEHOLDER
