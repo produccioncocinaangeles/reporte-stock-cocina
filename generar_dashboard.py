@@ -479,7 +479,19 @@ def procesar():
         alerta = (sv_hoy==0 and sp_hoy>0 and vel_v>0) or (sp_hoy==0 and sv_hoy>0 and vel_p>0)
         pto_reorden   = math.ceil(vel_t * trepo)              if vel_t > 0 else 0
         lote_sugerido = math.ceil(vel_t * 30)                 if vel_t > 0 else 0
-        despacho      = max(0, math.ceil(vel_p * max(trepo,7)) - sp_hoy) if vel_p > 0 else 0
+        # Misma regla que la Guía de Despacho (estadoDespacho en JS, 7 días):
+        # lo que Pataguas necesita, limitado a lo que Vitacura puede mandar
+        # sin quedarse en cero (guarda su propia reserva de reposición).
+        nec_pat       = max(0, math.ceil(vel_p * max(trepo,7)) - sp_hoy) if vel_p > 0 else 0
+        reserva_vit   = math.ceil(vel_v * trepo)
+        despacho      = min(nec_pat, max(0, sv_hoy - reserva_vit))
+
+        # Días seguidos que Vitacura lleva sin stock (0 si hoy tiene)
+        dias_sin_vit = 0
+        if sv_hoy == 0 and sd_v:
+            for d in sorted(sd_v, reverse=True):
+                if sd_v[d] <= 0: dias_sin_vit += 1
+                else: break
 
         # El semaforo mide dias de produccion: cuanto dura el stock de Vitacura
         # al ritmo de venta de las dos tiendas (dias_prod). No se descuenta el
@@ -511,7 +523,7 @@ def procesar():
             'total_vit': tot_v, 'total_pat': tot_p,
             'dias_stock_vit': dsc_v, 'dias_stock_pat': dsc_p,
             'n_lotes': n_lotes, 'prom_lote': prom_lote,
-            'periodos_sin_stock_vit': per_v,
+            'periodos_sin_stock_vit': per_v, 'dias_sin_stock_vit': dias_sin_vit,
             'lotes': lts, 'movs': movimientos(dv, dp), 'ventas_mes': vm,
             'receta': recetas.get(sku, []),
         })
@@ -557,7 +569,7 @@ def calcular_salsas(resultados, recetas):
             'total_vit': 0, 'total_pat': 0,
             'dias_stock_vit': 0, 'dias_stock_pat': 0,
             'n_lotes': 0, 'prom_lote': 0,
-            'periodos_sin_stock_vit': [],
+            'periodos_sin_stock_vit': [], 'dias_sin_stock_vit': 0,
             'lotes': [], 'movs': [], 'ventas_mes': [],
             'receta': recetas.get(salsa_sku, []),
             'platos_asociados': [p['nombre'] for p in platos],
@@ -1504,7 +1516,7 @@ function badgeCobertura(p){
   if(p.estado==='salsa') return ''; // sugerencia, no hay cobertura real que medir
   const dias = (p.dias_total !== null && p.dias_total !== undefined)
     ? Math.round(p.dias_total) : (p.total>0 ? 999 : -1);
-  const label = dias < 0 ? 'Sin stock' : dias >= 30 ? '+30 días' : dias+' días';
+  const label = dias < 0 ? 'Sin stock' : 'Cobertura total: ' + (dias >= 30 ? '+30d' : dias+'d');
   const cls   = dias < 0 || dias <= 3 ? 'badge-cobertura alerta' : 'badge-cobertura';
   return '<span class="'+cls+'">'+label+'</span>';
 }
@@ -1580,7 +1592,7 @@ function buildAnalisis(p){
     + 'Así el ritmo refleja lo que de verdad se vende cuando hay disponible.</span><br><br>'
     + 'Vitacura: <b>'+p.total_vit+' und</b> vendidas en '+p.dias_stock_vit+' días con stock → <b>'+p.vel_vit.toFixed(3)+' und/día</b><br>'
     + 'Pataguas: <b>'+p.total_pat+' und</b> vendidas en '+p.dias_stock_pat+' días con stock → <b>'+p.vel_pat.toFixed(3)+' und/día</b><br>'
-    + 'Ritmo total: <b>'+vt.toFixed(3)+' und/día</b> → ≈<b>'+(vt*30).toFixed(0)+' und/mes</b> si nunca falta stock</div>';
+    + 'Ritmo total: <b>'+vt.toFixed(3)+' und/día</b> → ≈<b>'+Math.ceil(vt*30)+' und/mes</b> si nunca falta stock</div>';
 
   // Períodos sin stock Vitacura — consolidado por mes, detalle plegable
   const per = p.periodos_sin_stock_vit||[];
@@ -1699,7 +1711,7 @@ function textDias(dias, und){
   if(dias===null||dias===undefined) return "—";
   return Math.round(dias)+"d restantes";
 }
-function bloqueSucursal(label, dotColor, valor, dias){
+function bloqueSucursal(label, dotColor, valor, dias, diasSin){
   var cero = valor===0;
   var urg  = colorDias(dias, valor);
   // El color queda solo en el punto de estado; el dato en sí es siempre neutro.
@@ -1708,7 +1720,7 @@ function bloqueSucursal(label, dotColor, valor, dias){
   return '<div class="nicho">'
     +   '<div class="nicho-label"><span class="nicho-dot" style="background:'+dotColor+'"></span>'+label+'</div>'
     +   '<div class="nicho-valor stock-data'+(cero?' dato-cero':'')+'">'+valor+' <span class="nicho-unidad'+(cero?' dato-cero':'')+'">un</span></div>'
-    +   '<div class="nicho-dias'+(cero?' dato-cero':'')+'">'+statusDot+textDias(dias,valor)+'</div>'
+    +   '<div class="nicho-dias'+(cero?' dato-cero':'')+'">'+statusDot+textDias(dias,valor)+(cero && diasSin>0 ? ' · hace '+diasSin+(diasSin===1?' día':' días') : '')+'</div>'
     + '</div>';
 }
 // Lista actualmente pintada en la vista Productos. Los índices de las
@@ -1740,10 +1752,10 @@ function renderCards(data, animate){
       +    '<div class="card-meta">'+metaHtml+'</div>'
       +    '<div class="card-badges">'+alHtml
       +      badgeCobertura(p)
-      +      '<span class="badge '+eCls+'">'+EST_LBL[p.estado]+'</span>'
+      +      '<span class="badge '+eCls+'">'+(p.estado==='sin_stock' && p.pat>0 ? 'Sin stock Vitacura' : EST_LBL[p.estado])+'</span>'
       +    '</div>'
       +  '</div>'
-      +  bloqueSucursal('Vitacura','#3B6D11',p.vit,p.dias_vit)
+      +  bloqueSucursal('Vitacura','#3B6D11',p.vit,p.dias_vit,p.dias_sin_stock_vit)
       +  bloqueSucursal('Pataguas','#185FA5',p.pat,p.dias_pat)
       +'</div>'
       // El contenido del detalle (movimientos + análisis) se construye recién
@@ -3012,11 +3024,12 @@ function producir(p, dias){
   var pat_after   = Math.max(0, pat_need - vit_surplus);
   return Math.ceil(vit_need + pat_after);
 }
+// Días de la Guía de Producción = los mismos del semáforo, el Resumen y el
+// correo: cuánto dura el stock de Vitacura al ritmo de venta de las dos tiendas
+// (p.dias_prod, calculado en Python). Antes esta guía usaba su propia fórmula.
 function cobertura(p){
-  if(p.vel_total<=0) return 99999;
-  var dvit = p.vel_vit>0 ? p.vit/p.vel_vit : 99999;
-  var dtot = (p.vit+p.pat)/p.vel_total;
-  return Math.min(dvit, dtot);
+  if(p.vel_total<=0 || p.dias_prod===null || p.dias_prod===undefined) return 99999;
+  return p.dias_prod;
 }
 
 function renderGuiaProduccion(){
@@ -3194,10 +3207,9 @@ function estadoDespacho(p, dias){
   return {estado:estado, necesita:necesita, desp:desp};
 }
 
-function renderGuiaDespacho(){
-  const dias = parseInt(document.getElementById('d-dias').value)||7;
-  document.getElementById('d-dias-label').textContent = dias+' días';
-
+// Lista de la Guía de Despacho: la usan la pantalla y la impresión para que
+// siempre muestren exactamente lo mismo.
+function prodsDespacho(dias){
   // Se muestran TODOS los productos que se venden en Pataguas; los que no
   // necesitan nada salen marcados como "OK" para que la guía se explique sola.
   var prods = DATA.filter(function(p){return p.vel_pat>0;});
@@ -3209,6 +3221,14 @@ function renderGuiaDespacho(){
     var db = b.pat>0&&b.vel_pat>0 ? b.pat/b.vel_pat : 999;
     return da-db;
   });
+  return prods;
+}
+
+function renderGuiaDespacho(){
+  const dias = parseInt(document.getElementById('d-dias').value)||7;
+  document.getElementById('d-dias-label').textContent = dias+' días';
+
+  var prods = prodsDespacho(dias);
 
   var despachar = 0, producir = 0;
   var filas = prods.map(function(p){
@@ -3311,7 +3331,11 @@ var ROLLO_CSS = [
 ].join('');
 
 function abrirRollo(bodyHtml){
-  var win = window.open('','_blank','width=400,height:750');
+  var win = window.open('','_blank','width=400,height=750');
+  if(!win){
+    alert('El navegador bloqueó la ventana de impresión. Permite las ventanas emergentes de este sitio y vuelve a tocar Imprimir.');
+    return;
+  }
   var html = '<!DOCTYPE html><html><head><meta charset="utf-8"><title>La Cocina</title>'
     + '<style>' + ROLLO_CSS + '</style></head><body>' + bodyHtml
     + '<script>window.onload=function(){window.print();}<\\/script>'
@@ -3354,22 +3378,18 @@ function imprimirProduccion(){
 
 function imprimirDespacho(){
   var dias = parseInt(document.getElementById('d-dias').value)||7;
-  var prods = DATA.filter(function(p){
-    return p.vel_pat>0 && Math.max(0,Math.ceil(p.vel_pat*dias)-p.pat)>0;
-  });
-  prods.sort(function(a,b){
-    var da = a.pat>0&&a.vel_pat>0 ? a.pat/a.vel_pat : 0;
-    var db = b.pat>0&&b.vel_pat>0 ? b.pat/b.vel_pat : 0;
-    return da-db;
-  });
+  // La hoja impresa es para quien arma el envío: solo los productos que
+  // Vitacura SÍ puede mandar hoy (mismos cálculos que la pantalla, vía
+  // prodsDespacho/estadoDespacho). Los que hay que producir u OK no se imprimen.
+  var prods = prodsDespacho(dias).map(function(p){ return {p:p, e:estadoDespacho(p, dias)}; })
+    .filter(function(x){ return x.e.estado==='completo' || x.e.estado==='parcial'; });
 
-  var filas = prods.map(function(p){
-    var desp = Math.max(0, Math.ceil(p.vel_pat*dias)-p.pat);
+  var filas = prods.map(function(x){
     return '<tr>'
-      +'<td class="nom">'+p.nombre+'</td>'
-      +'<td class="r">'+p.vit+'</td>'
-      +'<td class="r">'+p.pat+'</td>'
-      +'<td class="r prod">+'+desp+'</td>'
+      +'<td class="nom">'+tituloCase(x.p.nombre)+'</td>'
+      +'<td class="r">'+x.p.vit+'</td>'
+      +'<td class="r">'+x.p.pat+'</td>'
+      +'<td class="r prod">+'+x.e.desp+'</td>'
       +'</tr>';
   }).join('');
 
@@ -3377,9 +3397,11 @@ function imprimirDespacho(){
     '<div class="logo">La Cocina</div>'
    +'<div class="sub">Despacho Vitacura → Pataguas · '+dias+' días</div>'
    +'<div class="fecha">FECHA_HOY_PLACEHOLDER</div>'
-   +'<table><thead><tr>'
-   +'<th>Producto</th><th class="r">VIT</th><th class="r">PAT</th><th class="r">Desp</th>'
-   +'</tr></thead><tbody>'+filas+'</tbody></table>'
+   +(prods.length
+      ? '<table><thead><tr>'
+       +'<th>Producto</th><th class="r">VIT</th><th class="r">PAT</th><th class="r">Desp</th>'
+       +'</tr></thead><tbody>'+filas+'</tbody></table>'
+      : '<div class="sub">No hay productos para despachar hoy.</div>')
    +'<div class="footer">'+prods.length+' productos a despachar</div>'
   );
 }
