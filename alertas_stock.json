@@ -1,32 +1,5 @@
 {
-  "fecha": "2026-10-16",
-  "entradas": [
-    {
-      "sku": "RM",
-      "oficina": "VIT",
-      "cantidad": 10.0
-    },
-    {
-      "sku": "TSA",
-      "oficina": "VIT",
-      "cantidad": 10.0
-    },
-    {
-      "sku": "RA",
-      "oficina": "VIT",
-      "cantidad": 11.0
-    }
-  ],
-  "salidas": [
-    {
-      "sku": "CAMA",
-      "oficina": "VIT",
-      "cantidad": 2.0
-    },
-    {
-      "sku": "PCP",
-      "oficina": "VIT",
-      "cantidad": 1.0
-    }
-  ]
+  "fecha": "2026-10-17",
+  "entradas": [],
+  "salidas": []
 }
