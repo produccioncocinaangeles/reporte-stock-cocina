@@ -998,7 +998,9 @@ body{font-family:'Inter',-apple-system,BlinkMacSystemFont,sans-serif;background:
 /* ── Header ─────────────────────────────────────────────── */
 .header{background:transparent;padding:16px 20px 8px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px}
 .logo{display:flex;align-items:center;gap:10px}
-.logo-icon{width:30px;height:30px;background:#275300;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0;color:#fff}
+.logo-icon{width:30px;height:30px;background:#275300;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0;color:#fff;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none;touch-action:manipulation}
+.nav-oculta{display:none}
+.mostrar-ocultas .nav-oculta{display:inline-block}
 .logo-nombre{font-size:15px;font-weight:800;letter-spacing:-0.03em;color:var(--text-color)}
 .logo-sub{font-size:11px;font-weight:400;color:#64748b;letter-spacing:0.01em;margin-left:4px}
 .header-right{display:flex;gap:6px;align-items:center}
@@ -1882,6 +1884,30 @@ function mostrarRendimiento(){
     renderRendimiento();
   });
 }
+
+// ── Pestañas ocultas: Producción y Rendimiento ──
+// Aparecen al mantener apretado el logo 2 s; otra vez las oculta.
+// No se recuerda: al recargar vuelven a estar ocultas. No es seguridad
+// (el repo es público), solo evita que se vean a simple vista.
+function toggleOcultas(){
+  var nav = document.querySelector('.navbar-cocina');
+  var ver = !nav.classList.contains('mostrar-ocultas');
+  nav.classList.toggle('mostrar-ocultas', ver);
+  if(!ver){
+    var activa = document.querySelector('.nav-oculta.nav-active');
+    if(activa) mostrarResumen();
+  }
+  if(navigator.vibrate) navigator.vibrate(40);
+}
+(function(){
+  var logo = document.querySelector('.logo-icon');
+  if(!logo) return;
+  var t = null;
+  function cancelar(){ if(t){ clearTimeout(t); t = null; } }
+  logo.addEventListener('pointerdown', function(){ cancelar(); t = setTimeout(function(){ t = null; toggleOcultas(); }, 2000); });
+  ['pointerup','pointerleave','pointercancel'].forEach(function(ev){ logo.addEventListener(ev, cancelar); });
+  logo.addEventListener('contextmenu', function(e){ e.preventDefault(); });
+})();
 
 // ── Diciembre: meta del mes − ventas de diciembre − stock = falta producir ──
 var DIC_F = 'falta', DIC_O = '', DIC_C = '', DIC_SORT = {k:'falta', dir:-1};
@@ -3587,8 +3613,8 @@ HTML_TEMPLATE = """<!DOCTYPE html>
   <button class="navtab" id="nav-productos" onclick="mostrarProductos()">Productos</button>
   <button class="navtab" id="nav-guias" onclick="mostrarGuias()">Guías</button>
   <button class="navtab" id="nav-analisis" onclick="mostrarAnalisis()">Análisis</button>
-  <button class="navtab" id="nav-recetas" onclick="mostrarRecetas()">Producción</button>
-  <button class="navtab" id="nav-rendimiento" onclick="mostrarRendimiento()">Rendimiento</button>
+  <button class="navtab nav-oculta" id="nav-recetas" onclick="mostrarRecetas()">Producción</button>
+  <button class="navtab nav-oculta" id="nav-rendimiento" onclick="mostrarRendimiento()">Rendimiento</button>
   <button class="navtab" id="nav-diciembre" onclick="mostrarDiciembre()">Diciembre</button>
 </nav>
 
