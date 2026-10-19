@@ -1,5 +1,5 @@
 {
-  "ultimo_update": "2026-10-18T20:59:12",
+  "ultimo_update": "2026-10-19T07:34:46",
   "movimientos": [
     {
       "fecha": "2026-01-15",
@@ -87551,6 +87551,15 @@
     {
       "fecha": "2026-10-18",
       "sku": "PV",
+      "oficina": "PAT",
+      "tipo": "produccion",
+      "cantidad": 1.0,
+      "doc_id": 0,
+      "inferido": true
+    },
+    {
+      "fecha": "2026-10-19",
+      "sku": "EM",
       "oficina": "PAT",
       "tipo": "produccion",
       "cantidad": 1.0,
