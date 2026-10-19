@@ -1,11 +1,5 @@
 {
   "fecha": "2026-10-19",
-  "entradas": [
-    {
-      "sku": "EM",
-      "oficina": "PAT",
-      "cantidad": 1.0
-    }
-  ],
+  "entradas": [],
   "salidas": []
 }
