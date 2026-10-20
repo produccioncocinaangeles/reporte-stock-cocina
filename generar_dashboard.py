@@ -1839,12 +1839,14 @@ function toggleCard(i){
   var inner = document.getElementById('det-inner-'+i);
   if(inner && !inner.innerHTML){
     var p = RENDER_LIST[i];
+    // Análisis primero. Los movimientos se arman recién al abrir su pestaña
+    // (pueden ser cientos de filas y no hacen falta para leer el análisis).
     inner.innerHTML = '<div class="tabs">'
-      +  '<button class="tab active" data-tab="mov" data-idx="'+i+'" onclick="switchTabD(this)">Movimientos</button>'
-      +  '<button class="tab" data-tab="analisis" data-idx="'+i+'" onclick="switchTabD(this)">Análisis</button>'
+      +  '<button class="tab active" data-tab="analisis" data-idx="'+i+'" onclick="switchTabD(this)">Análisis</button>'
+      +  '<button class="tab" data-tab="mov" data-idx="'+i+'" onclick="switchTabD(this)">Movimientos</button>'
       +'</div>'
-      +'<div class="tab-body active" id="tab-'+i+'-mov">'+buildMovs(p.movs, i, false)+'</div>'
-      +'<div class="tab-body" id="tab-'+i+'-analisis">'+buildAnalisis(p)+'</div>';
+      +'<div class="tab-body active" id="tab-'+i+'-analisis">'+buildAnalisis(p)+'</div>'
+      +'<div class="tab-body" id="tab-'+i+'-mov"></div>';
   }
   document.getElementById('det-'+i).classList.toggle('open');
   document.getElementById('chev-'+i).classList.toggle('open');
@@ -1855,7 +1857,9 @@ function switchTabD(btn){
   document.querySelectorAll('#det-'+i+' .tab').forEach(function(t){t.classList.remove('active');});
   document.querySelectorAll('#det-'+i+' .tab-body').forEach(function(t){t.classList.remove('active');});
   btn.classList.add('active');
-  document.getElementById('tab-'+i+'-'+tab).classList.add('active');
+  var body = document.getElementById('tab-'+i+'-'+tab);
+  if(tab==='mov' && !body.innerHTML) body.innerHTML = buildMovs(RENDER_LIST[i].movs, i, false);
+  body.classList.add('active');
 }
 function switchTab(i,tab,btn){
   document.querySelectorAll('#det-'+i+' .tab').forEach(function(t){t.classList.remove('active');});
