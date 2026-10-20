@@ -1,5 +1,5 @@
 {
-  "ultimo_update": "2026-10-20T13:34:20",
+  "ultimo_update": "2026-10-20T14:00:44",
   "movimientos": [
     {
       "fecha": "2026-01-02",
@@ -100905,6 +100905,15 @@
       "oficina": "PAT",
       "tipo": "consumo",
       "cantidad": 12.0,
+      "doc_id": 0,
+      "inferido": true
+    },
+    {
+      "fecha": "2026-10-20",
+      "sku": "GHD",
+      "oficina": "VIT",
+      "tipo": "produccion",
+      "cantidad": 2.0,
       "doc_id": 0,
       "inferido": true
     }
