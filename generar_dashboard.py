@@ -94,6 +94,28 @@ COCINEROS = {
 }
 # Rocío los pide al proveedor, no se cocinan (no cuentan como producción de la cocina)
 PROVEEDOR_SKUS = {'CBN','CDL','CDM','CHF','FC','GHD','P','TBN','TCF','TCH','THM','TMF','THF','HDV'}
+# Componentes que salen con un producto pero no se facturan aparte (oct-2026):
+# cada PACK PONDERACIONES lleva 1 HELADO DE VAINILLA. Por cada venta del pack se
+# agrega una venta del helado, así su stock y su velocidad cuadran con Bsale.
+COMPONENTES_SIN_FACTURA = {'P': {'HDV': 1}}
+# Productos distintos en Bsale que comparten el mismo inventario: la PONDERACION
+# sola (POND) sale del stock del pack (P). Sus ventas se cuentan como ventas de
+# P (sin helado); sus recepciones se ignoran, porque se ingresan solo para
+# poder venderla y no son mercadería nueva.
+MISMO_INVENTARIO = {'POND': 'P'}
+# Ambas reglas las aplica expandir_componentes(), que usan leer_json() y la
+# cuadratura de actualizar_diario.py.
+
+def expandir_componentes(movs):
+    extra = []
+    for m in movs:
+        if m['tipo'] == 'venta' and m['sku'] in MISMO_INVENTARIO:
+            extra.append({**m, 'sku': MISMO_INVENTARIO[m['sku']], 'vendido_como': m['sku']})
+        elif m['tipo'] == 'venta' and m['sku'] in COMPONENTES_SIN_FACTURA:
+            for comp, cant in COMPONENTES_SIN_FACTURA[m['sku']].items():
+                extra.append({**m, 'sku': comp, 'cantidad': m['cantidad'] * cant,
+                              'componente_de': m['sku']})
+    return movs + extra
 # Salsas (12-ago-2026): no existen en Bsale (sin SKU propio, sin stock trackeado
 # ahí) pero acompañan a un plato específico 1 a 1. Adriana las prepara a todas,
 # sin importar quién cocine el plato. Cuando varias filas comparten la misma
@@ -113,6 +135,7 @@ SALSAS = {
     'SLS-MAL': {'nombre': 'SALSA MOSTAZA ALIMONADA', 'skus': ['TF']},
     'SLS-ACR': {'nombre': 'SALSA ACARAMELADA',       'skus': ['LA']},
     'SLS-NIK': {'nombre': 'SALSA NIKKEI',            'skus': ['TA', 'TS']},
+    'SLS-MAN': {'nombre': 'SALSA DE MANJAR',         'skus': ['P']},  # va en el Pack Ponderaciones
 }
 MAPA = {
     'OSTION A LA PARMESANA':'OP','OSTIÓN A LA PARMESANA':'OP','OSTIONES A LA PARMESANA':'OP',
@@ -237,7 +260,7 @@ def leer_json(oficina):
     with open(ARCHIVO_JSON, encoding='utf-8') as f:
         cache = json.load(f)
     movs = sorted(
-        [m for m in cache['movimientos'] if m['oficina'] == oficina],
+        [m for m in expandir_componentes(cache['movimientos']) if m['oficina'] == oficina],
         # mismo día: entradas (produccion) antes que salidas, para no toparse con el cero
         key=lambda m: (m['fecha'], m['tipo'] != 'produccion')
     )

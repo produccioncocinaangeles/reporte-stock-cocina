@@ -36,6 +36,9 @@ def main():
     # si no las entradas de ese tramo quedan sin salidas y el stock se infla.
     primera = min((m["fecha"] for m in movs if m["sku"] in SKUS and m["tipo"] != "produccion"), default=CORTE)
     cand += [m for m in comp if m["tipo"] in ("venta", "despacho") and m["sku"] in SKUS and m["fecha"] < primera]
+    # POND (ponderación sola) comparte inventario con P: también sus ventas de ese tramo
+    cand += [m for m in comp if m["tipo"] == "venta" and m["sku"] == "POND"
+             and m["fecha"] < min((x["fecha"] for x in movs if x["sku"] == "POND"), default=CORTE)]
     n1 = len(cand)
     headers = {"access_token": d.leer_token()}
     from datetime import datetime, timezone
