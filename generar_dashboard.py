@@ -1864,6 +1864,19 @@ function switchTab(i,tab,btn){
   document.getElementById('tab-'+i+'-'+tab).classList.add('active');
 }
 var FILTRO_ESTADO = '';
+// Cocina | Proveedor: los postres de proveedor (Rocío) no se mezclan con la
+// producción. Por defecto se ve la cocina.
+var FILTRO_ORIGEN = 'cocina';
+function setChipOrigen(btn){
+  FILTRO_ORIGEN = btn.getAttribute('data-origen');
+  document.querySelectorAll('#chips-origen .chip').forEach(function(c){c.classList.remove('chip-active');});
+  btn.classList.add('chip-active');
+  // El filtro de cocinero solo tiene sentido en la cocina
+  var sel = document.getElementById('f-cocinero');
+  sel.value = '';
+  document.getElementById('chip-cocinero').style.display = FILTRO_ORIGEN==='proveedor' ? 'none' : '';
+  filtrar();
+}
 function setChipEstado(btn){
   FILTRO_ESTADO = btn.getAttribute('data-estado');
   document.querySelectorAll('#chips-estado .chip[data-estado]').forEach(function(c){c.classList.remove('chip-active');});
@@ -1876,6 +1889,8 @@ function filtrar(){
   const est = FILTRO_ESTADO;
   const bus = norm(document.getElementById('f-buscar').value);
   const fil = DATA.filter(function(p){
+    if(FILTRO_ORIGEN==='cocina' && p.proveedor)     return false;
+    if(FILTRO_ORIGEN==='proveedor' && !p.proveedor) return false;
     if(coc && p.cocinero!==coc) return false;
     if(est && p.estado!==est)   return false;
     if(bus && !norm(p.nombre).includes(bus) && !norm(p.sku).includes(bus)) return false;
@@ -2997,10 +3012,17 @@ function renderAlertas(){
 
 // ── Resumen ejecutivo ──────────────────────────────────────
 function renderResumen(){
-  var urgentes  = DATA.filter(function(p){return p.estado==='sin_stock'||p.estado==='critico';});
-  var bajos     = DATA.filter(function(p){return p.estado==='bajo';});
-  var totalVit  = DATA.reduce(function(s,p){return s+p.vit;},0);
-  var totalPat  = DATA.reduce(function(s,p){return s+p.pat;},0);
+  // Los postres de proveedor (Rocío) no cuentan como producción: van en su
+  // propia tarjeta. Despachos y alertas de cuadratura siguen con todo, porque
+  // los postres también viajan a Pataguas y su stock también se controla.
+  var COCINA    = DATA.filter(function(p){return !p.proveedor;});
+  var PROV      = DATA.filter(function(p){return p.proveedor;});
+  var urgentes  = COCINA.filter(function(p){return p.estado==='sin_stock'||p.estado==='critico';});
+  var bajos     = COCINA.filter(function(p){return p.estado==='bajo';});
+  var pedir     = PROV.filter(function(p){return p.estado!=='ok';})
+                      .sort(function(a,b){return a.dias_prod-b.dias_prod;});
+  var totalVit  = COCINA.reduce(function(s,p){return s+p.vit;},0);
+  var totalPat  = COCINA.reduce(function(s,p){return s+p.pat;},0);
   var dias = 7;
   var despachos = DATA.filter(function(p){
     if(p.vel_pat<=0) return false;
@@ -3013,8 +3035,8 @@ function renderResumen(){
   renderAlertas();
 
   // Fila de stats
-  var sinStk = DATA.filter(function(p){return p.estado==='sin_stock';}).length;
-  var crit   = DATA.filter(function(p){return p.estado==='critico';}).length;
+  var sinStk = COCINA.filter(function(p){return p.estado==='sin_stock';}).length;
+  var crit   = COCINA.filter(function(p){return p.estado==='critico';}).length;
   function statKpi(val, label, alertCls){
     var cardCls = 'card-kpi-individual'+(val>0&&alertCls?' '+alertCls:'');
     var valCls  = 'res-stat-val'+(val>0?'':' dato-cero');
@@ -3034,7 +3056,7 @@ function renderResumen(){
     : '<div class="grid-etiquetas">'+urgentes.map(function(p){
         var dias_s  = p.estado==='sin_stock'?'Sin stock':Math.round(p.dias_prod)+'d';
         var badgeCls = p.estado==='sin_stock'?'danger':'warning';
-        return '<div class="etiqueta-item"><span class="res-item-nombre">'+tituloCase(p.nombre)+(p.proveedor?' <span class="sku-tag" style="color:var(--info-text);font-size:10px">PROVEEDOR · pedir</span>':'')+'</span>'
+        return '<div class="etiqueta-item"><span class="res-item-nombre">'+tituloCase(p.nombre)+'</span>'
           +'<span class="badge '+badgeCls+'" style="flex-shrink:0;margin-left:8px">'+dias_s+'</span></div>';
       }).join('')+'</div>';
   document.getElementById('res-alert-col').innerHTML =
@@ -3061,10 +3083,20 @@ function renderResumen(){
           +'<span style="color:var(--warn-text);font-weight:600;font-size:12px">'+Math.round(p.dias_prod)+'d</span></div>';
       }).join('');
 
+  var pedirHtml = pedir.length===0
+    ? '<div style="color:#94a3b8;font-size:13px;padding:8px 0">Nada por pedir</div>'
+    : pedir.map(function(p){
+        var txt = p.estado==='sin_stock' ? 'Sin stock' : Math.round(p.dias_prod)+'d';
+        var clr = (p.estado==='sin_stock'||p.estado==='critico') ? 'var(--danger-text)' : 'var(--warn-text)';
+        return '<div class="res-item"><span class="res-item-nombre">'+tituloCase(p.nombre)+'</span>'
+          +'<span style="color:'+clr+';font-weight:600;font-size:12px">'+txt+'</span></div>';
+      }).join('');
+
   document.getElementById('res-grid').innerHTML =
     '<div class="res-card"><div class="res-card-title">Despachar a Pataguas ('+despachos.length+')</div>'+despHtml+'</div>'
    +'<div class="res-card"><div class="res-card-title">Stock bajo ('+bajos.length+')</div>'+bajosHtml+'</div>'
-   +'<div class="res-card"><div class="res-card-title">Totales en stock</div>'
+   +'<div class="res-card"><div class="res-card-title">🛒 Pedir a proveedor · Rocío ('+pedir.length+')</div>'+pedirHtml+'</div>'
+   +'<div class="res-card"><div class="res-card-title">Totales en stock · cocina</div>'
    +'<div class="res-item"><span class="res-item-nombre">Vitacura</span><span class="stock-data">'+totalVit+' und</span></div>'
    +'<div class="res-item"><span class="res-item-nombre">Pataguas</span><span class="stock-data">'+totalPat+' und</span></div>'
    +'<div class="res-item"><span class="res-item-nombre">Total general</span><span class="stock-data">'+(totalVit+totalPat)+' und</span></div>'
@@ -3697,8 +3729,7 @@ recClear.addEventListener('click', function(){
   filtrarRecetas();
   recBuscar.focus();
 });
-renderCards(DATA);
-updateMetricas();
+filtrar();
 buildMesesOpts();
 renderResumen();
 initScrollReveal(document);
@@ -3781,13 +3812,17 @@ HTML_TEMPLATE = """<!DOCTYPE html>
       <input type="text" id="f-buscar" placeholder="Buscar producto o SKU...">
       <button type="button" id="f-buscar-clear" class="search-clear" aria-label="Borrar búsqueda" style="display:none">✕</button>
     </div>
+    <div class="chips" id="chips-origen">
+      <button class="chip chip-active" data-origen="cocina" onclick="setChipOrigen(this)">👨‍🍳 Cocina</button>
+      <button class="chip" data-origen="proveedor" onclick="setChipOrigen(this)">🛒 Proveedor · Rocío</button>
+    </div>
     <div class="chips" id="chips-estado">
       <button class="chip chip-active" data-estado="" onclick="setChipEstado(this)">Todos</button>
       <button class="chip" data-estado="sin_stock" onclick="setChipEstado(this)">Sin stock</button>
       <button class="chip" data-estado="critico" onclick="setChipEstado(this)">Críticos</button>
       <button class="chip" data-estado="bajo" onclick="setChipEstado(this)">Bajos</button>
       <button class="chip" data-estado="ok" onclick="setChipEstado(this)">OK</button>
-      <span class="chip" style="padding:8px 10px">👨‍🍳 <select id="f-cocinero"><option value="">Todos</option><option>CAROLINA</option><option>ADRIANA</option><option>CÉSAR</option><option>JESÚS</option><option>ROCÍO</option></select></span>
+      <span class="chip" id="chip-cocinero" style="padding:8px 10px">👨‍🍳 <select id="f-cocinero"><option value="">Todos</option><option>CAROLINA</option><option>ADRIANA</option><option>CÉSAR</option><option>JESÚS</option></select></span>
     </div>
   </div>
   <div class="container">
