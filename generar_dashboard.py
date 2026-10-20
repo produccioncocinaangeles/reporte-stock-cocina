@@ -1369,6 +1369,7 @@ select,input[type=text],input[type=number]{font-size:13px;font-weight:500;paddin
 /* ── Movimientos scroll ──────────────────────────────────── */
 .movs-scroll{max-height:380px;overflow-y:auto;border:1px solid #f1f5f9;border-radius:10px}
 .movs-scroll thead th{position:sticky;top:0;background:var(--card-bg);z-index:1}
+.movs-mes{margin-left:auto;font-size:11px;font-weight:700;padding:4px 10px;border-radius:20px;border:1px solid var(--neutral-border);background:var(--card-bg);color:inherit;font-family:inherit;cursor:pointer}
 .btn-vermas{display:block;width:100%;margin-top:8px;padding:9px;font-size:12px;font-weight:700;font-family:inherit;color:var(--ok-text);background:var(--ok-bg);border:1px solid var(--ok-border);border-radius:8px;cursor:pointer}
 .btn-vermas:hover{background:#dcfce7}
 
@@ -1595,58 +1596,76 @@ function tipoBadge(tipo){
     'Consumo':'tipo-consumo','Despacho recibido':'tipo-desp-rec','Entrada':'tipo-prod'};
   return '<span class="tipo-badge '+(m[tipo]||'tipo-prod')+'">'+tipo+'</span>';
 }
-function buildMovs(movs, idx, completo){
+// Movimientos por mes: se muestra un mes a la vez (por defecto el actual, o el
+// último con movimientos) y un menú permite elegir otro mes o todo el historial.
+var MESES_ES = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
+var MOV_TIENDA = {};   // filtro de tienda elegido en cada tarjeta (se conserva al cambiar de mes)
+function buildMovs(movs, idx, mes){
   if(!movs||movs.length===0) return '<p style="color:#bbb;font-size:12px;padding:8px 0">Sin movimientos.</p>';
-  // Por defecto: últimos 2 meses (mínimo 10 movimientos). El registro completo
-  // se conserva siempre; esto solo acota lo que se muestra inicialmente.
-  var visibles = movs, ocultos = 0;
-  if(!completo){
-    var corte = new Date(); corte.setDate(corte.getDate()-60);
-    var iso = corte.toISOString().slice(0,10);
-    visibles = movs.filter(function(m){return m.fecha_ord >= iso;});
-    if(visibles.length < 10) visibles = movs.slice(-10);
-    ocultos = movs.length - visibles.length;
+  // Meses con movimientos, del más reciente al más antiguo
+  var cuenta = {};
+  movs.forEach(function(m){ var k=m.fecha_ord.slice(0,7); cuenta[k]=(cuenta[k]||0)+1; });
+  var meses = Object.keys(cuenta).sort().reverse();
+  if(!mes){
+    var actual = new Date().toISOString().slice(0,7);
+    mes = cuenta[actual] ? actual : meses[0];
   }
+  var visibles = mes==='todo' ? movs : movs.filter(function(m){return m.fecha_ord.slice(0,7)===mes;});
+  var tienda = MOV_TIENDA[idx] || 'Todas';
+
   const rows = visibles.map(function(m){
-    const tienda = m.tienda==='Vitacura'
+    const tiendaHtml = m.tienda==='Vitacura'
       ? '<span class="tienda-vit">Vitacura</span>'
       : '<span class="tienda-pat">Pataguas</span>';
     const cantCls = m.signo==='+' ? 'cant-pos' : 'cant-neg';
     const rowBg = m.stock===0 ? 'background:rgba(186,26,26,0.07);' : '';
-    return '<tr data-tienda="'+m.tienda+'" style="'+rowBg+'"><td style="color:#888">'+m.fecha+'</td><td>'+tipoBadge(m.tipo)+'</td>'
-      +'<td style="color:#666;font-size:11px">'+m.documento+'</td><td>'+tienda+'</td>'
+    const oculto = (tienda!=='Todas' && m.tienda!==tienda) ? 'display:none;' : '';
+    return '<tr data-tienda="'+m.tienda+'" style="'+rowBg+oculto+'"><td style="color:#888">'+m.fecha+'</td><td>'+tipoBadge(m.tipo)+'</td>'
+      +'<td style="color:#666;font-size:11px">'+m.documento+'</td><td>'+tiendaHtml+'</td>'
       +'<td class="'+cantCls+'" style="text-align:right">'+m.signo+m.cantidad+'</td>'
       +'<td style="text-align:right;font-weight:600">'+m.stock+'</td></tr>';
   }).join('');
-  var boton = '';
-  if(ocultos > 0){
-    boton = '<button class="btn-vermas" onclick="verMovsCompletos('+idx+')">Ver historial completo ('+ocultos+' movimientos anteriores)</button>';
-  } else if(completo && movs.length > 0){
-    boton = '<div style="font-size:11px;color:#aaa;padding:8px 0;text-align:center">Historial completo · '+movs.length+' movimientos</div>';
+
+  // Menú de meses, agrupado por año si hay más de uno
+  var anios = {};
+  meses.forEach(function(k){ (anios[k.slice(0,4)] = anios[k.slice(0,4)]||[]).push(k); });
+  var listaAnios = Object.keys(anios).sort().reverse();
+  function opt(k){
+    var txt = MESES_ES[parseInt(k.slice(5,7),10)-1]+' '+k.slice(0,4)+' ('+cuenta[k]+')';
+    return '<option value="'+k+'"'+(k===mes?' selected':'')+'>'+txt+'</option>';
   }
-  var filtros = '<div class="movs-filtros">'
-    +'<button class="movs-filter-btn activo" onclick="filtrarMovs('+idx+',&apos;Todas&apos;,this)">Todas</button>'
-    +'<button class="movs-filter-btn" onclick="filtrarMovs('+idx+',&apos;Vitacura&apos;,this)">Vitacura</button>'
-    +'<button class="movs-filter-btn" onclick="filtrarMovs('+idx+',&apos;Pataguas&apos;,this)">Pataguas</button>'
+  var opciones = listaAnios.length>1
+    ? listaAnios.map(function(a){ return '<optgroup label="'+a+'">'+anios[a].map(opt).join('')+'</optgroup>'; }).join('')
+    : meses.map(opt).join('');
+  opciones += '<option value="todo"'+(mes==='todo'?' selected':'')+'>Todo el historial ('+movs.length+')</option>';
+
+  function btnT(t){
+    return '<button class="movs-filter-btn'+(t===tienda?' activo':'')+'" onclick="filtrarMovs('+idx+',&apos;'+t+'&apos;,this)">'+t+'</button>';
+  }
+  var filtros = '<div class="movs-filtros">'+btnT('Todas')+btnT('Vitacura')+btnT('Pataguas')
+    +'<select class="movs-mes" onchange="cambiarMesMovs('+idx+',this.value)" aria-label="Mes">'+opciones+'</select>'
     +'</div>';
-  return filtros+'<div class="movs-scroll"><table class="movs-table"><thead><tr>'
-    +'<th>Fecha</th><th>Tipo</th><th>Documento</th><th>Tienda</th>'
-    +'<th style="text-align:right">Cant.</th><th style="text-align:right">Stock</th>'
-    +'</tr></thead><tbody>'+rows+'</tbody></table></div>'+boton;
+  var tabla = visibles.length===0
+    ? '<p style="color:#bbb;font-size:12px;padding:8px 0">Sin movimientos en este mes.</p>'
+    : '<div class="movs-scroll"><table class="movs-table"><thead><tr>'
+      +'<th>Fecha</th><th>Tipo</th><th>Documento</th><th>Tienda</th>'
+      +'<th style="text-align:right">Cant.</th><th style="text-align:right">Stock</th>'
+      +'</tr></thead><tbody>'+rows+'</tbody></table></div>';
+  return filtros+tabla;
 }
-function verMovsCompletos(i){
+function cambiarMesMovs(i, mes){
   // RENDER_LIST y no DATA: con un filtro activo el índice i es de la lista
   // filtrada — usar DATA[i] mostraba los movimientos de otro producto.
-  document.getElementById('tab-'+i+'-mov').innerHTML = buildMovs(RENDER_LIST[i].movs, i, true);
+  document.getElementById('tab-'+i+'-mov').innerHTML = buildMovs(RENDER_LIST[i].movs, i, mes);
 }
 function filtrarMovs(idx, tienda, btn){
+  MOV_TIENDA[idx] = tienda;
   document.querySelectorAll('#tab-'+idx+'-mov .movs-filter-btn').forEach(function(b){ b.classList.remove('activo'); });
   btn.classList.add('activo');
   document.querySelectorAll('#tab-'+idx+'-mov tr[data-tienda]').forEach(function(r){
     r.style.display = (tienda==='Todas' || r.dataset.tienda===tienda) ? '' : 'none';
   });
 }
-
 // ── Análisis ───────────────────────────────────────────────
 function buildAnalisis(p){
   const vt = p.vel_total;
@@ -1792,12 +1811,13 @@ function bloqueSucursal(label, dotColor, valor, dias, diasSin){
     + '</div>';
 }
 // Lista actualmente pintada en la vista Productos. Los índices de las
-// tarjetas (toggleCard, verMovsCompletos, etc.) apuntan a ESTA lista, que
+// tarjetas (toggleCard, cambiarMesMovs, etc.) apuntan a ESTA lista, que
 // puede ser un subconjunto filtrado de DATA.
 var RENDER_LIST = [];
 function renderCards(data, animate){
   animate = animate !== false;
   RENDER_LIST = data;
+  MOV_TIENDA = {};  // los índices cambian con cada lista nueva
   const cont  = document.getElementById('productos');
   const noRes = document.getElementById('no-res');
   if(!data.length){cont.innerHTML='';noRes.style.display='block';return;}
@@ -1858,7 +1878,7 @@ function switchTabD(btn){
   document.querySelectorAll('#det-'+i+' .tab-body').forEach(function(t){t.classList.remove('active');});
   btn.classList.add('active');
   var body = document.getElementById('tab-'+i+'-'+tab);
-  if(tab==='mov' && !body.innerHTML) body.innerHTML = buildMovs(RENDER_LIST[i].movs, i, false);
+  if(tab==='mov' && !body.innerHTML) body.innerHTML = buildMovs(RENDER_LIST[i].movs, i);
   body.classList.add('active');
 }
 function switchTab(i,tab,btn){
