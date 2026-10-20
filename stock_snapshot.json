@@ -1,16 +1,16 @@
 {
-  "fecha": "2026-10-19",
+  "fecha": "2026-10-20",
   "stock": {
     "OP": {
-      "vit": 3,
-      "pat": 1
+      "vit": 2,
+      "pat": 2
     },
     "RPP": {
-      "vit": 8,
-      "pat": 3
+      "vit": 5,
+      "pat": 6
     },
     "MCL": {
-      "vit": 2,
+      "vit": 12,
       "pat": 0
     },
     "CJ": {
@@ -18,16 +18,16 @@
       "pat": 4
     },
     "CLC": {
-      "vit": 7,
-      "pat": 0
+      "vit": 3,
+      "pat": 4
     },
     "MCJ": {
-      "vit": 18,
-      "pat": 3
+      "vit": 15,
+      "pat": 6
     },
     "RC": {
-      "vit": 5,
-      "pat": 4
+      "vit": 4,
+      "pat": 5
     },
     "LA": {
       "vit": 12,
@@ -42,12 +42,12 @@
       "pat": 4
     },
     "TLS": {
-      "vit": 16,
-      "pat": 4
+      "vit": 15,
+      "pat": 5
     },
     "CL": {
-      "vit": 10,
-      "pat": 4
+      "vit": 7,
+      "pat": 7
     },
     "LS": {
       "vit": 2,
@@ -59,11 +59,11 @@
     },
     "PC": {
       "vit": 11,
-      "pat": 4
+      "pat": 3
     },
     "MMR": {
-      "vit": 17,
-      "pat": 3
+      "vit": 15,
+      "pat": 5
     },
     "TS": {
       "vit": 7,
@@ -74,12 +74,12 @@
       "pat": 1
     },
     "TSA": {
-      "vit": 10,
-      "pat": 0
+      "vit": 7,
+      "pat": 3
     },
     "RB": {
-      "vit": 11,
-      "pat": 3
+      "vit": 9,
+      "pat": 5
     },
     "CF": {
       "vit": 6,
@@ -94,7 +94,7 @@
       "pat": 2
     },
     "PCM": {
-      "vit": 1,
+      "vit": 2,
       "pat": 0
     },
     "ÑP": {
@@ -110,48 +110,48 @@
       "pat": 7
     },
     "CAMA": {
-      "vit": 44,
-      "pat": 5
+      "vit": 41,
+      "pat": 8
     },
     "TPP": {
-      "vit": 10,
-      "pat": 1
+      "vit": 7,
+      "pat": 4
     },
     "RA": {
-      "vit": 10,
-      "pat": 3
+      "vit": 7,
+      "pat": 6
     },
     "AS": {
       "vit": 0,
       "pat": 3
     },
     "PAC": {
-      "vit": 24,
-      "pat": 3
+      "vit": 22,
+      "pat": 5
     },
     "EM": {
-      "vit": 3,
-      "pat": 2
+      "vit": 2,
+      "pat": 3
     },
     "ÑC": {
       "vit": 7,
       "pat": 3
     },
     "EJ": {
-      "vit": 5,
-      "pat": 3
+      "vit": 4,
+      "pat": 4
     },
     "BAP": {
-      "vit": 18,
-      "pat": 4
+      "vit": 16,
+      "pat": 6
     },
     "MIGNON": {
       "vit": 20,
       "pat": 4
     },
     "PV": {
-      "vit": 6,
-      "pat": 2
+      "vit": 4,
+      "pat": 4
     },
     "TA": {
       "vit": 4,
@@ -186,32 +186,32 @@
       "pat": 2
     },
     "PCP": {
-      "vit": 6,
-      "pat": 3
+      "vit": 3,
+      "pat": 6
     },
     "EC": {
-      "vit": 4,
-      "pat": 3
+      "vit": 3,
+      "pat": 4
     },
     "CC": {
-      "vit": 3,
-      "pat": 1
+      "vit": 2,
+      "pat": 2
     },
     "SSA": {
-      "vit": 3,
-      "pat": 2
+      "vit": 2,
+      "pat": 3
     },
     "LM": {
       "vit": 2,
       "pat": 3
     },
     "CAC": {
-      "vit": 0,
+      "vit": 6,
       "pat": 1
     },
     "TPU": {
-      "vit": 12,
-      "pat": 4
+      "vit": 11,
+      "pat": 5
     },
     "SA": {
       "vit": 11,
@@ -219,6 +219,62 @@
     },
     "CAMAC": {
       "vit": 3,
+      "pat": 3
+    },
+    "CBN": {
+      "vit": 3,
+      "pat": 3
+    },
+    "CDL": {
+      "vit": 7,
+      "pat": 4
+    },
+    "CDM": {
+      "vit": 1,
+      "pat": 4
+    },
+    "CHF": {
+      "vit": 3,
+      "pat": 4
+    },
+    "FC": {
+      "vit": 2,
+      "pat": 3
+    },
+    "GHD": {
+      "vit": 6,
+      "pat": 3
+    },
+    "P": {
+      "vit": 0,
+      "pat": 0
+    },
+    "TBN": {
+      "vit": 2,
+      "pat": 1
+    },
+    "TCF": {
+      "vit": 5,
+      "pat": 5
+    },
+    "TCH": {
+      "vit": 6,
+      "pat": 3
+    },
+    "THM": {
+      "vit": 4,
+      "pat": 2
+    },
+    "TMF": {
+      "vit": 5,
+      "pat": 3
+    },
+    "THF": {
+      "vit": 1,
+      "pat": 3
+    },
+    "HDV": {
+      "vit": 13,
       "pat": 3
     }
   }
