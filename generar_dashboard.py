@@ -65,6 +65,13 @@ NOMBRES = {
     'SSA':'SALMÓN CON SALSA DE ALCAPARRAS','LM':'LASAÑA MEDITERRÁNEA',
     'CAC':'CHOCLO A LA CREMA','TPU':'TEQUEÑOS DE PULPO CON SALSA','SA':'SALSA EN FRASCO',
     'CAMAC':'CAMARONES COCIDOS CON SALSA',
+    # Postres de proveedor (oct-2026)
+    'CBN':'CAJA BOLITA NUEZ 18 UNID', 'CDL':'CRUMBLE DE LIMÓN', 'CDM':'CRUMBLE DE MANZANA',
+    'CHF':'CHEESECAKE FRAMBUESA', 'FC':'FLAN DE CALUGA', 'GHD':'GALLETAS EL HORNO DE DOMINGA',
+    'P':'PACK PONDERACIONES', 'TBN':'TORTA BOLITA NUEZ', 'TCF':'TORTA CALUGA FRAMBUESA',
+    'TCH':'TORTA CHOCOLATE MANJAR', 'THM':'TORTA HOJARASCA MANJAR LECHE CONDENSADA',
+    'TMF':'TORTA MERENGUE FRAMBUESA', 'THF':'TORTA HOJARASCA CREMA FRAMBUESA MANJAR',
+    'HDV':'HELADO DE VAINILLA',
 }
 COCINEROS = {
     'OP':'CAROLINA','RPP':'CÉSAR','MCL':'JESÚS','CJ':'JESÚS','CLC':'JESÚS',
@@ -79,7 +86,14 @@ COCINEROS = {
     'TCM':'ADRIANA','PCP':'JESÚS','EC':'CAROLINA','CC':'JESÚS','SSA':'JESÚS',
     'LM':'ADRIANA','CAC':'JESÚS','TPU':'ADRIANA','SA':'ADRIANA',
     'CAMAC':'CÉSAR',
+    # Postres de proveedor (oct-2026)
+    'CBN':'ROCÍO','CDL':'ROCÍO','CDM':'ROCÍO','CHF':'ROCÍO',
+    'FC':'ROCÍO','GHD':'ROCÍO','P':'ROCÍO','TBN':'ROCÍO',
+    'TCF':'ROCÍO','TCH':'ROCÍO','THM':'ROCÍO','TMF':'ROCÍO',
+    'THF':'ROCÍO','HDV':'ROCÍO',
 }
+# Rocío los pide al proveedor, no se cocinan (no cuentan como producción de la cocina)
+PROVEEDOR_SKUS = {'CBN','CDL','CDM','CHF','FC','GHD','P','TBN','TCF','TCH','THM','TMF','THF','HDV'}
 # Salsas (12-ago-2026): no existen en Bsale (sin SKU propio, sin stock trackeado
 # ahí) pero acompañan a un plato específico 1 a 1. Adriana las prepara a todas,
 # sin importar quién cocine el plato. Cuando varias filas comparten la misma
@@ -134,6 +148,22 @@ MAPA = {
     'LASAÑA MEDITERRANEA':'LM','LASAÑA MEDITERRÁNEA':'LM',
     'CHOCLO A LA CREMA':'CAC','TEQUEÑOS DE PULPO CON SALSA':'TPU',
     'SALSA EN FRASCO':'SA','CAMARONES COCIDOS CON SALSA':'CAMAC',
+    # Postres de proveedor (oct-2026): nombres Bsale (con " PN"; "MERENGE" viene mal escrito)
+    'CAJA BOLITA NUEZ 18 UNID PN':'CBN','CAJA BOLITA NUEZ 18 UNID':'CBN',
+    'CRUMBLE DE LIMON PN':'CDL','CRUMBLE DE LIMON':'CDL','CRUMBLE DE LIMÓN':'CDL',
+    'CRUMBLE DE MANZANA PN':'CDM','CRUMBLE DE MANZANA':'CDM',
+    'CHEESECAKE FRAMBUESA PN':'CHF','CHEESECAKE FRAMBUESA':'CHF',
+    'FLAN DE CALUGA PN':'FC','FLAN DE CALUGA':'FC',
+    'GALLETAS EL HORNO DE DOMINGA':'GHD',
+    'PACK PONDERACIONES PN':'P','PACK PONDERACIONES':'P',
+    'TORTA BOLITA NUEZ PN':'TBN','TORTA BOLITA NUEZ':'TBN',
+    'TORTA CALUGA FRAMBUESA PN':'TCF','TORTA CALUGA FRAMBUESA':'TCF',
+    'TORTA CHOCOLATE MANJAR PN':'TCH','TORTA CHOCOLATE MANJAR':'TCH',
+    'TORTA HOJARASCA MANJAR LECHE CONDENSADA':'THM',
+    'TORTA MERENGE FRAMBUESA PN':'TMF','TORTA MERENGUE FRAMBUESA':'TMF',
+    'TORTA HOJARASCA CREMA FRAMBUESA MANJAR LECHE CONDENSADA':'THF',
+    'TORTA HOJARASCA CREMA FRAMBUESA MANJAR':'THF',
+    'HELADO DE VAINILLA':'HDV',
 }
 
 # ─── LECTURA ─────────────────────────────────────────────────
@@ -521,7 +551,7 @@ def procesar():
         vm = [{'mes':m,'vit':vm_v.get(m,0),'pat':vm_p.get(m,0),'total':vm_v.get(m,0)+vm_p.get(m,0)} for m in meses]
 
         resultados.append({
-            'sku': sku, 'nombre': NOMBRES[sku], 'cocinero': COCINEROS.get(sku,''),
+            'sku': sku, 'nombre': NOMBRES[sku], 'cocinero': COCINEROS.get(sku,''), 'proveedor': sku in PROVEEDOR_SKUS,
             'vit': sv_hoy, 'pat': sp_hoy, 'total': total_hoy,
             'vel_vit': vel_v, 'vel_pat': vel_p, 'vel_total': round(vel_t,4),
             'dias_vit': dias_v, 'dias_pat': dias_p, 'dias_total': dias_t, 'dias_prod': dias_prod,
@@ -907,12 +937,13 @@ def calcular_produccion():
 
     prod = [m for m in movs
             if m.get('tipo') == 'produccion' and m.get('oficina') == 'VIT'
-            and m.get('sku') in NOMBRES]
+            and m.get('sku') in NOMBRES
+            and m.get('sku') not in PROVEEDOR_SKUS]  # recepciones de proveedor no son producción de la cocina
     if not prod:
         return vacio
 
     meses = sorted({m['fecha'][:7] for m in prod})[-12:]
-    cocineros = sorted({c for c in COCINEROS.values()})
+    cocineros = sorted({c for s, c in COCINEROS.items() if s not in PROVEEDOR_SKUS})
 
     por_mes = {}
     for mes in meses:
@@ -1756,9 +1787,10 @@ function renderCards(data, animate){
     var estadoDotColor = (p.estado==='sin_stock'||p.estado==='critico') ? 'var(--danger-text)' : p.estado==='bajo' ? 'var(--warn-text)' : p.estado==='salsa' ? 'var(--info-text)' : 'var(--ok-text)';
     var revealCls = animate ? ' reveal' : '';
     var revealStyle = animate ? ' style="transition-delay:'+(Math.min(i,8)*40)+'ms"' : '';
+    var provTag = p.proveedor ? ' <span class="sku-tag" style="color:var(--info-text);font-size:10px">PROVEEDOR</span>' : '';
     var metaHtml = p.estado==='salsa'
       ? p.sku+' · <span class="cap">'+p.cocinero+'</span> · Según stock de: '+(p.platos_asociados||[]).map(tituloCase).join(', ')
-      : p.sku+' · <span class="cap">'+p.cocinero+'</span> · Repo: '+p.tiempo_repo+'d · Reordenar en '+p.pto_reorden+' und';
+      : p.sku+' · <span class="cap">'+p.cocinero+'</span>'+provTag+' · Repo: '+p.tiempo_repo+'d · Reordenar en '+p.pto_reorden+' und';
     return '<div class="card '+p.estado+revealCls+'"'+revealStyle+'>'
       +'<div class="card-row" onclick="toggleCard('+i+')">'
       +  '<div class="card-info">'
@@ -2112,6 +2144,7 @@ function renderProduccion(data, animate){
     var meta = 'Stock: <span class="stk-vit">'+p.vit+' Vit</span> · <span class="stk-pat">'+p.pat+' Pat</span>';
     if(p.dias_total!==null && p.dias_total!==undefined) meta += ' · Cobertura: '+Math.round(p.dias_total)+'d';
     if(p.cocinero) meta += ' · 👨‍🍳 <span class="cap">'+tituloCase(p.cocinero)+'</span>';
+    if(p.proveedor) meta += ' <span class="sku-tag" style="color:var(--info-text);font-size:10px">PROVEEDOR</span> · se pide, no se cocina';
     if(!tieneReceta) meta += ' · <span class="prod-warn">sin receta cargada</span>';
     else if(recetaIncompleta(p)) meta += ' · <span class="prod-warn">⚠ receta incompleta</span>';
     var val = PLAN[p.sku]||0;
@@ -2978,7 +3011,7 @@ function renderResumen(){
     : '<div class="grid-etiquetas">'+urgentes.map(function(p){
         var dias_s  = p.estado==='sin_stock'?'Sin stock':Math.round(p.dias_prod)+'d';
         var badgeCls = p.estado==='sin_stock'?'danger':'warning';
-        return '<div class="etiqueta-item"><span class="res-item-nombre">'+tituloCase(p.nombre)+'</span>'
+        return '<div class="etiqueta-item"><span class="res-item-nombre">'+tituloCase(p.nombre)+(p.proveedor?' <span class="sku-tag" style="color:var(--info-text);font-size:10px">PROVEEDOR · pedir</span>':'')+'</span>'
           +'<span class="badge '+badgeCls+'" style="flex-shrink:0;margin-left:8px">'+dias_s+'</span></div>';
       }).join('')+'</div>';
   document.getElementById('res-alert-col').innerHTML =
@@ -3085,7 +3118,7 @@ function renderGuiaProduccion(){
   var filas = prods.map(function(p){
     var total   = p.vit + p.pat;
     var und     = producir(p, dias);
-    var und_str = und > 0 ? und : '—';
+    var und_str = und > 0 ? und + (p.proveedor ? ' (pedir)' : '') : '—';
     var cob   = cobertura(p);
     var dt    = (p.vel_total<=0 || cob>=99999) ? '—' : Math.round(cob)+'d';
     var bCls  = cob<=3 ? 'danger' : cob<=7 ? 'warning' : 'ok';
@@ -3094,7 +3127,7 @@ function renderGuiaProduccion(){
       +'<td><input type="checkbox" class="prod-check" data-sku="'+p.sku+'"'+chk+' onchange="actualizarChecklist()"></td>'
       +'<td>'+tituloCase(p.nombre)+'</td>'
       +'<td style="width:60px"><span class="badge '+bCls+'">'+dt+'</span></td>'
-      +'<td style="color:#64748b;font-size:11px">'+tituloCase(p.cocinero)+'</td>'
+      +'<td style="color:#64748b;font-size:11px">'+tituloCase(p.cocinero)+(p.proveedor?' <span class="sku-tag" style="color:var(--info-text);font-size:10px">PROVEEDOR</span>':'')+'</td>'
       +'<td style="text-align:right;color:#64748b">'+p.vit+'</td>'
       +'<td style="text-align:right;color:var(--info-text)">'+p.pat+'</td>'
       +'<td style="text-align:right;font-weight:600">'+total+'</td>'
@@ -3672,7 +3705,7 @@ HTML_TEMPLATE = """<!DOCTYPE html>
       <button class="chip" data-estado="critico" onclick="setChipEstado(this)">Críticos</button>
       <button class="chip" data-estado="bajo" onclick="setChipEstado(this)">Bajos</button>
       <button class="chip" data-estado="ok" onclick="setChipEstado(this)">OK</button>
-      <span class="chip" style="padding:8px 10px">👨‍🍳 <select id="f-cocinero"><option value="">Todos</option><option>CAROLINA</option><option>ADRIANA</option><option>CÉSAR</option><option>JESÚS</option></select></span>
+      <span class="chip" style="padding:8px 10px">👨‍🍳 <select id="f-cocinero"><option value="">Todos</option><option>CAROLINA</option><option>ADRIANA</option><option>CÉSAR</option><option>JESÚS</option><option>ROCÍO</option></select></span>
     </div>
   </div>
   <div class="container">
@@ -3717,7 +3750,7 @@ HTML_TEMPLATE = """<!DOCTYPE html>
       <div class="guia-controls">
         <select id="g-cocinero" onchange="renderGuiaProduccion()">
           <option value="">Todos los cocineros</option>
-          <option>CAROLINA</option><option>ADRIANA</option><option>CÉSAR</option><option>JESÚS</option>
+          <option>CAROLINA</option><option>ADRIANA</option><option>CÉSAR</option><option>JESÚS</option><option>ROCÍO</option>
         </select>
         <div class="dias-group">
           <button class="dias-btn dias-btn-active" onclick="setDiasProd(7,this)">7d</button>
@@ -3894,6 +3927,7 @@ HTML_TEMPLATE = """<!DOCTYPE html>
       <button class="chip" data-cocinero="ADRIANA" onclick="setChipProdCocinero(this)">Adriana</button>
       <button class="chip" data-cocinero="CÉSAR" onclick="setChipProdCocinero(this)">César</button>
       <button class="chip" data-cocinero="JESÚS" onclick="setChipProdCocinero(this)">Jesús</button>
+      <button class="chip" data-cocinero="ROCÍO" onclick="setChipProdCocinero(this)">Rocío</button>
     </div>
   </div>
   <div class="container">
