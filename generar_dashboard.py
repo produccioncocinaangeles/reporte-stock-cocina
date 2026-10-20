@@ -1920,7 +1920,7 @@ function switchVista(vistaId, navId, cb){
 }
 function mostrarResumen(){ switchVista('vista-resumen','nav-resumen', renderResumen); }
 function mostrarProductos(){ switchVista('vista-productos','nav-productos'); }
-function mostrarGuias(){ switchVista('vista-guias','nav-guias', function(){ renderGuiaProduccion(); renderGuiaDespacho(); }); }
+function mostrarGuias(){ switchVista('vista-guias','nav-guias', function(){ renderGuiaProduccion(); renderGuiaProveedor(); renderGuiaDespacho(); }); }
 function mostrarRanking(){ switchVista('vista-ranking','nav-ranking', renderRanking); }
 function mostrarAnalisis(){
   switchVista('vista-analisis','nav-analisis', function(){
@@ -3135,13 +3135,14 @@ function renderGuiaProduccion(){
   // (cambiar de cocinero/días no debería perder la selección del checklist).
   var seleccionados = new Set(Array.from(document.querySelectorAll('.prod-check:checked')).map(function(c){return c.getAttribute('data-sku');}));
 
-  var prods = DATA.filter(function(p){return coc ? p.cocinero===coc : true;});
+  // Los productos de proveedor no se cocinan: van en su propia guía de pedidos.
+  var prods = DATA.filter(function(p){return !p.proveedor && (coc ? p.cocinero===coc : true);});
   prods.sort(function(a,b){ return cobertura(a) - cobertura(b); });
 
   var filas = prods.map(function(p){
     var total   = p.vit + p.pat;
     var und     = producir(p, dias);
-    var und_str = und > 0 ? und + (p.proveedor ? ' (pedir)' : '') : '—';
+    var und_str = und > 0 ? und : '—';
     var cob   = cobertura(p);
     var dt    = (p.vel_total<=0 || cob>=99999) ? '—' : Math.round(cob)+'d';
     var bCls  = cob<=3 ? 'danger' : cob<=7 ? 'warning' : 'ok';
@@ -3150,7 +3151,7 @@ function renderGuiaProduccion(){
       +'<td><input type="checkbox" class="prod-check" data-sku="'+p.sku+'"'+chk+' onchange="actualizarChecklist()"></td>'
       +'<td>'+tituloCase(p.nombre)+'</td>'
       +'<td style="width:60px"><span class="badge '+bCls+'">'+dt+'</span></td>'
-      +'<td style="color:#64748b;font-size:11px">'+tituloCase(p.cocinero)+(p.proveedor?' <span class="sku-tag" style="color:var(--info-text);font-size:10px">PROVEEDOR</span>':'')+'</td>'
+      +'<td style="color:#64748b;font-size:11px">'+tituloCase(p.cocinero)+'</td>'
       +'<td style="text-align:right;color:#64748b">'+p.vit+'</td>'
       +'<td style="text-align:right;color:var(--info-text)">'+p.pat+'</td>'
       +'<td style="text-align:right;font-weight:600">'+total+'</td>'
@@ -3163,6 +3164,58 @@ function renderGuiaProduccion(){
   var selAll = document.getElementById('sel-all-prod');
   if(selAll) selAll.checked = prods.length>0 && prods.every(function(p){return seleccionados.has(p.sku);});
   actualizarChecklist();
+}
+
+// ── Guía de pedidos a proveedor (Rocío): no se cocina, se pide ─
+function renderGuiaProveedor(){
+  var dias = parseInt(document.getElementById('p-dias').value)||7;
+  document.getElementById('p-dias-label').textContent = dias+' días';
+  var prods = DATA.filter(function(p){return p.proveedor;});
+  prods.sort(function(a,b){ return cobertura(a) - cobertura(b); });
+  var filas = prods.map(function(p){
+    var total = p.vit + p.pat;
+    var und   = producir(p, dias);
+    var cob   = cobertura(p);
+    var dt    = (p.vel_total<=0 || cob>=99999) ? '—' : Math.round(cob)+'d';
+    var bCls  = cob<=3 ? 'danger' : cob<=7 ? 'warning' : 'ok';
+    return '<tr>'
+      +'<td>'+tituloCase(p.nombre)+'</td>'
+      +'<td style="width:60px"><span class="badge '+bCls+'">'+dt+'</span></td>'
+      +'<td style="text-align:right;color:#64748b">'+p.vit+'</td>'
+      +'<td style="text-align:right;color:var(--info-text)">'+p.pat+'</td>'
+      +'<td style="text-align:right;font-weight:600">'+total+'</td>'
+      +'<td style="text-align:right;font-weight:700;font-size:13px;'+(und>0?'':'color:#cbd5e1')+'">'+(und>0?und:'—')+'</td>'
+      +'</tr>';
+  }).join('');
+  document.getElementById('tabla-proveedor').innerHTML = filas||'<tr><td colspan="6" style="text-align:center;color:#aaa;padding:20px">Sin productos</td></tr>';
+  document.getElementById('resumen-proveedor').textContent = 'Rocío · '+prods.length+' productos · para '+dias+' días';
+}
+
+function imprimirProveedor(){
+  var dias = parseInt(document.getElementById('p-dias').value)||7;
+  var prods = DATA.filter(function(p){return p.proveedor;});
+  prods.sort(function(a,b){ return cobertura(a)-cobertura(b); });
+  var filas = prods.map(function(p){
+    var cob  = cobertura(p);
+    var und  = producir(p, dias);
+    var dt   = (p.vel_total<=0||cob>=99999) ? '—' : Math.round(cob)+'d';
+    return '<tr'+(cob<=3?' class="urg"':'')+'>'
+      +'<td class="nom'+(cob>7?' ok':'')+'">'+p.nombre+'</td>'
+      +'<td class="r dias">'+dt+'</td>'
+      +'<td class="r">'+p.vit+'</td>'
+      +'<td class="r">'+p.pat+'</td>'
+      +'<td class="r prod">'+( und>0 ? und : '—' )+'</td>'
+      +'</tr>';
+  }).join('');
+  abrirRollo(
+    '<div class="logo">La Cocina</div>'
+   +'<div class="sub">Pedidos a proveedor · '+dias+' días</div>'
+   +'<div class="fecha">FECHA_HOY_PLACEHOLDER</div>'
+   +'<table><thead><tr>'
+   +'<th>Producto</th><th class="r">Días</th><th class="r">VIT</th><th class="r">PAT</th><th class="r">Pedir</th>'
+   +'</tr></thead><tbody>'+filas+'</tbody></table>'
+   +'<div class="footer">'+prods.length+' productos</div>'
+  );
 }
 
 // ── Ver ingredientes de lo que se va a producir (modal con tabs) ─
@@ -3395,6 +3448,12 @@ function setDiasProd(d, btn){
   btn.classList.add('dias-btn-active');
   renderGuiaProduccion();
 }
+function setDiasProv(d, btn){
+  document.getElementById('p-dias').value = d;
+  btn.parentElement.querySelectorAll('.dias-btn').forEach(function(b){b.classList.remove('dias-btn-active');});
+  btn.classList.add('dias-btn-active');
+  renderGuiaProveedor();
+}
 function setDiasDesp(d, btn){
   document.getElementById('d-dias').value = d;
   btn.parentElement.querySelectorAll('.dias-btn').forEach(function(b){b.classList.remove('dias-btn-active');});
@@ -3441,7 +3500,7 @@ function abrirRollo(bodyHtml){
 function imprimirProduccion(){
   var coc  = document.getElementById('g-cocinero').value;
   var dias = parseInt(document.getElementById('g-dias').value)||7;
-  var prods = DATA.filter(function(p){return coc ? p.cocinero===coc : true;});
+  var prods = DATA.filter(function(p){return !p.proveedor && (coc ? p.cocinero===coc : true);});
   prods.sort(function(a,b){ return cobertura(a)-cobertura(b); });
 
   var filas = prods.map(function(p){
@@ -3565,7 +3624,7 @@ function vistaVisible(id){ return document.getElementById(id).style.display !== 
 function repintarTodo(){
   filtrar();
   renderResumen();
-  if(vistaVisible('vista-guias')){ renderGuiaProduccion(); renderGuiaDespacho(); }
+  if(vistaVisible('vista-guias')){ renderGuiaProduccion(); renderGuiaProveedor(); renderGuiaDespacho(); }
   if(vistaVisible('vista-recetas')) renderProduccion(DATA);
 }
 var ULTIMO_UPDATE_ISO = ULTIMO_UPDATE_ISO_PLACEHOLDER;
@@ -3773,7 +3832,7 @@ HTML_TEMPLATE = """<!DOCTYPE html>
       <div class="guia-controls">
         <select id="g-cocinero" onchange="renderGuiaProduccion()">
           <option value="">Todos los cocineros</option>
-          <option>CAROLINA</option><option>ADRIANA</option><option>CÉSAR</option><option>JESÚS</option><option>ROCÍO</option>
+          <option>CAROLINA</option><option>ADRIANA</option><option>CÉSAR</option><option>JESÚS</option>
         </select>
         <div class="dias-group">
           <button class="dias-btn dias-btn-active" onclick="setDiasProd(7,this)">7d</button>
@@ -3801,6 +3860,36 @@ HTML_TEMPLATE = """<!DOCTYPE html>
   <!-- Botón para ver ingredientes de lo seleccionado arriba -->
   <div class="btn-ver-ing" id="btn-ver-ing-wrap">
     <button class="btn btn-primary" onclick="abrirModalIngredientes()">📋 Ver ingredientes (<span id="ver-ing-count">0</span>)</button>
+  </div>
+
+  <!-- Guía Pedidos a Proveedor -->
+  <div class="guia-section reveal">
+    <div class="guia-header">
+      <div>
+        <div class="guia-title">🛒 Guía de Pedidos a Proveedor</div>
+        <div class="guia-sub" id="resumen-proveedor">—</div>
+      </div>
+      <div class="guia-controls">
+        <div class="dias-group">
+          <button class="dias-btn dias-btn-active" onclick="setDiasProv(7,this)">7d</button>
+          <button class="dias-btn" onclick="setDiasProv(15,this)">15d</button>
+          <button class="dias-btn" onclick="setDiasProv(30,this)">30d</button>
+        </div>
+        <input type="number" id="p-dias" value="7" min="1" max="90" onchange="renderGuiaProveedor()" style="width:55px;text-align:center">
+        <span class="guia-sub" id="p-dias-label">7 días</span>
+        <button class="btn btn-primary" onclick="imprimirProveedor()">🖨 Imprimir</button>
+      </div>
+    </div>
+    <div class="table-container-responsive">
+    <table class="guia-table">
+      <thead><tr>
+        <th>Producto</th><th style="width:55px">Días</th>
+        <th style="text-align:right">Vitacura</th><th style="text-align:right">Pataguas</th>
+        <th style="text-align:right">Total</th><th style="text-align:right">Pedir</th>
+      </tr></thead>
+      <tbody id="tabla-proveedor"></tbody>
+    </table>
+    </div>
   </div>
 
   <!-- Guía Despacho -->
@@ -4189,6 +4278,7 @@ if __name__ == '__main__':
                 'sku':            d['sku'],
                 'nombre':         d['nombre'],
                 'cocinero':       d['cocinero'],
+                'proveedor':      d.get('proveedor', False),
                 'vit':            d['vit'],
                 'pat':            d['pat'],
                 'total':          d['total'],

@@ -7,6 +7,9 @@ y recalculaba los dias con su propia formula y sus propios umbrales, asi que el
 correo y el dashboard se contradecian (41 de 56 productos mostraban dias
 distintos y 20 tenian semaforo distinto). Ahora la unica fuente de verdad es el
 dashboard.
+
+Los productos con "proveedor": true (postres que pide Rocio) no cuentan como
+produccion: van en una tarjeta aparte "Pedidos a proveedor".
 """
 
 import smtplib
@@ -122,7 +125,14 @@ def titulo_case(texto):
 def armar_html(productos, fecha_datos):
     fecha = datetime.now().strftime("%d/%m/%Y · %H:%M")
 
-    criticos      = [p for p in productos if p["estado"] == "critico"]
+    # Los postres de proveedor (cocinero ROCIO) no se cocinan: Rocio los pide.
+    # Van en su propia tarjeta y no cuentan en KPIs, cocineros ni lista completa.
+    todos      = productos
+    produccion = [p for p in todos if not p.get("proveedor", False)]
+    proveedor  = [p for p in todos if p.get("proveedor", False)]
+    productos  = produccion
+
+    criticos     = [p for p in productos if p["estado"] == "critico"]
     bajos         = [p for p in productos if p["estado"] == "bajo"]
     ok            = [p for p in productos if p["estado"] == "ok"]
     sin_stock_vit = [p for p in productos if p["vit"] == 0]
@@ -230,6 +240,18 @@ def armar_html(productos, fecha_datos):
     titulo_card = (f'font-size:14px;font-weight:700;color:{TEXTO};margin:0 0 14px;'
                    f'font-family:{FUENTE}')
 
+    # ── Pedidos a proveedor (postres de Rocio) ──────────────
+    card_proveedor = ""
+    if proveedor:
+        urg_prov = any(p["estado"] in ("sin_stock", "critico") for p in proveedor)
+        color_prov = "#b91c1c" if urg_prov else TEXTO
+        titulo_prov = titulo_card.replace(f'color:{TEXTO}', f'color:{color_prov}')
+        card_proveedor = card(
+            f'<p style="{titulo_prov}">Pedidos a proveedor · Rocío · {len(proveedor)} productos</p>'
+            f'<p style="font-size:12px;color:{TENUE};margin:-8px 0 14px;font-family:{FUENTE}">'
+            f'Postres que se compran hechos; no son producción de la cocina.</p>'
+            f'{tabla(proveedor)}')
+
     # ── Header con el logo del dashboard ────────────────────
     header = (
         f'<table role="presentation" cellpadding="0" cellspacing="0" border="0" '
@@ -265,7 +287,9 @@ def armar_html(productos, fecha_datos):
 
 {card(f'<p style="{titulo_card}">Por cocinero</p>{secciones_cocinero}')}
 
-{card(f'<p style="{titulo_card}">Lista completa · {len(productos)} productos</p>{tabla(productos)}')}
+{card_proveedor}
+
+{card(f'<p style="{titulo_card}">Lista completa de producción · {len(produccion)} productos</p>{tabla(produccion)}')}
 
 <p style="font-size:11px;color:{TENUE};text-align:center;margin:4px 0 0;line-height:1.7;font-family:{FUENTE}">
   Generado automáticamente · Mismos datos del dashboard ({fecha_datos})<br>
