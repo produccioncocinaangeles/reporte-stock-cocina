@@ -3512,6 +3512,21 @@ function repintarTodo(){
   if(vistaVisible('vista-guias')){ renderGuiaProduccion(); renderGuiaDespacho(); }
   if(vistaVisible('vista-recetas')) renderProduccion(DATA);
 }
+var ULTIMO_UPDATE_ISO = ULTIMO_UPDATE_ISO_PLACEHOLDER;
+var stockVivoOk = false;
+function mostrarBannerDatosViejos(){
+  var b = document.getElementById('aviso-datos-viejos');
+  if(!b || !ULTIMO_UPDATE_ISO) return;
+  var t = new Date(ULTIMO_UPDATE_ISO).getTime();
+  if(isNaN(t)) return;
+  var horas = (Date.now() - t) / 3600000;
+  if(horas <= 30){ b.style.display = 'none'; return; }
+  var dias = Math.max(1, Math.floor(horas / 24));
+  var txt = '⚠️ Datos de hace ' + dias + (dias === 1 ? ' día' : ' días') + ' — la actualización automática no está corriendo';
+  if(stockVivoOk) txt += '. El stock sí está al día; ventas e historial no.';
+  b.textContent = txt;
+  b.style.display = 'block';
+}
 function iniciarStockEnVivo(){
   if(!STOCK_LIVE_URL) return;
   var aviso = document.getElementById('stock-aviso');
@@ -3522,11 +3537,16 @@ function iniciarStockEnVivo(){
     .then(function(res){
       clearTimeout(timer);
       if(!res || !res.ok || !res.stock || !Object.keys(res.stock).length) throw new Error((res && res.error) || 'respuesta vacía');
+      var skusData = DATA.filter(function(p){ return p.estado !== 'salsa'; });
+      var skusConStock = skusData.filter(function(p){ return res.stock[p.sku] || res.stock[p.sku.split('Ñ').join('N')]; }).length;
+      if(skusData.length && skusConStock < skusData.length * 0.5) throw new Error('stock incompleto: ' + skusConStock + ' de ' + skusData.length + ' productos');
       recalcularConStock(DATA, res.stock);
       var hora = res.hora || new Date().toLocaleTimeString('es-CL', {hour:'2-digit', minute:'2-digit'});
       document.getElementById('fecha-act').textContent = 'Stock en vivo · ' + hora;
       aviso.style.display = 'none';
+      stockVivoOk = true;
       repintarTodo();
+      mostrarBannerDatosViejos();
     })
     .catch(function(e){
       clearTimeout(timer);
@@ -3567,6 +3587,7 @@ updateMetricas();
 buildMesesOpts();
 renderResumen();
 initScrollReveal(document);
+mostrarBannerDatosViejos();
 iniciarStockEnVivo();
 """
 
@@ -3584,6 +3605,7 @@ HTML_TEMPLATE = """<!DOCTYPE html>
 <body>
 <script>if(localStorage.getItem('theme')==='dark'){document.body.classList.add('dark-mode');}</script>
 
+<div id="aviso-datos-viejos" role="alert" style="display:none;background:#ba1a1a;color:#fff;padding:12px 16px;font-size:14px;font-weight:600;line-height:1.35;text-align:center"></div>
 <div class="header">
   <div class="logo">
     <div class="logo-icon">🍽</div>
@@ -4031,7 +4053,7 @@ def calcular_diciembre(stock, hoy=None):
                     ventas[k] = ventas.get(k, 0) + float(m.get('cantidad', 0) or 0)
     return calcular_diciembre_desde(meta, ventas, stock, hoy)
 
-def generar_html(datos, fecha_str, analisis=None, ultimo_update_str=None, produccion=None, diciembre=None):
+def generar_html(datos, fecha_str, analisis=None, ultimo_update_str=None, produccion=None, diciembre=None, ultimo_update_iso=None):
     data_json    = json.dumps(datos, ensure_ascii=False)
     prod_json = json.dumps(produccion or {'meses': [], 'cocineros': [], 'por_mes': {}}, ensure_ascii=False)
     analisis_json = json.dumps(analisis or {}, ensure_ascii=False)
@@ -4044,6 +4066,7 @@ def generar_html(datos, fecha_str, analisis=None, ultimo_update_str=None, produc
         alertas_json = 'null'
     js_final  = JS.replace('FECHA_HOY_PLACEHOLDER', fecha_str)
     js_final  = js_final.replace('STOCK_LIVE_URL_PLACEHOLDER', json.dumps(STOCK_LIVE_URL))
+    js_final  = js_final.replace('ULTIMO_UPDATE_ISO_PLACEHOLDER', json.dumps(ultimo_update_iso or ''))
     html = HTML_TEMPLATE
     html = html.replace('CSS_PLACEHOLDER',            CSS)
     html = html.replace('ANA_DATA_PLACEHOLDER',       analisis_json)  # antes de DATA_PLACEHOLDER
@@ -4073,16 +4096,18 @@ if __name__ == '__main__':
         with open(ARCHIVO_JSON, encoding='utf-8') as _f:
             _uu = json.load(_f).get('ultimo_update', '')
         _uu_ts = pd.Timestamp(_uu)
+        ultimo_update_iso = _uu_ts.isoformat()
         ultimo_update_str = f'{_uu_ts.day} {MESES_ES[_uu_ts.month-1]} · {_uu_ts.strftime("%H:%M")}'
     except Exception:
         ultimo_update_str = FECHA_STR
+        ultimo_update_iso = ''
     print(f'\nGenerando HTML con {len(datos)} productos...')
     produccion = calcular_produccion()
     print('  Meses con produccion: ' + str(len(produccion.get('meses', []))))
     diciembre = calcular_diciembre(STOCK_BSALE)
     if diciembre:
         print(f"  Diciembre: {diciembre['tot']['productos']} productos, falta producir {diciembre['tot']['falta_cocina']} u")
-    html = generar_html(datos, FECHA_STR, analisis, ultimo_update_str, produccion, diciembre)
+    html = generar_html(datos, FECHA_STR, analisis, ultimo_update_str, produccion, diciembre, ultimo_update_iso)
     with open(ARCHIVO_HTML, 'w', encoding='utf-8') as f:
         f.write(html)
     print(f'Dashboard: {ARCHIVO_HTML}')

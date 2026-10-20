@@ -14,6 +14,13 @@
 #
 # Tras cada corrida, nuestro stock reconstruido == stock real de Bsale.
 # Si la API no responde o no hay token, NO modifica nada.
+#
+# Protecciones (para que un error de Bsale no ensucie el historial):
+#   - Tope de movimientos inferidos y cobertura mínima de SKUs (ver abajo).
+#   - Guardado seguro: se escribe a un archivo temporal y recién después se
+#     reemplaza el original (os.replace); el historial nunca puede perder datos.
+#   - Para saltarse los topes (cuando el dueño confirmó que el cambio de stock
+#     fue real) correr con la variable de entorno FORZAR_INFERENCIA=1.
 import json, os, time, sys
 from datetime import datetime, timedelta, timezone
 import requests
@@ -32,6 +39,15 @@ from generar_dashboard import NOMBRES, bsale_stock, CARPETA, BSALE_TOKEN
 ARCHIVO_HISTORIAL = os.path.join(CARPETA, 'historial.json')
 ARCHIVO_SNAPSHOT  = os.path.join(CARPETA, 'stock_snapshot.json')
 ARCHIVO_ALERTAS   = os.path.join(CARPETA, 'alertas_stock.json')
+
+# Tope de movimientos inferidos por corrida. Sale del historial real (113 días
+# con inferidos): máximo diario 29, percentil 95 = 22. Se fija en 60, más del
+# doble del máximo normal, pero por debajo de lo que pasaría si Bsale devolviera
+# el stock vacío o parcial (55 SKUs x 2 oficinas = hasta ~110 movimientos).
+MAX_INFERIDOS_POR_CORRIDA = 60
+# Si el stock descargado cubre menos de esta fracción de los SKUs de la foto
+# anterior, Bsale devolvió datos incompletos y se aborta.
+COBERTURA_MINIMA_SKUS = 0.80
 
 HEADERS   = {'access_token': BSALE_TOKEN}
 OFICINAS  = {1: 'VIT', 3: 'PAT'}
@@ -105,6 +121,51 @@ def reconstruir_stock(movs):
             stock[(sku, oficina)] = q
     return stock
 
+def guardar_json_seguro(ruta, datos, min_movimientos=None):
+    # Escribe a un temporal en la misma carpeta y reemplaza el original con
+    # os.replace. Si min_movimientos viene dado (historial), valida antes que
+    # el temporal se pueda releer y que no tenga menos movimientos que el original.
+    tmp = ruta + '.tmp'
+    try:
+        with open(tmp, 'w', encoding='utf-8') as f:
+            json.dump(datos, f, ensure_ascii=False, indent=2)
+        if min_movimientos is not None:
+            with open(tmp, encoding='utf-8') as f:
+                releido = json.load(f)
+            if len(releido['movimientos']) < min_movimientos:
+                raise ValueError(f"el archivo nuevo tiene {len(releido['movimientos'])} "
+                                 f"movimientos y el original {min_movimientos}")
+        os.replace(tmp, ruta)
+    except Exception as e:
+        try:
+            os.remove(tmp)
+        except OSError:
+            pass
+        print(f"ERROR: no se pudo guardar {os.path.basename(ruta)} de forma segura ({e}). "
+              f"El archivo original quedó intacto.")
+        sys.exit(1)
+
+def verificar_topes(inferidos, stock_real, skus_foto_anterior):
+    # Aborta (sys.exit(1)) si el stock de Bsale parece sospechoso. Se salta con FORZAR_INFERENCIA=1.
+    if os.environ.get('FORZAR_INFERENCIA') == '1':
+        print("  FORZAR_INFERENCIA=1: se omiten los topes de seguridad.")
+        return
+    if skus_foto_anterior:
+        cubiertos = sum(1 for sku in skus_foto_anterior
+                        if sku in stock_real or sku.replace('Ñ', 'N') in stock_real)
+        cobertura = cubiertos / len(skus_foto_anterior)
+        if cobertura < COBERTURA_MINIMA_SKUS:
+            print(f"ERROR: Bsale devolvió stock incompleto: solo {cubiertos} de "
+                  f"{len(skus_foto_anterior)} SKUs de la foto anterior ({cobertura:.0%}; mínimo "
+                  f"{COBERTURA_MINIMA_SKUS:.0%}). No se guardó nada. "
+                  f"Si el cambio es real, correr con FORZAR_INFERENCIA=1.")
+            sys.exit(1)
+    if len(inferidos) > MAX_INFERIDOS_POR_CORRIDA:
+        print(f"ERROR: Bsale devolvió un stock sospechoso: {len(inferidos)} movimientos "
+              f"inferidos (normal: hasta {MAX_INFERIDOS_POR_CORRIDA}). No se guardó nada. "
+              f"Si el cambio es real, correr con FORZAR_INFERENCIA=1.")
+        sys.exit(1)
+
 def main():
     hoy = datetime.now(TZ_CHILE)
     print(f"Actualización diaria — {hoy:%Y-%m-%d %H:%M} (hora Chile)")
@@ -118,6 +179,7 @@ def main():
 
     cache = json.load(open(ARCHIVO_HISTORIAL, encoding='utf-8'))
     movs  = cache['movimientos']
+    n_original = len(movs)  # para validar que al guardar no se pierdan movimientos
     conocidos = {(m['doc_id'], m['sku'], m['oficina'], m['tipo'])
                  for m in movs if m.get('doc_id')}
     # Documentos reemplazados por datos manuales (correcciones): no re-agregar
@@ -152,6 +214,13 @@ def main():
                 inferidos.append({'fecha': fecha_hoy, 'sku': sku, 'oficina': of_nombre,
                                   'tipo': 'consumo', 'cantidad': float(round(-residuo)),
                                   'doc_id': 0, 'inferido': True})
+    # Tope de seguridad ANTES de tocar nada (la foto anterior aún no se sobrescribe)
+    try:
+        with open(ARCHIVO_SNAPSHOT, encoding='utf-8') as f:
+            skus_foto_anterior = list(json.load(f).get('stock', {}).keys())
+    except Exception:
+        skus_foto_anterior = []
+    verificar_topes(inferidos, stock_real, skus_foto_anterior)
     movs.extend(inferidos)
 
     entradas = [i for i in inferidos if i['tipo'] == 'produccion']
@@ -165,19 +234,16 @@ def main():
     # ── 3. Guardar todo ──
     cache['ultimo_update'] = hoy.strftime('%Y-%m-%dT%H:%M:%S')
     cache['movimientos']   = movs
-    with open(ARCHIVO_HISTORIAL, 'w', encoding='utf-8') as f:
-        json.dump(cache, f, ensure_ascii=False, indent=2)
+    guardar_json_seguro(ARCHIVO_HISTORIAL, cache, min_movimientos=n_original)
 
     foto = {sku: stock_real.get(sku, stock_real.get(sku.replace('Ñ', 'N'), {'vit': 0, 'pat': 0}))
             for sku in NOMBRES}
-    with open(ARCHIVO_SNAPSHOT, 'w', encoding='utf-8') as f:
-        json.dump({'fecha': fecha_hoy, 'stock': foto}, f, ensure_ascii=False, indent=2)
+    guardar_json_seguro(ARCHIVO_SNAPSHOT, {'fecha': fecha_hoy, 'stock': foto})
 
-    with open(ARCHIVO_ALERTAS, 'w', encoding='utf-8') as f:
-        json.dump({'fecha': fecha_hoy,
-                   'entradas': [{'sku': i['sku'], 'oficina': i['oficina'], 'cantidad': i['cantidad']} for i in entradas],
-                   'salidas':  [{'sku': i['sku'], 'oficina': i['oficina'], 'cantidad': i['cantidad']} for i in salidas]},
-                  f, ensure_ascii=False, indent=2)
+    guardar_json_seguro(ARCHIVO_ALERTAS, {
+        'fecha': fecha_hoy,
+        'entradas': [{'sku': i['sku'], 'oficina': i['oficina'], 'cantidad': i['cantidad']} for i in entradas],
+        'salidas':  [{'sku': i['sku'], 'oficina': i['oficina'], 'cantidad': i['cantidad']} for i in salidas]})
 
     print(f"Historial: {len(movs)} movimientos | Foto y alertas guardadas")
 

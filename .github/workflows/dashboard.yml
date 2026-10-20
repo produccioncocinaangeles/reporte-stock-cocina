@@ -2,11 +2,20 @@ name: Dashboard y Reporte Diario
 
 on:
   schedule:
-    - cron: '0 22 * * *'   # 19:00 Chile (UTC-3)
+    - cron: '0 22 * * *'   # 19:00 Chile en horario de verano (UTC-3); 18:00 en invierno (UTC-4)
   workflow_dispatch:
+    inputs:
+      forzar_inferencia:
+        description: 'Forzar: guardar aunque Bsale entregue cambios de stock inusuales (solo si ya revisaste que son reales)'
+        type: boolean
+        default: false
 
 permissions:
   contents: write
+
+concurrency:
+  group: dashboard
+  cancel-in-progress: false
 
 jobs:
   build:
@@ -32,6 +41,7 @@ jobs:
         env:
           BSALE_TOKEN: ${{ secrets.BSALE_TOKEN }}
           TZ: America/Santiago
+          FORZAR_INFERENCIA: ${{ inputs.forzar_inferencia && '1' || '' }}
         run: python actualizar_diario.py
 
       - name: Guardar historial y foto de stock en el repo
@@ -39,7 +49,7 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git add historial.json stock_snapshot.json alertas_stock.json
-          git diff --staged --quiet || (git commit -m "Actualizacion diaria: ventas, guias y recepciones inferidas" && git push)
+          git diff --staged --quiet || (git commit -m "Actualizacion diaria: ventas, guias y recepciones inferidas" && git pull --rebase && git push)
 
       # ── PASO 2: Generar dashboard + velocidades.json ───────────
       # La credencial de Google Sheets permite leer las recetas para la pestaña
@@ -83,3 +93,28 @@ jobs:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           publish_dir: /tmp/deploy
           commit_message: "Dashboard actualizado ${{ github.run_number }}"
+
+      # ── Aviso si algo falló ───────────────────────────────────
+      - name: Avisar por correo si la actualización falló
+        if: failure()
+        env:
+          GMAIL_REMITENTE: ${{ secrets.GMAIL_REMITENTE }}
+          GMAIL_PASSWORD: ${{ secrets.GMAIL_PASSWORD }}
+          CORREOS_DESTINO: ${{ secrets.CORREOS_DESTINO }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          python - <<'PYEOF'
+          import os, smtplib
+          from email.mime.text import MIMEText
+          remitente = os.environ["GMAIL_REMITENTE"]
+          destinatarios = [c.strip() for c in os.environ["CORREOS_DESTINO"].split(",") if c.strip()]
+          cuerpo = ("⚠️ La actualización del dashboard falló hoy — el dashboard muestra datos del día anterior.\n\n"
+                    "Detalle de la corrida: " + os.environ["RUN_URL"])
+          msg = MIMEText(cuerpo, "plain", "utf-8")
+          msg["Subject"] = "⚠️ La actualización del dashboard falló hoy"
+          msg["From"] = remitente
+          msg["To"] = ", ".join(destinatarios)
+          with smtplib.SMTP_SSL("smtp.gmail.com", 465) as server:
+              server.login(remitente, os.environ["GMAIL_PASSWORD"])
+              server.sendmail(remitente, destinatarios, msg.as_string())
+          PYEOF
