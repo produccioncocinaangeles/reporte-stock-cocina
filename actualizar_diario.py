@@ -34,7 +34,7 @@ try:
 except Exception:
     TZ_CHILE = None  # sin base de datos de zonas horarias: usa hora local
 
-from generar_dashboard import NOMBRES, bsale_stock, CARPETA, BSALE_TOKEN
+from generar_dashboard import NOMBRES, bsale_stock, CARPETA, BSALE_TOKEN, expandir_componentes
 
 ARCHIVO_HISTORIAL = os.path.join(CARPETA, 'historial.json')
 ARCHIVO_SNAPSHOT  = os.path.join(CARPETA, 'stock_snapshot.json')
@@ -112,7 +112,7 @@ def reconstruir_stock(movs):
     stock = {}
     for oficina in ('VIT', 'PAT'):
         acum = {}
-        for m in sorted([x for x in movs if x['oficina'] == oficina],
+        for m in sorted([x for x in expandir_componentes(movs) if x['oficina'] == oficina],
                         key=lambda x: (x['fecha'], x['tipo'] != 'produccion')):
             ent = m['cantidad'] if m['tipo'] == 'produccion' else 0
             sal = m['cantidad'] if m['tipo'] in ('venta', 'despacho', 'consumo') else 0
