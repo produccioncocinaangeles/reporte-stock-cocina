@@ -1,11 +1,7 @@
 {
   "fecha": "2026-10-20",
-  "entradas": [
-    {
-      "sku": "GHD",
-      "oficina": "VIT",
-      "cantidad": 2.0
-    }
-  ],
-  "salidas": []
+  "entradas": [],
+  "salidas": [],
+  "recepciones": [],
+  "consumos": []
 }

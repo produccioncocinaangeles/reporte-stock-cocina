@@ -1,5 +1,5 @@
 {
-  "ultimo_update": "2026-10-20T14:00:44",
+  "ultimo_update": "2026-10-20T21:26:16",
   "movimientos": [
     {
       "fecha": "2026-01-02",
@@ -100916,6 +100916,62 @@
       "cantidad": 2.0,
       "doc_id": 0,
       "inferido": true
+    },
+    {
+      "fecha": "2026-10-20",
+      "sku": "PCP",
+      "oficina": "VIT",
+      "tipo": "venta",
+      "cantidad": 1.0,
+      "doc_id": 22326
+    },
+    {
+      "fecha": "2026-10-20",
+      "sku": "GHD",
+      "oficina": "VIT",
+      "tipo": "venta",
+      "cantidad": 1.0,
+      "doc_id": 22326
+    },
+    {
+      "fecha": "2026-10-20",
+      "sku": "CAMA",
+      "oficina": "VIT",
+      "tipo": "venta",
+      "cantidad": 1.0,
+      "doc_id": 22327
+    },
+    {
+      "fecha": "2026-10-20",
+      "sku": "EPL",
+      "oficina": "VIT",
+      "tipo": "venta",
+      "cantidad": 1.0,
+      "doc_id": 22327
+    },
+    {
+      "fecha": "2026-10-20",
+      "sku": "THF",
+      "oficina": "VIT",
+      "tipo": "venta",
+      "cantidad": 1.0,
+      "doc_id": 22327
+    },
+    {
+      "fecha": "2026-10-20",
+      "sku": "TP",
+      "oficina": "VIT",
+      "tipo": "venta",
+      "cantidad": 1.0,
+      "doc_id": 22327
+    },
+    {
+      "fecha": "2026-10-20",
+      "sku": "CAMAC",
+      "oficina": "VIT",
+      "tipo": "venta",
+      "cantidad": 1.0,
+      "doc_id": 22327
     }
   ],
   "docs_ignorar": [
@@ -101267,5 +101323,7 @@
       "PAT",
       "venta"
     ]
-  ]
+  ],
+  "ultima_recepcion_id": 5392,
+  "ultimo_consumo_id": 1753
 }
