@@ -1,7 +1,57 @@
 {
-  "fecha": "2026-10-20",
+  "fecha": "2026-10-21",
   "entradas": [],
   "salidas": [],
-  "recepciones": [],
-  "consumos": []
+  "recepciones": [
+    {
+      "sku": "ÑJ",
+      "oficina": "VIT",
+      "cantidad": 1.0,
+      "nota": "Recepcion / CRISTIAN LAGOS"
+    },
+    {
+      "sku": "AS",
+      "oficina": "VIT",
+      "cantidad": 14.0,
+      "nota": "Recepcion / CRISTIAN LAGOS"
+    },
+    {
+      "sku": "P",
+      "oficina": "VIT",
+      "cantidad": 10.0,
+      "nota": "Recepcion / CRISTIAN LAGOS"
+    },
+    {
+      "sku": "PCP",
+      "oficina": "VIT",
+      "cantidad": 19.0,
+      "nota": "Recepcion / CRISTIAN LAGOS"
+    },
+    {
+      "sku": "CC",
+      "oficina": "VIT",
+      "cantidad": 8.0,
+      "nota": "Recepcion / CRISTIAN LAGOS"
+    }
+  ],
+  "consumos": [
+    {
+      "sku": "CAMA",
+      "oficina": "VIT",
+      "cantidad": 1.0,
+      "nota": "cristhian"
+    },
+    {
+      "sku": "CAMA",
+      "oficina": "VIT",
+      "cantidad": 2.0,
+      "nota": "cristhian"
+    },
+    {
+      "sku": "ÑJ",
+      "oficina": "PAT",
+      "cantidad": 1.0,
+      "nota": "descuadre autorizado por berna"
+    }
+  ]
 }
