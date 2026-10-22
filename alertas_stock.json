@@ -1,7 +1,6 @@
 {
   "fecha": "2026-10-22",
-  "entradas": [],
-  "salidas": [
+  "entradas": [
     {
       "sku": "OP",
       "oficina": "PAT",
@@ -23,36 +22,13 @@
       "cantidad": 5.0
     }
   ],
+  "salidas": [],
   "recepciones": [
     {
-      "sku": "RS",
+      "sku": "PCM",
       "oficina": "VIT",
-      "cantidad": 10.0,
-      "nota": "Recepcion / CRISTIAN LAGOS"
-    },
-    {
-      "sku": "PCP",
-      "oficina": "PAT",
-      "cantidad": 7.0,
-      "nota": "Recepcion / YALECI CHIQUINQUIRA"
-    },
-    {
-      "sku": "P",
-      "oficina": "PAT",
       "cantidad": 5.0,
-      "nota": "Recepcion / YALECI CHIQUINQUIRA"
-    },
-    {
-      "sku": "OP",
-      "oficina": "PAT",
-      "cantidad": 1.0,
-      "nota": "Recepcion / YALECI CHIQUINQUIRA"
-    },
-    {
-      "sku": "CBN",
-      "oficina": "PAT",
-      "cantidad": 1.0,
-      "nota": "Recepcion / YALECI CHIQUINQUIRA"
+      "nota": "Recepcion / CRISTIAN LAGOS"
     }
   ],
   "consumos": []

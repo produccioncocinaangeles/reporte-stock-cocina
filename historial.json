@@ -1,5 +1,5 @@
 {
-  "ultimo_update": "2026-10-22T12:19:29",
+  "ultimo_update": "2026-10-22T12:44:16",
   "movimientos": [
     {
       "fecha": "2026-01-02",
@@ -101527,6 +101527,76 @@
       "cantidad": 5.0,
       "doc_id": 0,
       "inferido": true
+    },
+    {
+      "fecha": "2026-10-22",
+      "sku": "FC",
+      "oficina": "VIT",
+      "tipo": "venta",
+      "cantidad": 1.0,
+      "doc_id": 22349
+    },
+    {
+      "fecha": "2026-10-22",
+      "sku": "PCP",
+      "oficina": "PAT",
+      "tipo": "venta",
+      "cantidad": 1.0,
+      "doc_id": 22350
+    },
+    {
+      "fecha": "2026-10-22",
+      "sku": "MIGNON",
+      "oficina": "PAT",
+      "tipo": "venta",
+      "cantidad": 1.0,
+      "doc_id": 22350
+    },
+    {
+      "fecha": "2026-10-22",
+      "sku": "PCM",
+      "oficina": "VIT",
+      "tipo": "produccion",
+      "cantidad": 5.0,
+      "doc_id": "R5400",
+      "costo": 35000.0,
+      "nota": "Recepcion / CRISTIAN LAGOS"
+    },
+    {
+      "fecha": "2026-10-22",
+      "sku": "OP",
+      "oficina": "PAT",
+      "tipo": "produccion",
+      "cantidad": 1.0,
+      "doc_id": 0,
+      "inferido": true
+    },
+    {
+      "fecha": "2026-10-22",
+      "sku": "PCP",
+      "oficina": "PAT",
+      "tipo": "produccion",
+      "cantidad": 7.0,
+      "doc_id": 0,
+      "inferido": true
+    },
+    {
+      "fecha": "2026-10-22",
+      "sku": "CBN",
+      "oficina": "PAT",
+      "tipo": "produccion",
+      "cantidad": 1.0,
+      "doc_id": 0,
+      "inferido": true
+    },
+    {
+      "fecha": "2026-10-22",
+      "sku": "P",
+      "oficina": "PAT",
+      "tipo": "produccion",
+      "cantidad": 5.0,
+      "doc_id": 0,
+      "inferido": true
     }
   ],
   "docs_ignorar": [
@@ -101879,6 +101949,6 @@
       "venta"
     ]
   ],
-  "ultima_recepcion_id": 5399,
+  "ultima_recepcion_id": 5400,
   "ultimo_consumo_id": 1756
 }
