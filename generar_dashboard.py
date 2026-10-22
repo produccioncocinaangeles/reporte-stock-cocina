@@ -2989,51 +2989,63 @@ function nombreSku(sku){
   var p = DATA.find(function(x){return x.sku===sku;});
   return p ? p.nombre : sku;
 }
+// Desde oct-2026 el proceso diario registra recepciones y consumos REALES de
+// Bsale (ALERTAS.recepciones / .consumos, con la nota del documento). Las
+// 'entradas' y 'salidas' son lo que quedó sin documento y se dedujo cuadrando
+// contra el stock real: se muestran marcadas para distinguirlas.
+function escHtml(t){ return String(t||'').replace(/[&<>"]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c];}); }
 function renderAlertas(){
   var elSal = document.getElementById('res-salidas');
   var elRec = document.getElementById('res-recepciones');
   if(!elSal || !elRec) return;
-  if(!ALERTAS || ((ALERTAS.entradas||[]).length===0 && (ALERTAS.salidas||[]).length===0)){
-    elSal.innerHTML = '';
-    elRec.innerHTML = '<div class="card-master"><div class="res-card-title">Recepciones detectadas</div>'
-      +'<div style="color:#94a3b8;font-size:13px;padding:8px 0">Sin movimientos fuera de lo esperado.</div></div>';
-    return;
-  }
-  if((ALERTAS.salidas||[]).length>0){
-    var items = ALERTAS.salidas.map(function(a){
-      return '<div class="res-item"><span class="res-item-nombre">'+tituloCase(nombreSku(a.sku))
-        +' <span style="color:#94a3b8;font-size:11px">('+(a.oficina==='VIT'?'Vitacura':'Pataguas')+')</span></span>'
-        +'<span style="color:var(--warn-text);font-weight:700">-'+Math.round(a.cantidad)+' und</span></div>';
-    }).join('');
-    elSal.innerHTML = '<div class="card-master"><div class="res-card-title">Salidas sin explicación — '+(ALERTAS.fecha||'')+'</div>'
-      +'<div class="card-master-desc">El stock bajó sin ventas ni guías que lo expliquen. '
-      +'Puede ser consumo interno o merma; si no lo reconoces, revisa la tarjeta de existencia del producto en Bsale.</div>'
-      +items+'</div>';
-  } else {
-    elSal.innerHTML = '';
-  }
-  if((ALERTAS.entradas||[]).length>0){
-    // Agrupadas por tienda: primero Vitacura, luego Pataguas
+  var A = ALERTAS || {};
+  var fecha = A.fecha ? ' — '+fechaES(A.fecha) : '';
+  var TAG_DED = ' <span class="sku-tag" style="color:var(--warn-text);font-size:10px">sin documento</span>';
+  function nota(a){ return a.nota ? '<div style="color:#94a3b8;font-size:11px;font-weight:400;text-transform:none">'+escHtml(a.nota)+'</div>' : ''; }
+
+  // ── Recepciones: reales + deducidas, agrupadas por tienda ──
+  var recs = (A.recepciones||[]).map(function(a){return {a:a, ded:false};})
+     .concat((A.entradas||[]).map(function(a){return {a:a, ded:true};}));
+  if(recs.length>0){
     var grupos = [['VIT','Vitacura'],['PAT','Pataguas']];
     var items2 = grupos.map(function(g){
-      var deTienda = ALERTAS.entradas.filter(function(a){return a.oficina===g[0];});
+      var deTienda = recs.filter(function(r){return r.a.oficina===g[0];});
       if(deTienda.length===0) return '';
-      var filas = deTienda.map(function(a){
-        return '<div class="etiqueta-item"><span class="res-item-nombre">'+tituloCase(nombreSku(a.sku))+'</span>'
-          +'<span style="color:var(--ok-text);font-weight:700;flex-shrink:0;margin-left:8px">+'+Math.round(a.cantidad)+' und</span></div>';
+      var filas = deTienda.map(function(r){
+        return '<div class="etiqueta-item"><span class="res-item-nombre">'+tituloCase(nombreSku(r.a.sku))+(r.ded?TAG_DED:'')+nota(r.a)+'</span>'
+          +'<span style="color:var(--ok-text);font-weight:700;flex-shrink:0;margin-left:8px">+'+Math.round(r.a.cantidad)+' und</span></div>';
       }).join('');
       return '<div class="grupo-tienda">'+g[1]+' <span class="grupo-count">('+deTienda.length+')</span></div>'
         +'<div class="grid-etiquetas">'+filas+'</div>';
     }).join('');
-    elRec.innerHTML = '<div class="card-master"><div class="res-card-title">Recepciones detectadas — '+fechaES(ALERTAS.fecha||'')+'</div>'
-      +'<div class="card-master-desc">El stock subió: se registraron como producción del día. Normal si hubo recepción.</div>'
+    elRec.innerHTML = '<div class="card-master"><div class="res-card-title">Recepciones'+fecha+'</div>'
+      +'<div class="card-master-desc">Recepciones registradas en Bsale desde la corrida anterior. '
+      +'"Sin documento" = el stock subió sin recepción en Bsale y se dedujo.</div>'
       +'<div class="lista-scroll">'+items2+'</div></div>';
   } else {
-    elRec.innerHTML = '<div class="card-master"><div class="res-card-title">Recepciones detectadas</div>'
-      +'<div style="color:#94a3b8;font-size:13px;padding:8px 0">Sin recepciones hoy.</div></div>';
+    elRec.innerHTML = '<div class="card-master"><div class="res-card-title">Recepciones'+fecha+'</div>'
+      +'<div style="color:#94a3b8;font-size:13px;padding:8px 0">Sin recepciones desde la corrida anterior.</div></div>';
+  }
+
+  // ── Consumos: reales (con motivo) + salidas sin explicación ──
+  var cons = (A.consumos||[]).map(function(a){return {a:a, ded:false};})
+     .concat((A.salidas||[]).map(function(a){return {a:a, ded:true};}));
+  if(cons.length>0){
+    var hayDed = cons.some(function(c){return c.ded;});
+    var items = cons.map(function(c){
+      return '<div class="res-item"><span class="res-item-nombre">'+tituloCase(nombreSku(c.a.sku))
+        +' <span style="color:#94a3b8;font-size:11px">('+(c.a.oficina==='VIT'?'Vitacura':'Pataguas')+')</span>'
+        +(c.ded?TAG_DED:'')+nota(c.a)+'</span>'
+        +'<span style="color:var(--warn-text);font-weight:700">-'+Math.round(c.a.cantidad)+' und</span></div>';
+    }).join('');
+    elSal.innerHTML = '<div class="card-master"><div class="res-card-title">Consumos y mermas'+fecha+'</div>'
+      +'<div class="card-master-desc">Consumos registrados en Bsale, con el motivo que escribieron.'
+      +(hayDed ? ' "Sin documento" = el stock bajó sin venta, guía ni consumo que lo explique; si no lo reconoces, revisa la tarjeta de existencia en Bsale.' : '')
+      +'</div>'+items+'</div>';
+  } else {
+    elSal.innerHTML = '';
   }
 }
-
 // ── Resumen ejecutivo ──────────────────────────────────────
 function renderResumen(){
   // Los postres de proveedor (Rocío) no cuentan como producción: van en su
