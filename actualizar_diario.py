@@ -165,6 +165,13 @@ def docs_nuevos(endpoint, ultimo_id):
     max_id = max(vistos) if vistos else ultimo_id
     return [vistos[i] for i in sorted(vistos) if i > ultimo_id], max_id
 
+def id_maximo(endpoint):
+    # Id del último documento existente ahora (count con limit=1 y última página).
+    url = f'{BASE}/stocks/{endpoint}.json'
+    total = get_pagina(url, {'limit': 1})['count']
+    ultimos = get_pagina(url, {'limit': 50, 'offset': max(0, total - 50)}).get('items', [])
+    return max(i['id'] for i in ultimos)
+
 def detalles_de(doc, endpoint):
     # expand=[details] trunca en 25 líneas; si hay más se piden completas.
     bloque = doc.get('details', {})
@@ -173,9 +180,14 @@ def detalles_de(doc, endpoint):
         items = get_all(f"{BASE}/stocks/{endpoint}/{doc['id']}/details.json")
     return items
 
-def recepciones_y_consumos(cache):
+def recepciones_y_consumos(cache, topes):
     # Devuelve (movimientos nuevos, nuevos ids {clave: id}). Lanza excepción si
     # algo falla: main() la captura y NO actualiza los ids.
+    # topes = {endpoint: id máximo leído ANTES de pedir el stock real}. Solo se
+    # importan documentos hasta ese id: uno creado mientras corre el proceso
+    # (p.ej. Pataguas recibe una guía a mediodía) ya está en la lista de
+    # recepciones pero no en el stock que se leyó antes, y la cuadratura lo
+    # anulaba con una salida "sin documento". Queda para la corrida siguiente.
     movs, nuevos_ids, variantes = [], {}, None
     for clave, endpoint, prefijo, env in (
             ('ultima_recepcion_id', 'receptions', 'R', 'DESDE_RECEPCION_ID'),
@@ -186,14 +198,14 @@ def recepciones_y_consumos(cache):
         if ultimo is None:
             # Primera corrida: corte. Lo anterior ya está deducido en el
             # historial; importarlo lo duplicaría. Solo se fija el id máximo.
-            url = f'{BASE}/stocks/{endpoint}.json'
-            total = get_pagina(url, {'limit': 1})['count']
-            ultimos = get_pagina(url, {'limit': 50, 'offset': max(0, total - 50)}).get('items', [])
-            max_id = max(i['id'] for i in ultimos)
+            max_id = topes[endpoint]
             nuevos_ids[clave] = max_id
             print(f"  {endpoint}: primera corrida, corte en id {max_id} (no se importa nada)")
             continue
         docs, max_id = docs_nuevos(endpoint, ultimo)
+        tope = topes[endpoint]
+        docs = [d for d in docs if d['id'] <= tope]
+        max_id = max(ultimo, min(max_id, tope))
         for doc in docs:
             oficina = OFICINAS.get(int(doc.get('office', {}).get('id', 0)))
             if not oficina:
@@ -299,6 +311,13 @@ def main():
     hoy = datetime.now(TZ_CHILE)
     print(f"Actualización diaria — {hoy:%Y-%m-%d %H:%M} (hora Chile)")
 
+    # ── Topes de recepciones/consumos, ANTES del stock real (ver recepciones_y_consumos) ──
+    topes = None
+    try:
+        topes = {ep: id_maximo(ep) for ep in ('receptions', 'consumptions')}
+    except Exception as e:
+        print(f"AVISO: no se pudieron leer los topes de recepciones/consumos ({e}).")
+
     # ── Stock real (si falla, abortamos sin tocar nada) ──
     stock_real = bsale_stock()
     if not stock_real:
@@ -331,7 +350,9 @@ def main():
     # Si falla, NO se aborta: la cuadratura los deduce como siempre.
     reales, nuevos_ids = [], {}
     try:
-        reales, nuevos_ids = recepciones_y_consumos(cache)
+        if topes is None:
+            raise Exception('sin topes')
+        reales, nuevos_ids = recepciones_y_consumos(cache, topes)
     except Exception as e:
         print(f"AVISO: no se pudieron leer recepciones/consumos ({e}); se sigue deduciendo como antes.")
     recepciones, consumos = [], []
