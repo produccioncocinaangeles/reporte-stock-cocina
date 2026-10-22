@@ -1,57 +1,59 @@
 {
-  "fecha": "2026-10-21",
+  "fecha": "2026-10-22",
   "entradas": [],
-  "salidas": [],
-  "recepciones": [
+  "salidas": [
     {
-      "sku": "ÑJ",
-      "oficina": "VIT",
-      "cantidad": 1.0,
-      "nota": "Recepcion / CRISTIAN LAGOS"
+      "sku": "OP",
+      "oficina": "PAT",
+      "cantidad": 1.0
     },
     {
-      "sku": "AS",
-      "oficina": "VIT",
-      "cantidad": 14.0,
-      "nota": "Recepcion / CRISTIAN LAGOS"
+      "sku": "PCP",
+      "oficina": "PAT",
+      "cantidad": 7.0
+    },
+    {
+      "sku": "CBN",
+      "oficina": "PAT",
+      "cantidad": 1.0
     },
     {
       "sku": "P",
+      "oficina": "PAT",
+      "cantidad": 5.0
+    }
+  ],
+  "recepciones": [
+    {
+      "sku": "RS",
       "oficina": "VIT",
       "cantidad": 10.0,
       "nota": "Recepcion / CRISTIAN LAGOS"
     },
     {
       "sku": "PCP",
-      "oficina": "VIT",
-      "cantidad": 19.0,
-      "nota": "Recepcion / CRISTIAN LAGOS"
+      "oficina": "PAT",
+      "cantidad": 7.0,
+      "nota": "Recepcion / YALECI CHIQUINQUIRA"
     },
     {
-      "sku": "CC",
-      "oficina": "VIT",
-      "cantidad": 8.0,
-      "nota": "Recepcion / CRISTIAN LAGOS"
-    }
-  ],
-  "consumos": [
-    {
-      "sku": "CAMA",
-      "oficina": "VIT",
-      "cantidad": 1.0,
-      "nota": "cristhian"
+      "sku": "P",
+      "oficina": "PAT",
+      "cantidad": 5.0,
+      "nota": "Recepcion / YALECI CHIQUINQUIRA"
     },
     {
-      "sku": "CAMA",
-      "oficina": "VIT",
-      "cantidad": 2.0,
-      "nota": "cristhian"
-    },
-    {
-      "sku": "ÑJ",
+      "sku": "OP",
       "oficina": "PAT",
       "cantidad": 1.0,
-      "nota": "descuadre autorizado por berna"
+      "nota": "Recepcion / YALECI CHIQUINQUIRA"
+    },
+    {
+      "sku": "CBN",
+      "oficina": "PAT",
+      "cantidad": 1.0,
+      "nota": "Recepcion / YALECI CHIQUINQUIRA"
     }
-  ]
+  ],
+  "consumos": []
 }
