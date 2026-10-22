@@ -1,27 +1,6 @@
 {
   "fecha": "2026-10-22",
-  "entradas": [
-    {
-      "sku": "OP",
-      "oficina": "PAT",
-      "cantidad": 1.0
-    },
-    {
-      "sku": "PCP",
-      "oficina": "PAT",
-      "cantidad": 7.0
-    },
-    {
-      "sku": "CBN",
-      "oficina": "PAT",
-      "cantidad": 1.0
-    },
-    {
-      "sku": "P",
-      "oficina": "PAT",
-      "cantidad": 5.0
-    }
-  ],
+  "entradas": [],
   "salidas": [],
   "recepciones": [
     {

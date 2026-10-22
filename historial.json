@@ -101494,42 +101494,6 @@
     },
     {
       "fecha": "2026-10-22",
-      "sku": "OP",
-      "oficina": "PAT",
-      "tipo": "consumo",
-      "cantidad": 1.0,
-      "doc_id": 0,
-      "inferido": true
-    },
-    {
-      "fecha": "2026-10-22",
-      "sku": "PCP",
-      "oficina": "PAT",
-      "tipo": "consumo",
-      "cantidad": 7.0,
-      "doc_id": 0,
-      "inferido": true
-    },
-    {
-      "fecha": "2026-10-22",
-      "sku": "CBN",
-      "oficina": "PAT",
-      "tipo": "consumo",
-      "cantidad": 1.0,
-      "doc_id": 0,
-      "inferido": true
-    },
-    {
-      "fecha": "2026-10-22",
-      "sku": "P",
-      "oficina": "PAT",
-      "tipo": "consumo",
-      "cantidad": 5.0,
-      "doc_id": 0,
-      "inferido": true
-    },
-    {
-      "fecha": "2026-10-22",
       "sku": "FC",
       "oficina": "VIT",
       "tipo": "venta",
@@ -101561,42 +101525,6 @@
       "doc_id": "R5400",
       "costo": 35000.0,
       "nota": "Recepcion / CRISTIAN LAGOS"
-    },
-    {
-      "fecha": "2026-10-22",
-      "sku": "OP",
-      "oficina": "PAT",
-      "tipo": "produccion",
-      "cantidad": 1.0,
-      "doc_id": 0,
-      "inferido": true
-    },
-    {
-      "fecha": "2026-10-22",
-      "sku": "PCP",
-      "oficina": "PAT",
-      "tipo": "produccion",
-      "cantidad": 7.0,
-      "doc_id": 0,
-      "inferido": true
-    },
-    {
-      "fecha": "2026-10-22",
-      "sku": "CBN",
-      "oficina": "PAT",
-      "tipo": "produccion",
-      "cantidad": 1.0,
-      "doc_id": 0,
-      "inferido": true
-    },
-    {
-      "fecha": "2026-10-22",
-      "sku": "P",
-      "oficina": "PAT",
-      "tipo": "produccion",
-      "cantidad": 5.0,
-      "doc_id": 0,
-      "inferido": true
     }
   ],
   "docs_ignorar": [
