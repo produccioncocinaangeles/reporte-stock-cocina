@@ -2,13 +2,6 @@
   "fecha": "2026-10-22",
   "entradas": [],
   "salidas": [],
-  "recepciones": [
-    {
-      "sku": "PCM",
-      "oficina": "VIT",
-      "cantidad": 5.0,
-      "nota": "Recepcion / CRISTIAN LAGOS"
-    }
-  ],
+  "recepciones": [],
   "consumos": []
 }
