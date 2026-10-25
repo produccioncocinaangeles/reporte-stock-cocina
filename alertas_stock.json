@@ -1,63 +1,25 @@
 {
-  "fecha": "2026-10-24",
+  "fecha": "2026-10-25",
   "entradas": [
     {
       "sku": "P",
       "oficina": "PAT",
-      "cantidad": 2.0
+      "cantidad": 1.0
+    },
+    {
+      "sku": "HDV",
+      "oficina": "VIT",
+      "cantidad": 1.0
     }
   ],
   "salidas": [],
   "recepciones": [
     {
-      "sku": "T",
-      "oficina": "VIT",
-      "cantidad": 10.0,
-      "nota": "Recepcion / CRISTIAN LAGOS"
-    },
-    {
-      "sku": "T",
+      "sku": "RM",
       "oficina": "PAT",
-      "cantidad": 10.0,
-      "nota": "Recepcion / CRISTIAN LAGOS"
-    },
-    {
-      "sku": "POND",
-      "oficina": "PAT",
-      "cantidad": 3.0,
-      "nota": "Recepcion / CRISTIAN LAGOS"
-    },
-    {
-      "sku": "ORZO",
-      "oficina": "VIT",
-      "cantidad": 16.0,
-      "nota": "Recepcion / CRISTIAN LAGOS"
-    },
-    {
-      "sku": "FC",
-      "oficina": "VIT",
-      "cantidad": 12.0,
-      "nota": "Recepcion / CRISTIAN LAGOS"
-    },
-    {
-      "sku": "CBN",
-      "oficina": "VIT",
-      "cantidad": 6.0,
+      "cantidad": 1.0,
       "nota": "Recepcion / CRISTIAN LAGOS"
     }
   ],
-  "consumos": [
-    {
-      "sku": "LF",
-      "oficina": "VIT",
-      "cantidad": 1.0,
-      "nota": "jesus cocina"
-    },
-    {
-      "sku": "P",
-      "oficina": "PAT",
-      "cantidad": 3.0,
-      "nota": "sin pack"
-    }
-  ]
+  "consumos": []
 }
