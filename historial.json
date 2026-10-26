@@ -1,5 +1,5 @@
 {
-  "ultimo_update": "2026-10-25T20:56:31",
+  "ultimo_update": "2026-10-26T16:01:34",
   "movimientos": [
     {
       "fecha": "2026-01-02",
@@ -102988,6 +102988,62 @@
       "cantidad": 1.0,
       "doc_id": 0,
       "inferido": true
+    },
+    {
+      "fecha": "2026-10-26",
+      "sku": "RM",
+      "oficina": "VIT",
+      "tipo": "venta",
+      "cantidad": 1.0,
+      "doc_id": 22419
+    },
+    {
+      "fecha": "2026-10-26",
+      "sku": "TFC",
+      "oficina": "VIT",
+      "tipo": "venta",
+      "cantidad": 1.0,
+      "doc_id": 22420
+    },
+    {
+      "fecha": "2026-10-26",
+      "sku": "179303846665926",
+      "oficina": "VIT",
+      "tipo": "venta",
+      "cantidad": 1.0,
+      "doc_id": 22422
+    },
+    {
+      "fecha": "2026-10-26",
+      "sku": "ÑP",
+      "oficina": "PAT",
+      "tipo": "venta",
+      "cantidad": 1.0,
+      "doc_id": 22417
+    },
+    {
+      "fecha": "2026-10-26",
+      "sku": "CDM",
+      "oficina": "PAT",
+      "tipo": "venta",
+      "cantidad": 1.0,
+      "doc_id": 22417
+    },
+    {
+      "fecha": "2026-10-26",
+      "sku": "ZEITUN",
+      "oficina": "PAT",
+      "tipo": "venta",
+      "cantidad": 1.0,
+      "doc_id": 22418
+    },
+    {
+      "fecha": "2026-10-26",
+      "sku": "CP",
+      "oficina": "PAT",
+      "tipo": "venta",
+      "cantidad": 1.0,
+      "doc_id": 22421
     }
   ],
   "docs_ignorar": [

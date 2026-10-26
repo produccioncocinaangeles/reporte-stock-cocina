@@ -1,25 +1,7 @@
 {
-  "fecha": "2026-10-25",
-  "entradas": [
-    {
-      "sku": "P",
-      "oficina": "PAT",
-      "cantidad": 1.0
-    },
-    {
-      "sku": "HDV",
-      "oficina": "VIT",
-      "cantidad": 1.0
-    }
-  ],
+  "fecha": "2026-10-26",
+  "entradas": [],
   "salidas": [],
-  "recepciones": [
-    {
-      "sku": "RM",
-      "oficina": "PAT",
-      "cantidad": 1.0,
-      "nota": "Recepcion / CRISTIAN LAGOS"
-    }
-  ],
+  "recepciones": [],
   "consumos": []
 }
