@@ -256,6 +256,225 @@ def leer_recetas():
         })
     return recetas
 
+# ─── COSTOS ──────────────────────────────────────────────────
+# Unidad canónica -> (familia, cuántas unidades mínimas trae). Masa y volumen se
+# cruzan como 1 g = 1 ml: las recetas mezclan los dos para el mismo ingrediente
+# (Crema Leche en g y en L) y para costear basta esa aproximación.
+UNIDADES = {'kg': ('masa', 1000), 'g': ('masa', 1), 'l': ('volumen', 1000),
+            'ml': ('volumen', 1), 'un': ('conteo', 1)}
+SINONIMOS_UNIDAD = {
+    'kg': 'kg', 'kgs': 'kg', 'kilo': 'kg', 'kilos': 'kg', 'kilogramo': 'kg', 'kilogramos': 'kg',
+    'g': 'g', 'gr': 'g', 'grs': 'g', 'gramo': 'g', 'gramos': 'g',
+    'l': 'l', 'lt': 'l', 'lts': 'l', 'litro': 'l', 'litros': 'l',
+    'ml': 'ml', 'cc': 'ml',
+    'un': 'un', 'und': 'un', 'unid': 'un', 'unidad': 'un', 'unidades': 'un', 'u': 'un',
+}
+
+def canon_unidad(u):
+    return SINONIMOS_UNIDAD.get(norm_txt(str(u or '')).rstrip('.'))
+
+def factor_unidad(desde, hasta):
+    """Cuántas `hasta` hay en 1 `desde`, o None si no se pueden comparar
+    (kilos contra unidades)."""
+    a, b = UNIDADES.get(desde), UNIDADES.get(hasta)
+    if not a or not b:
+        return None
+    if a[0] != b[0] and not {a[0], b[0]} <= {'masa', 'volumen'}:
+        return None
+    return a[1] / b[1]
+
+def num(v):
+    """Número de una celda leída sin formato; '' o texto raro -> None."""
+    if isinstance(v, (int, float)):
+        return float(v)
+    s = str(v or '').replace('$', '').replace(' ', '').strip()
+    if not s:
+        return None
+    if ',' in s:
+        s = s.replace('.', '').replace(',', '.')
+    try:
+        return float(s)
+    except ValueError:
+        return None
+
+IVA = 1.19
+
+def es_flete(d):
+    """Línea de Compras que es transporte y no un ingrediente."""
+    ing = norm_txt(str(d.get('ingrediente', '')))
+    return ing.startswith(('flete', 'logistic', 'transporte'))
+
+def recargos_flete(compras):
+    """{(rut, folio): recargo} con el flete de cada factura como fracción de lo
+    que costaron sus materias primas (flete 10.000 sobre 200.000 de producto =
+    0.05). Si la factura no trae materias primas con valor, no hay recargo."""
+    cols = compras[0]
+    flete, base = {}, {}
+    for fila in compras[1:]:
+        d = dict(zip(cols, fila))
+        if str(d.get('tipo_doc', '')).strip() == 'guia_despacho':
+            continue
+        clave = (str(d.get('rut_proveedor', '')).strip(), str(d.get('folio', '')).strip())
+        total = num(d.get('total')) or 0
+        if es_flete(d):
+            flete[clave] = flete.get(clave, 0) + total
+        elif str(d.get('categoria', '')).strip() in ('', 'materia_prima'):
+            base[clave] = base.get(clave, 0) + total
+    return {k: v / base[k] for k, v in flete.items() if v > 0 and base.get(k, 0) > 0}
+
+def leer_costos():
+    """Precio de cada ingrediente para costear las recetas.
+
+    Manda el último precio de factura (hoja Compras, la llena la app de bodega):
+    precio_efectivo * IVA / factor, en la unidad base (la factura es neta, el
+    costo va con IVA). Se usa el precio efectivo y no
+    total / cant_base porque el total es lo facturado y cant_base lo recibido:
+    con un faltante el precio saldría inflado. Si el ingrediente no tiene factura
+    se usa el precio escrito a mano en la hoja Ingredientes (Precio por la
+    Unidad de Compra, que trae Cantidad de Unidad Medida). La merma sale siempre
+    de Ingredientes.
+
+    Devuelve ({ingrediente_norm: precio}, {elaborado_norm: [líneas]}). Si falla la
+    lectura devuelve dos dicts vacíos y las recetas quedan sin costo."""
+    if not RECETAS_SHEET_ID or gspread is None or not os.path.exists(GOOGLE_SERVICE_ACCOUNT_FILE):
+        return {}, {}
+    try:
+        gc = gspread.service_account(filename=GOOGLE_SERVICE_ACCOUNT_FILE)
+        libro = gc.open_by_key(RECETAS_SHEET_ID)
+        crudo = lambda hoja: libro.worksheet(hoja).get_all_values(value_render_option='UNFORMATTED_VALUE')
+        ingredientes, compras, elab = crudo('Ingredientes'), crudo('Compras'), crudo('Elaborados')
+    except Exception as e:
+        print(f"  Warning: no se pudieron leer costos desde Google Sheets ({e})")
+        return {}, {}
+
+    precios, mermas = {}, {}
+    for fila in ingredientes[1:]:
+        fila = (list(fila) + [''] * 8)[:8]
+        nombre, u_compra, cantidad, u_medida, precio, merma = fila[:6]
+        if not str(nombre).strip():
+            continue
+        clave = norm_txt(str(nombre))
+        m = num(merma)
+        if m:
+            m = m / 100 if m > 1 else m
+            if 0 < m < 1:
+                mermas[clave] = m
+        p = num(precio)
+        if p is None:
+            continue
+        unidad = canon_unidad(u_medida) or canon_unidad(u_compra)
+        precios[clave] = {'precio': p / (num(cantidad) or 1), 'unidad': unidad,
+                          'fuente': 'manual', 'fecha': '', 'proveedor': str(fila[6]).strip()}
+
+    # Compras viene en orden de carga; a igual fecha gana la última cargada.
+    if compras:
+        cols = compras[0]
+        recargo_flete = recargos_flete(compras)
+        ultimas = {}
+        for i, fila in enumerate(compras[1:]):
+            d = dict(zip(cols, fila))
+            if str(d.get('tipo_doc', '')).strip() == 'guia_despacho':
+                continue
+            p = num(d.get('precio_efectivo')) or num(d.get('precio_lista'))
+            ing = str(d.get('ingrediente', '')).strip()
+            if not p or not ing or es_flete(d):
+                continue
+            # La factura trae precios netos; los precios manuales de Ingredientes
+            # llevan IVA, y el costo del plato se calcula siempre con IVA.
+            if str(d.get('tipo_doc', '')).strip() in ('', 'factura'):
+                p = p * IVA
+            # El flete de la factura se reparte entre sus materias primas, en
+            # proporción a lo que cuesta cada una.
+            flete_pct = recargo_flete.get((str(d.get('rut_proveedor', '')).strip(),
+                                           str(d.get('folio', '')).strip()), 0)
+            if flete_pct and str(d.get('categoria', '')).strip() in ('', 'materia_prima'):
+                p = p * (1 + flete_pct)
+            else:
+                flete_pct = 0
+            fecha = d.get('fecha', '')
+            if isinstance(fecha, (int, float)):   # serial de Sheets
+                fecha = (pd.Timestamp('1899-12-30') + pd.Timedelta(days=fecha)).strftime('%Y-%m-%d')
+            clave = norm_txt(ing)
+            if clave in ultimas and (ultimas[clave][0], ultimas[clave][1]) > (str(fecha), i):
+                continue
+            ultimas[clave] = (str(fecha), i, {
+                'precio': p / (num(d.get('factor')) or 1),
+                'unidad': canon_unidad(d.get('unidad_base')),
+                'fuente': 'factura', 'fecha': str(fecha), 'flete_pct': round(flete_pct * 100, 1),
+                'proveedor': str(d.get('proveedor', '')).strip()})
+        for clave, (_f, _i, info) in ultimas.items():
+            precios[clave] = info
+
+    for clave, info in precios.items():
+        info['merma'] = mermas.get(clave, 0)
+
+    elaborados, actual = {}, ''
+    for fila in elab[1:]:
+        fila = (list(fila) + [''] * 4)[:4]
+        if str(fila[0]).strip():
+            actual = norm_txt(str(fila[0]))
+        if actual and str(fila[1]).strip():
+            elaborados.setdefault(actual, []).append({
+                'ingrediente': str(fila[1]).strip(),
+                'cantidad': num(fila[2]) or 0.0,
+                'unidad': str(fila[3]).strip()})
+    return precios, elaborados
+
+def costear_recetas(recetas, precios, elaborados):
+    """Agrega a cada línea de receta 'costo' ($ por 1 unidad del producto, o None)
+    y, si no se pudo, 'falta' con el motivo. El total por producto lo suma el JS.
+    Un elaborado (salsa, vasito) se costea con su propia receta por 1 unidad; si
+    no tiene receta en Elaborados se usa el precio escrito a mano, si lo hay."""
+    memo = {}
+
+    def costo_elaborado(clave, visitando):
+        if clave in memo:
+            return memo[clave]
+        if clave in visitando:
+            return None, 'receta circular'
+        total, faltan = 0.0, 0
+        for linea in elaborados[clave]:
+            c, _ = costo_linea(linea, visitando | {clave})
+            if c is None:
+                faltan += 1
+            else:
+                total += c
+        memo[clave] = (total, None) if not faltan else (None, f'faltan {faltan} precios en su receta')
+        return memo[clave]
+
+    def costo_linea(linea, visitando=frozenset()):
+        cant = linea.get('cantidad') or 0
+        if not cant > 0:
+            return None, 'sin cantidad'
+        clave = norm_txt(linea['ingrediente'])
+        unidad = canon_unidad(linea.get('unidad'))
+        if clave in elaborados:
+            if unidad != 'un':
+                return None, 'elaborado: la receta debe usarlo en un'
+            c_unit, motivo = costo_elaborado(clave, visitando)
+            return (None, motivo) if c_unit is None else (cant * c_unit, None)
+        info = precios.get(clave)
+        if not info:
+            return None, 'sin precio'
+        if not unidad or not info['unidad']:
+            return None, 'falta unidad'
+        f = factor_unidad(unidad, info['unidad'])
+        if f is None:
+            return None, f"precio en {info['unidad']}, receta en {unidad}"
+        return cant * f * info['precio'] / (1 - info['merma']), None
+
+    for receta in recetas.values():
+        for linea in receta:
+            c, motivo = costo_linea(linea)
+            linea['costo'] = round(c, 1) if c is not None else None
+            if motivo:
+                linea['falta'] = motivo
+            info = precios.get(norm_txt(linea['ingrediente']))
+            if info and c is not None:
+                linea['fuente'] = info['fuente']
+                if info.get('flete_pct'):
+                    linea['flete_pct'] = info['flete_pct']
+
 def leer_json(oficina):
     with open(ARCHIVO_JSON, encoding='utf-8') as f:
         cache = json.load(f)
@@ -282,6 +501,10 @@ def leer_json(oficina):
             'Stock':                  stock_acum[sku],
             'Movimiento de salida':   mov_sal if salida > 0 else '',
             'Movimiento de entrada':  mov_ent if entrada > 0 else '',
+            # Motivo para la pestaña Movimientos: la nota del documento real de
+            # Bsale (consumos y recepciones, desde oct-2026) o "sin documento"
+            # si el movimiento se dedujo cuadrando contra el stock real.
+            'Nota':                   'sin documento' if m.get('inferido') else (m.get('nota') or ''),
         })
     return pd.DataFrame(rows)
 
@@ -440,15 +663,16 @@ def movimientos(df_vit, df_pat):
     for _, row in df_vit.sort_values('Fecha').iterrows():
         de = str(row['Movimiento de entrada']) if pd.notna(row['Movimiento de entrada']) else ''
         ds = str(row['Movimiento de salida'])  if pd.notna(row['Movimiento de salida'])  else ''
+        nota = row.get('Nota', '') or ''
         if row['Entrada'] > 0:
             t = 'Producción' if ('Recepción' in de or 'Sin Documento' in de) else 'Entrada'
-            n = de.split('Nº')[-1].strip() if 'Nº' in de else de[:20]
+            n = nota or (de.split('Nº')[-1].strip() if 'Nº' in de else de[:20])
             movs.append({'fecha':fmt(row['Fecha']),'fecha_ord':row['Fecha'].isoformat(),
                          'tipo':t,'documento':n,'tienda':'Vitacura',
                          'cantidad':int(row['Entrada']),'signo':'+','stock':int(row['Stock'])})
         if row['Salida'] > 0:
             if   'GUÍA DE DESPACHO' in ds.upper(): t,n = 'Despacho', ds.split('Nº')[-1].strip() if 'Nº' in ds else ds[:20]
-            elif 'Consumo' in ds:                  t,n = 'Consumo',  ds.split('Nº')[-1].strip() if 'Nº' in ds else ds[:20]
+            elif 'Consumo' in ds:                  t,n = 'Consumo',  nota or (ds.split('Nº')[-1].strip() if 'Nº' in ds else ds[:20])
             else:                                  t,n = 'Venta',    ds.replace('BOLETA ELECTRÓNICA T Nº','').replace('BOLETA ELECTRÓNICA','').strip()
             movs.append({'fecha':fmt(row['Fecha']),'fecha_ord':row['Fecha'].isoformat(),
                          'tipo':t,'documento':n,'tienda':'Vitacura',
@@ -457,14 +681,15 @@ def movimientos(df_vit, df_pat):
     for _, row in df_pat.sort_values('Fecha').iterrows():
         de = str(row['Movimiento de entrada']) if pd.notna(row['Movimiento de entrada']) else ''
         ds = str(row['Movimiento de salida'])  if pd.notna(row['Movimiento de salida'])  else ''
+        nota = row.get('Nota', '') or ''
         if row['Entrada'] > 0:
-            n = de.split('Nº')[-1].strip() if 'Nº' in de else de[:20]
+            n = nota or (de.split('Nº')[-1].strip() if 'Nº' in de else de[:20])
             movs.append({'fecha':fmt(row['Fecha']),'fecha_ord':row['Fecha'].isoformat(),
                          'tipo':'Despacho recibido','documento':n,'tienda':'Pataguas',
                          'cantidad':int(row['Entrada']),'signo':'+','stock':int(row['Stock'])})
         if row['Salida'] > 0:
             t = 'Consumo' if 'Consumo' in ds else 'Venta'
-            n = ds.replace('BOLETA ELECTRÓNICA T Nº','').replace('BOLETA ELECTRÓNICA','').strip()
+            n = (nota or ds) if t == 'Consumo' else ds.replace('BOLETA ELECTRÓNICA T Nº','').replace('BOLETA ELECTRÓNICA','').strip()
             movs.append({'fecha':fmt(row['Fecha']),'fecha_ord':row['Fecha'].isoformat(),
                          'tipo':t,'documento':n,'tienda':'Pataguas',
                          'cantidad':int(row['Salida']),'signo':'-','stock':int(row['Stock'])})
@@ -494,6 +719,9 @@ def procesar():
 
     recetas = leer_recetas()
     print(f"  {len(recetas)} productos con receta cargada" if recetas else "  Sin RECETAS_SHEET_ID configurado o sin datos (tab Recetas quedará vacío)")
+    precios, elaborados = leer_costos()
+    costear_recetas(recetas, precios, elaborados)
+    print(f"  {len(precios)} ingredientes con precio ({sum(1 for p in precios.values() if p['fuente']=='factura')} de factura)")
 
     # OJO: las fórmulas que dependen del stock (vit/pat/total, dias_*, estado,
     # alerta_dist, despacho_sug, dias_sin_stock_vit y las salsas) están
@@ -961,7 +1189,9 @@ def calcular_produccion():
     prod = [m for m in movs
             if m.get('tipo') == 'produccion' and m.get('oficina') == 'VIT'
             and m.get('sku') in NOMBRES
-            and m.get('sku') not in PROVEEDOR_SKUS]  # recepciones de proveedor no son producción de la cocina
+            and m.get('sku') not in PROVEEDOR_SKUS  # recepciones de proveedor no son producción de la cocina
+            # "Ajuste de Stock" en Bsale corrige inventario, no es producción
+            and not str(m.get('nota', '')).lower().startswith('ajuste de stock')]
     if not prod:
         return vacio
 
@@ -2168,6 +2398,14 @@ var PLAN_SHEET_TAB = 'consolidado';
 
 function sugSemana(p){ return p.vel_total>0 ? Math.max(1, Math.round(p.vel_total*7)) : 0; }
 function recetaIncompleta(p){ return p.receta && p.receta.length>0 && p.receta.some(function(i){ return !(i.cantidad>0); }); }
+// Costo por 1 unidad: suma de lo que tiene precio; 'faltan' = líneas sin costo
+// (el motivo de cada una viene en ing.falta, calculado en leer_costos).
+function costoProducto(p){
+  var total = 0, faltan = 0;
+  (p.receta||[]).forEach(function(i){ if(i.costo===null||i.costo===undefined) faltan++; else total += i.costo; });
+  return {total: total, faltan: faltan};
+}
+function clpCosto(n){ return '$'+Math.round(n).toLocaleString('es-CL'); }
 function prodBySku(sku){ return DATA.find(function(d){ return d.sku===sku; }); }
 
 function setChipProdOrden(btn){
@@ -2209,6 +2447,12 @@ function renderProduccion(data, animate){
     if(p.proveedor) meta += ' <span class="sku-tag" style="color:var(--info-text);font-size:10px">PROVEEDOR</span> · se pide, no se cocina';
     if(!tieneReceta) meta += ' · <span class="prod-warn">sin receta cargada</span>';
     else if(recetaIncompleta(p)) meta += ' · <span class="prod-warn">⚠ receta incompleta</span>';
+    if(tieneReceta){
+      var cp = costoProducto(p);
+      if(!cp.faltan) meta += ' · Costo <strong>'+clpCosto(cp.total)+'</strong>';
+      else if(cp.total>0) meta += ' · Costo parcial '+clpCosto(cp.total)+' <span class="prod-warn">(faltan '+cp.faltan+' precios)</span>';
+      else meta += ' · <span class="prod-warn">sin precios</span>';
+    }
     var val = PLAN[p.sku]||0;
     var revealStyle = animate ? ' style="transition-delay:'+(Math.min(i,8)*40)+'ms"' : '';
     return '<div class="card '+p.estado+revealBase+'"'+revealStyle+'>'
@@ -2238,8 +2482,15 @@ function prodDetalleHtml(p){
   var filas = p.receta.map(function(ing){
     var sinDato = !(ing.cantidad>0);
     var cant = sinDato ? '<span class="prod-warn">sin dato</span>' : fmtCant(ing.cantidad)+' '+(ing.unidad||'');
-    return '<tr'+(sinDato?' class="prod-sin-dato"':'')+'><td>'+ing.ingrediente+(ing.elaborado?' <span class="badge-elab">se prepara</span>':'')+'</td><td style="text-align:right;font-weight:600;white-space:nowrap">'+cant+'</td></tr>';
+    var costo = (ing.costo===null||ing.costo===undefined)
+      ? '<span class="prod-warn" style="font-size:11px">'+(ing.falta||'sin precio')+'</span>'
+      : clpCosto(ing.costo)+(ing.fuente==='manual'?' <span style="font-size:10px;opacity:.6">manual</span>':'')
+        +(ing.flete_pct?' <span style="font-size:10px;opacity:.6">incl. flete +'+ing.flete_pct+'%</span>':'');
+    return '<tr'+(sinDato?' class="prod-sin-dato"':'')+'><td>'+ing.ingrediente+(ing.elaborado?' <span class="badge-elab">se prepara</span>':'')+'</td><td style="text-align:right;font-weight:600;white-space:nowrap">'+cant+'</td><td style="text-align:right;white-space:nowrap">'+costo+'</td></tr>';
   }).join('');
+  var cp = costoProducto(p);
+  filas += '<tr><td><strong>Costo por unidad</strong></td><td></td><td style="text-align:right;white-space:nowrap"><strong>'+clpCosto(cp.total)+'</strong>'
+    +(cp.faltan?'<br><span class="prod-warn" style="font-size:11px">parcial: faltan '+cp.faltan+'</span>':'')+'</td></tr>';
   var opts = p.receta.filter(function(i){ return i.cantidad>0; }).map(function(i){
     return '<option value="'+i.cantidad+'">'+i.ingrediente+(i.unidad?' ('+i.unidad+')':'')+'</option>';
   }).join('');
