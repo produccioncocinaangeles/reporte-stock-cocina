@@ -2,6 +2,31 @@
   "fecha": "2026-10-26",
   "entradas": [],
   "salidas": [],
-  "recepciones": [],
+  "recepciones": [
+    {
+      "sku": "LSA",
+      "oficina": "VIT",
+      "cantidad": 10.0,
+      "nota": "Recepcion / CRISTIAN LAGOS"
+    },
+    {
+      "sku": "FCT",
+      "oficina": "VIT",
+      "cantidad": 7.0,
+      "nota": "Recepcion / CRISTIAN LAGOS"
+    },
+    {
+      "sku": "PV",
+      "oficina": "VIT",
+      "cantidad": 5.0,
+      "nota": "Recepcion / CRISTIAN LAGOS"
+    },
+    {
+      "sku": "TSA",
+      "oficina": "VIT",
+      "cantidad": 2.0,
+      "nota": "211"
+    }
+  ],
   "consumos": []
 }

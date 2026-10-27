@@ -1,5 +1,5 @@
 {
-  "ultimo_update": "2026-10-26T16:01:34",
+  "ultimo_update": "2026-10-26T22:16:41",
   "movimientos": [
     {
       "fecha": "2026-01-02",
@@ -103044,6 +103044,102 @@
       "tipo": "venta",
       "cantidad": 1.0,
       "doc_id": 22421
+    },
+    {
+      "fecha": "2026-10-26",
+      "sku": "GHD",
+      "oficina": "VIT",
+      "tipo": "venta",
+      "cantidad": 1.0,
+      "doc_id": 22423
+    },
+    {
+      "fecha": "2026-10-26",
+      "sku": "CAMA",
+      "oficina": "VIT",
+      "tipo": "venta",
+      "cantidad": 1.0,
+      "doc_id": 22423
+    },
+    {
+      "fecha": "2026-10-26",
+      "sku": "PP",
+      "oficina": "VIT",
+      "tipo": "venta",
+      "cantidad": 1.0,
+      "doc_id": 22424
+    },
+    {
+      "fecha": "2026-10-26",
+      "sku": "CDM",
+      "oficina": "VIT",
+      "tipo": "venta",
+      "cantidad": 1.0,
+      "doc_id": 22425
+    },
+    {
+      "fecha": "2026-10-26",
+      "sku": "CHF",
+      "oficina": "VIT",
+      "tipo": "venta",
+      "cantidad": 1.0,
+      "doc_id": 22425
+    },
+    {
+      "fecha": "2026-10-26",
+      "sku": "TSA",
+      "oficina": "VIT",
+      "tipo": "venta",
+      "cantidad": 2.0,
+      "doc_id": 22427
+    },
+    {
+      "fecha": "2026-10-26",
+      "sku": "CLC",
+      "oficina": "VIT",
+      "tipo": "venta",
+      "cantidad": 1.0,
+      "doc_id": 22427
+    },
+    {
+      "fecha": "2026-10-26",
+      "sku": "LSA",
+      "oficina": "VIT",
+      "tipo": "produccion",
+      "cantidad": 10.0,
+      "doc_id": "R5412",
+      "costo": 0.0,
+      "nota": "Recepcion / CRISTIAN LAGOS"
+    },
+    {
+      "fecha": "2026-10-26",
+      "sku": "FCT",
+      "oficina": "VIT",
+      "tipo": "produccion",
+      "cantidad": 7.0,
+      "doc_id": "R5412",
+      "costo": 0.0,
+      "nota": "Recepcion / CRISTIAN LAGOS"
+    },
+    {
+      "fecha": "2026-10-26",
+      "sku": "PV",
+      "oficina": "VIT",
+      "tipo": "produccion",
+      "cantidad": 5.0,
+      "doc_id": "R5412",
+      "costo": 19000.0,
+      "nota": "Recepcion / CRISTIAN LAGOS"
+    },
+    {
+      "fecha": "2026-10-26",
+      "sku": "TSA",
+      "oficina": "VIT",
+      "tipo": "produccion",
+      "cantidad": 2.0,
+      "doc_id": "R5413",
+      "costo": 0.0,
+      "nota": "211"
     }
   ],
   "docs_ignorar": [
@@ -103396,6 +103492,6 @@
       "venta"
     ]
   ],
-  "ultima_recepcion_id": 5411,
+  "ultima_recepcion_id": 5413,
   "ultimo_consumo_id": 1758
 }
