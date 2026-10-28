@@ -273,6 +273,10 @@ SINONIMOS_UNIDAD = {
 def canon_unidad(u):
     return SINONIMOS_UNIDAD.get(norm_txt(str(u or '')).rstrip('.'))
 
+# {elaborado_norm: 'un' | 'kg' | 'l' ...}: a qué equivale 1 unidad de su receta.
+# Lo llena leer_costos() desde la columna E de la hoja Elaborados.
+UNIDAD_ELABORADO = {}
+
 def factor_unidad(desde, hasta):
     """Cuántas `hasta` hay en 1 `desde`, o None si no se pueden comparar
     (kilos contra unidades)."""
@@ -408,11 +412,16 @@ def leer_costos():
     for clave, info in precios.items():
         info['merma'] = mermas.get(clave, 0)
 
+    # La columna E ("Rinde por") de la primera fila de cada elaborado dice a qué
+    # equivale 1 unidad de su receta: un (vasitos) o kg / L (cebolla acaramelada,
+    # bechamel...). Vacía = un, como antes.
     elaborados, actual = {}, ''
+    UNIDAD_ELABORADO.clear()
     for fila in elab[1:]:
-        fila = (list(fila) + [''] * 4)[:4]
+        fila = (list(fila) + [''] * 5)[:5]
         if str(fila[0]).strip():
             actual = norm_txt(str(fila[0]))
+            UNIDAD_ELABORADO[actual] = canon_unidad(fila[4]) or 'un'
         if actual and str(fila[1]).strip():
             elaborados.setdefault(actual, []).append({
                 'ingrediente': str(fila[1]).strip(),
@@ -449,10 +458,12 @@ def costear_recetas(recetas, precios, elaborados):
         clave = norm_txt(linea['ingrediente'])
         unidad = canon_unidad(linea.get('unidad'))
         if clave in elaborados:
-            if unidad != 'un':
-                return None, 'elaborado: la receta debe usarlo en un'
+            base = UNIDAD_ELABORADO.get(clave, 'un')
+            f = 1 if unidad == base else factor_unidad(unidad, base)
+            if f is None:
+                return None, f'elaborado por {base}, receta en {unidad}'
             c_unit, motivo = costo_elaborado(clave, visitando)
-            return (None, motivo) if c_unit is None else (cant * c_unit, None)
+            return (None, motivo) if c_unit is None else (cant * f * c_unit, None)
         info = precios.get(clave)
         if not info:
             return None, 'sin precio'
@@ -667,16 +678,21 @@ def calcular_gestion(datos, precios_venta, compras):
         for l in ls:
             nom = l['ingrediente'] or '(sin ingrediente)'
             cm['categorias'][l['grupo']] = round(cm['categorias'].get(l['grupo'], 0) + l['total'])
-            pv = cm['proveedores'].setdefault(l['proveedor'], {'monto': 0, 'facs': set(), 'ingredientes': {}})
+            pv = cm['proveedores'].setdefault(l['proveedor'], {'monto': 0, 'facs': set(), 'ingredientes': {}, 'detalle': {}})
             pv['monto'] = round(pv['monto'] + l['total'])
             pv['facs'].add((l['rut'], l['folio']))
             pv['ingredientes'][nom] = round(pv['ingredientes'].get(nom, 0) + l['total'])
+            dt = pv['detalle'].setdefault(nom + '|' + l['unidad'],
+                                          {'ingrediente': nom, 'unidad': l['unidad'], 'cant': 0, 'monto': 0})
+            dt['cant'] = round(dt['cant'] + l['cant'], 3)
+            dt['monto'] = round(dt['monto'] + l['total'])
             ig = cm['ingredientes'].setdefault(nom + '|' + l['unidad'],
                                                {'ingrediente': nom, 'unidad': l['unidad'], 'cant': 0, 'monto': 0})
             ig['cant'] = round(ig['cant'] + l['cant'], 3)
             ig['monto'] = round(ig['monto'] + l['total'])
         for pv in cm['proveedores'].values():
             pv['facturas'] = len(pv.pop('facs'))
+            pv['detalle'] = sorted(pv['detalle'].values(), key=lambda x: -x['monto'])
         cm['ingredientes'] = sorted(cm['ingredientes'].values(), key=lambda x: -x['monto'])
         compras_mes[m] = cm
 
@@ -745,10 +761,30 @@ def calcular_gestion(datos, precios_venta, compras):
                         'proveedor': ult['proveedor'], 'historial': hist, 'platos': afectados})
     alertas.sort(key=lambda a: -a['variacion'])
 
+    # Sección Ingredientes: cada compra, precio último vs anterior y totales por mes.
+    ingredientes = []
+    for clave, ls in por_ing.items():
+        meses_ing = {}
+        for l in ls:
+            mm = meses_ing.setdefault(l['mes'], {'cant': 0, 'monto': 0})
+            mm['cant'] = round(mm['cant'] + l['cant'], 3)
+            mm['monto'] = round(mm['monto'] + l['total'])
+        ult = ls[-1]
+        ant = ls[-2] if len(ls) >= 2 else None
+        ingredientes.append({
+            'ingrediente': ult['ingrediente'], 'unidad': ult['unidad'], 'grupo': ult['grupo'],
+            'precio': round(ult['precio_unit'], 2), 'fecha': ult['fecha'], 'proveedor': ult['proveedor'],
+            'precio_ant': round(ant['precio_unit'], 2) if ant else None,
+            'variacion': round((ult['precio_unit'] / ant['precio_unit'] - 1) * 100, 1) if ant else None,
+            'compras': [[l['fecha'], l['proveedor'], l['cant'], round(l['precio_unit'], 2), round(l['total'])] for l in ls],
+            'meses': meses_ing, 'total': round(sum(l['total'] for l in ls)),
+            'platos': sum(1 for p in platos if any(norm_txt(x['ingrediente']) == clave for x in receta_de[p['sku']]))})
+    ingredientes.sort(key=lambda x: -x['total'])
+
     return {'ok': bool(platos or lineas), 'avisos': avisos, 'platos': platos, 'alertas': alertas,
             'meses': meses, 'compras_mes': compras_mes, 'facturas': facturas,
             'diferencias_recepcion': diferencias, 'calidad': calidad, 'multi_proveedor': multi,
-            'grupos': list(GRUPOS_GASTO) + ['Otros']}
+            'ingredientes': ingredientes, 'grupos': list(GRUPOS_GASTO) + ['Otros']}
 
 def leer_json(oficina):
     with open(ARCHIVO_JSON, encoding='utf-8') as f:
@@ -2084,6 +2120,12 @@ body.dark-mode .plan-aviso{background:#3a2f10;border-color:#6b5518;color:#ecd9a0
 .ges-factura:last-child{border-bottom:none}
 .ges-prov{background:var(--card-bg);border:var(--card-border);border-radius:12px;padding:14px 16px;margin:0 20px 12px;box-shadow:var(--shadow-sm)}
 .ges-prov .ges-barra{margin-top:8px}
+.ges-prov{cursor:pointer}
+.ges-prov-toggle{margin-top:6px;font-size:12px;font-weight:600;color:var(--system-green)}
+.ges-flecha{font-size:10px}
+.ges-prov-tabla{margin-top:10px;width:100%;font-size:12px;table-layout:fixed}
+.ges-tabla.ges-prov-tabla th,.ges-tabla.ges-prov-tabla td{padding:6px 4px;white-space:normal;position:static;background:none}
+.ges-tabla.ges-prov-tabla th:first-child,.ges-tabla.ges-prov-tabla td:first-child{width:34%;padding-left:0}
 .ges-factura-top{display:flex;justify-content:space-between;gap:12px;font-size:14px}
 .ges-falto{font-size:12px;color:var(--danger-text);margin-top:3px}
 .ges-var{margin-left:6px}
@@ -2559,9 +2601,9 @@ function toggleOcultas(){
 })();
 
 // ── Gestión: ganancia por plato, compras y proveedores ──
-var G_SEC = 'platos', G_FILT = 'todos', G_MES = '', G_ABIERTO = {};
+var G_SEC = 'platos', G_FILT = 'todos', G_MES = '', G_ABIERTO = {}, G_PROV_ABIERTO = {}, G_ING_ABIERTO = {};
 var G_MESES_ES = ['ene','feb','mar','abr','may','jun','jul','ago','sep','oct','nov','dic'];
-var G_SECCIONES = [['platos','Platos'],['compras','Compras'],['proveedores','Proveedores'],['pormes','Por mes']];
+var G_SECCIONES = [['platos','Platos'],['proveedores','Proveedores'],['ingredientes','Ingredientes']];
 function mostrarGestion(){
   switchVista('vista-gestion','nav-gestion', function(){
     if(!G_MES && GESTION.meses && GESTION.meses.length) G_MES = GESTION.meses[GESTION.meses.length-1];
@@ -2606,9 +2648,8 @@ function renderGestion(){
     return;
   }
   if(G_SEC==='platos') html += gRenderPlatos();
-  else if(G_SEC==='compras') html += gRenderCompras();
   else if(G_SEC==='proveedores') html += gRenderProveedores();
-  else html += gRenderPorMes();
+  else html += gRenderIngredientes();
   cuerpo.innerHTML = html;
 }
 
@@ -2686,15 +2727,18 @@ function gTarjetaPlato(p){
 }
 
 // ── Compras ──
-function gRenderCompras(){
-  if(!GESTION.meses.length) return '<div class="ges-vacio">No hay facturas registradas.</div>';
-  var C = GESTION.compras_mes[G_MES];
+// Indicadores del mes: van arriba de la sección Proveedores.
+function gComprasIndicadores(C){
   var parcial = (G_MES === (new Date()).toISOString().slice(0,7));
-  var h = gSelectorMes() + '<div class="metricas ges-3">'
+  return '<div class="metricas ges-3">'
     + gCelda('Comprado en el mes', gClp(C.total), 'neto, sin IVA'+(parcial?' · mes en curso':''))
     + gCelda('Compras / ventas', C.pct_ventas==null?'—':String(C.pct_ventas).replace('.',',')+'%', 'aproximado: ventas netas = unidades × precio de lista ÷ 1,19')
     + gCelda('Facturas', String(C.facturas), 'cargadas en el mes')
     + '</div>';
+}
+// Categorías, facturas y diferencias del mes: van debajo del gasto por proveedor.
+function gComprasDetalle(C){
+  var h = '';
   var cats = Object.keys(C.categorias).sort(function(a,b){ return C.categorias[b]-C.categorias[a]; });
   var mx = cats.length ? C.categorias[cats[0]] : 1;
   h += '<div class="ana-section ges-sec"><div class="ana-section-title">Gasto por categoría</div>'
@@ -2721,7 +2765,7 @@ function gRenderCompras(){
   return h;
 }
 
-// ── Proveedores ──
+// ── Proveedores (incluye las compras del mes) ──
 function gRenderProveedores(){
   if(!GESTION.meses.length) return '<div class="ges-vacio">No hay facturas registradas.</div>';
   var C = GESTION.compras_mes[G_MES], i = GESTION.meses.indexOf(G_MES);
@@ -2730,8 +2774,9 @@ function gRenderProveedores(){
   GESTION.meses.forEach(function(m){ var pv = GESTION.compras_mes[m].proveedores; Object.keys(pv).forEach(function(k){ acum[k] = (acum[k]||0) + pv[k].monto; }); });
   var nombres = Object.keys(C.proveedores).sort(function(a,b){ return C.proveedores[b].monto - C.proveedores[a].monto; });
   var mx = nombres.length ? C.proveedores[nombres[0]].monto : 1;
-  var h = gSelectorMes();
+  var h = gSelectorMes() + gComprasIndicadores(C);
   if(!nombres.length) h += '<div class="ges-vacio">Sin compras en este mes.</div>';
+  else h += '<div class="ana-section ges-sec"><div class="ana-section-title">Gasto por proveedor</div>';
   h += nombres.map(function(n){
     var pv = C.proveedores[n], var_txt = '';
     if(ant){
@@ -2739,12 +2784,21 @@ function gRenderProveedores(){
       if(!a) var_txt = '<span class="ges-var">sin compras el mes anterior</span>';
       else { var v = pv.monto/a.monto - 1; var_txt = '<span class="ges-var '+(v>0.05?'val-amarillo':'')+'">'+(v>=0?'+':'')+Math.round(v*100)+'% vs mes anterior</span>'; }
     }
-    var ings = Object.keys(pv.ingredientes).sort(function(x,y){ return pv.ingredientes[y]-pv.ingredientes[x]; }).map(function(k){ return gEsc(k)+' '+gClp(pv.ingredientes[k]); }).join(' · ');
-    return '<div class="ges-prov"><div class="ges-factura-top"><b>'+gEsc(n)+'</b><span>'+gClp(pv.monto)+'</span></div>'
+    var det = pv.detalle || [], abierto = !!G_PROV_ABIERTO[n];
+    var h2 = '<div class="ges-prov'+(abierto?' abierto':'')+'" data-ges="prov" data-v="'+gEsc(n)+'"><div class="ges-factura-top"><b>'+gEsc(n)+'</b><span>'+gClp(pv.monto)+'</span></div>'
       +'<div class="ges-barra"><i style="width:'+Math.round(100*pv.monto/mx)+'%"></i></div>'
       +'<div class="ges-linea-chica">'+pv.facturas+' factura'+(pv.facturas===1?'':'s')+' · acumulado '+gClp(acum[n])+' '+var_txt+'</div>'
-      +'<div class="ges-linea-chica">Ingredientes comprados: '+ings+'</div></div>';
+      +'<div class="ges-prov-toggle">'+det.length+' producto'+(det.length===1?'':'s')+' comprado'+(det.length===1?'':'s')+' <span class="ges-flecha">'+(abierto?'▲':'▼')+'</span></div>';
+    if(abierto){
+      h2 += '<table class="ges-tabla ges-prov-tabla"><thead><tr><th>Producto</th><th>Cantidad</th><th>Monto neto</th><th>Precio prom.</th></tr></thead><tbody>'
+        + det.map(function(d){
+            return '<tr><td>'+gEsc(d.ingrediente)+'</td><td>'+gNum(d.cant)+' '+gEsc(d.unidad)+'</td><td>'+gClp(d.monto)+'</td><td>'+(d.cant?gClp(d.monto/d.cant)+' / '+gEsc(d.unidad):'—')+'</td></tr>';
+          }).join('') + '</tbody></table>';
+    }
+    return h2 + '</div>';
   }).join('');
+  if(nombres.length) h += '</div>';
+  h += gComprasDetalle(C);
   var M = GESTION.multi_proveedor || [];
   if(M.length){
     h += '<div class="ana-section ges-sec"><div class="ana-section-title">Comparación de precios entre proveedores</div>'
@@ -2754,10 +2808,11 @@ function gRenderProveedores(){
             +'</div>';
         }).join('') + '</div>';
   }
+  h += gTablaMensualProveedores();
   return h;
 }
 
-// ── Por mes (vista administrativa) ──
+// ── Tablas mensuales (para CSV y Proveedores) ──
 function gTablaIngredientes(){
   var filas = {};
   GESTION.meses.forEach(function(m){
@@ -2777,23 +2832,57 @@ function gTablaProveedores(){
   });
   return Object.keys(filas).map(function(k){ return filas[k]; }).sort(function(a,b){ return b.total-a.total; });
 }
-function gRenderPorMes(){
-  if(!GESTION.meses.length) return '<div class="ges-vacio">No hay facturas registradas.</div>';
-  var ms = GESTION.meses, I = gTablaIngredientes(), V = gTablaProveedores();
-  var h = '<div class="ana-section ges-sec"><div class="ges-tabla-head"><div class="ana-section-title">Ingrediente por mes (cantidad y monto neto)</div>'
-    +'<button class="btn" data-ges="csv" data-v="ing">Descargar CSV</button></div><div class="tabla-wrap"><table class="ges-tabla"><thead><tr><th>Ingrediente</th>'
-    + ms.map(function(m){ return '<th>'+gMesTxt(m)+'</th>'; }).join('') + '<th>Total</th></tr></thead><tbody>'
-    + I.map(function(f){
-        return '<tr><td>'+gEsc(f.ingrediente)+'</td>'+ms.map(function(m){
-          var x = f.m[m]; return '<td>'+(x?gNum(x.cant)+' '+gEsc(f.unidad)+'<br><b>'+gClp(x.monto)+'</b>':'—')+'</td>';
-        }).join('')+'<td><b>'+gClp(f.total)+'</b></td></tr>';
-      }).join('') + '</tbody></table></div></div>';
-  h += '<div class="ana-section ges-sec"><div class="ges-tabla-head"><div class="ana-section-title">Proveedor por mes (monto neto)</div>'
+// Tabla proveedor × mes: va al final de la sección Proveedores.
+function gTablaMensualProveedores(){
+  var ms = GESTION.meses, V = gTablaProveedores();
+  return '<div class="ana-section ges-sec"><div class="ges-tabla-head"><div class="ana-section-title">Gasto mensual por proveedor (monto neto)</div>'
     +'<button class="btn" data-ges="csv" data-v="prov">Descargar CSV</button></div><div class="tabla-wrap"><table class="ges-tabla"><thead><tr><th>Proveedor</th>'
     + ms.map(function(m){ return '<th>'+gMesTxt(m)+'</th>'; }).join('') + '<th>Total</th></tr></thead><tbody>'
     + V.map(function(f){
         return '<tr><td>'+gEsc(f.proveedor)+'</td>'+ms.map(function(m){ return '<td>'+(f.m[m]!=null?gClp(f.m[m]):'—')+'</td>'; }).join('')+'<td><b>'+gClp(f.total)+'</b></td></tr>';
       }).join('') + '</tbody></table></div></div>';
+}
+
+// ── Ingredientes: cantidades compradas, precios y variaciones ──
+function gVariacion(v){
+  if(v==null) return '<span class="ges-var">una sola compra</span>';
+  var cls = v>=15 ? 'val-rojo' : (v>=5 ? 'val-amarillo' : (v<=-1 ? 'val-verde' : ''));
+  return '<span class="ges-var '+cls+'">'+(v>0?'▲ +':(v<0?'▼ ':''))+String(v).replace('.',',')+'% vs compra anterior</span>';
+}
+function gRenderIngredientes(){
+  var I = GESTION.ingredientes || [];
+  if(!I.length) return '<div class="ges-vacio">No hay facturas registradas.</div>';
+  var alzas = I.filter(function(x){ return x.variacion!=null && x.variacion>=5; }).length;
+  var h = gSelectorMes() + '<div class="metricas ges-3">'
+    + gCelda('Ingredientes comprados', String(I.length), 'con al menos una factura')
+    + gCelda('Con alza de precio', String(alzas), '5% o más vs la compra anterior', alzas?'val-rojo':'')
+    + gCelda('Comprados en el mes', String(I.filter(function(x){ return x.meses[G_MES]; }).length), G_MES?gMesTxt(G_MES):'')
+    + '</div>';
+  h += '<div class="ana-section ges-sec"><div class="ges-tabla-head"><div class="ana-section-title">Precio y cantidades por ingrediente</div>'
+    + '<button class="btn" data-ges="csv" data-v="ing">Descargar CSV</button></div>';
+  h += I.map(function(x){
+    var abierto = !!G_ING_ABIERTO[x.ingrediente], mm = x.meses[G_MES];
+    var c = '<div class="ges-prov'+(abierto?' abierto':'')+'" data-ges="ing" data-v="'+gEsc(x.ingrediente)+'">'
+      + '<div class="ges-factura-top"><b>'+gEsc(x.ingrediente)+'</b><span>'+gClp(x.precio)+' / '+gEsc(x.unidad)+'</span></div>'
+      + '<div class="ges-linea-chica">'+gVariacion(x.variacion)+' · última compra '+gFecha(x.fecha)+' · '+gEsc(x.proveedor)+'</div>'
+      + '<div class="ges-linea-chica">'+(mm ? 'Comprado en el mes: '+gNum(mm.cant)+' '+gEsc(x.unidad)+' · '+gClp(mm.monto) : 'Sin compras en el mes')
+      + (x.platos ? ' · se usa en '+x.platos+' plato'+(x.platos===1?'':'s') : '')+'</div>'
+      + '<div class="ges-prov-toggle">Ver historial <span class="ges-flecha">'+(abierto?'▲':'▼')+'</span></div>';
+    if(abierto){
+      if(x.compras.length>=2) c += '<div class="ges-hist">'+gSpark(x.compras.map(function(k){ return [k[0],k[3]]; }))+'</div>';
+      c += '<table class="ges-tabla ges-prov-tabla ges-ing-compras"><thead><tr><th>Compra</th><th>Cantidad</th><th>Precio neto</th></tr></thead><tbody>'
+        + x.compras.slice().reverse().map(function(k){
+            return '<tr><td>'+gFecha(k[0])+'<br><span class="ges-linea-chica">'+gEsc(k[1])+'</span></td><td>'+gNum(k[2])+' '+gEsc(x.unidad)+'</td><td>'+gClp(k[3])+' / '+gEsc(x.unidad)+'</td></tr>';
+          }).join('') + '</tbody></table>';
+      var ms = Object.keys(x.meses).sort().reverse();
+      c += '<table class="ges-tabla ges-prov-tabla"><thead><tr><th>Mes</th><th>Cantidad</th><th>Monto neto</th><th>Precio prom.</th></tr></thead><tbody>'
+        + ms.map(function(m){
+            var y = x.meses[m];
+            return '<tr><td>'+gMesTxt(m)+'</td><td>'+gNum(y.cant)+' '+gEsc(x.unidad)+'</td><td>'+gClp(y.monto)+'</td><td>'+(y.cant?gClp(y.monto/y.cant)+' / '+gEsc(x.unidad):'—')+'</td></tr>';
+          }).join('') + '</tbody></table>';
+    }
+    return c + '</div>';
+  }).join('') + '</div>';
   return h;
 }
 function gDescargarCSV(que){
@@ -2829,6 +2918,8 @@ document.getElementById('vista-gestion').addEventListener('click', function(e){
   else if(k==='filt') setGFiltro(v);
   else if(k==='csv') gDescargarCSV(v);
   else if(k==='plato'){ G_ABIERTO[v] = !G_ABIERTO[v]; renderGestion(); }
+  else if(k==='prov'){ G_PROV_ABIERTO[v] = !G_PROV_ABIERTO[v]; renderGestion(); }
+  else if(k==='ing'){ G_ING_ABIERTO[v] = !G_ING_ABIERTO[v]; renderGestion(); }
 });
 document.getElementById('vista-gestion').addEventListener('change', function(e){
   if(e.target.getAttribute('data-ges')==='mes') setGMes(e.target.value);
