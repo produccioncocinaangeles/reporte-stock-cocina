@@ -475,6 +475,281 @@ def costear_recetas(recetas, precios, elaborados):
                 if info.get('flete_pct'):
                     linea['flete_pct'] = info['flete_pct']
 
+# ─── GESTIÓN (costos, márgenes y compras) ───────────────────
+# Lista de precios de Bsale que usan Vitacura y Las Pataguas ("precio 2026").
+BSALE_LISTA_PRECIOS = 17
+
+GRUPOS_GASTO = {
+    'Carnes': ['carne mechada', 'filete', 'jamon pierna', 'jamon serrano', 'lomo ahumado', 'lomo de cerdo',
+               'pechuga', 'pollo mechado', 'tapapecho', 'tocino', 'truto'],
+    'Pescados y mariscos': ['atun natural', 'camaron', 'camarones apanados', 'centolla', 'corvina', 'jaiba',
+                            'loco g', 'loco m', 'ostion sin concha', 'pulpo', 'salmon ahumado caliente',
+                            'salmon ahumado en frio southwind', 'salmon natural', 'frasco de locos'],
+    'Lácteos y quesos': ['crema fresca', 'crema leche', 'leche', 'leche evaporada', 'leche condensada', 'manjar',
+                         'mantequilla', 'parmesano', 'queso azul', 'queso brie', 'queso brie un', 'queso crema',
+                         'queso mantecoso', 'queso parmesano', 'queso ricota', 'helado vainilla'],
+    'Pastas y masas': ['masa emp horno', 'masa empanada', 'masa filo', 'masa de wantan', 'masita rellena', 'noquis',
+                       'pan molde', 'panko', 'panqueques docena', 'tostadas', 'harina', 'arroz basmati',
+                       'arroz g1', 'arroz salvaje', 'bastones'],
+    'Verduras y frutas': ['aji amarillo', 'albahaca', 'alcachofa', 'berenjena', 'camote', 'cebolla acaramelada',
+                          'cebolla cruda', 'cebolla morada', 'cebollin', 'champinon', 'ciboulette', 'cilantro',
+                          'espinaca', 'jengibre', 'limon sutil', 'maiz', 'manzana', 'palta', 'papas',
+                          'pasta choclo', 'pepinillo', 'perejil', 'pimenton acaramelado', 'pimenton crudo',
+                          'pimenton morron', 'rucula', 'tomate', 'tomate cherry', 'zanahoria', 'frambuesa',
+                          'coco', 'cranberry', 'mani', 'nuez', 'almendra', 'avellanas', 'frutos secos'],
+    'Envases': ['bolsa', 'caja de rollo', 'fuente mediana', 'fuente grande', 'greda', 'paila', 'paila chica'],
+}
+GRUPO_DE_INGREDIENTE = {norm_txt(i): g for g, lst in GRUPOS_GASTO.items() for i in lst}
+
+def grupo_gasto(ingrediente):
+    return GRUPO_DE_INGREDIENTE.get(norm_txt(str(ingrediente or '')), 'Otros')
+
+def _fecha_serial(v):
+    """Fecha de una celda de Sheets (serial numérico o texto) -> 'YYYY-MM-DD' o ''."""
+    if isinstance(v, (int, float)) and v:
+        return (pd.Timestamp('1899-12-30') + pd.Timedelta(days=v)).strftime('%Y-%m-%d')
+    try:
+        return pd.Timestamp(str(v), dayfirst=True).strftime('%Y-%m-%d') if str(v).strip() else ''
+    except Exception:
+        return ''
+
+def leer_precios_venta():
+    """{sku: precio con IVA} de la lista de precios 17 de Bsale. Si falla, {}."""
+    headers = {'access_token': BSALE_TOKEN}
+    base = 'https://api.bsale.cl/v1'
+    def paginar(url):
+        items, offset = [], 0
+        while True:
+            for intento in range(3):
+                try:
+                    r = requests.get(url, headers=headers, params={'limit': 50, 'offset': offset}, timeout=30)
+                    if r.status_code == 200:
+                        break
+                except Exception:
+                    pass
+                time.sleep(2)
+            else:
+                raise RuntimeError(f'Bsale no respondió ({url})')
+            lote = r.json().get('items', [])
+            items += lote
+            if len(lote) < 50:
+                return items
+            offset += 50
+    try:
+        precios = {}
+        for it in paginar(f'{base}/price_lists/{BSALE_LISTA_PRECIOS}/details.json'):
+            precios[str(it['variant']['id'])] = it.get('variantValueWithTaxes')
+        out = {}
+        for v in paginar(f'{base}/variants.json'):
+            p = precios.get(str(v['id']))
+            if p and v.get('code'):
+                sku = ' '.join(str(v['code']).split()).upper()
+                out[sku] = float(p)
+                out.setdefault(sku.replace('Ñ', 'N'), float(p))
+        return out
+    except Exception as e:
+        print(f"  Warning: no se pudo leer la lista de precios de Bsale ({e})")
+        return {}
+
+def leer_compras():
+    """Líneas de la hoja Compras como lista de dicts, sin guías de despacho y con
+    la fecha ya en texto. Si falla la lectura devuelve None (pestaña con aviso)."""
+    if not RECETAS_SHEET_ID or gspread is None or not os.path.exists(GOOGLE_SERVICE_ACCOUNT_FILE):
+        return None
+    try:
+        gc = gspread.service_account(filename=GOOGLE_SERVICE_ACCOUNT_FILE)
+        crudo = gc.open_by_key(RECETAS_SHEET_ID).worksheet('Compras').get_all_values(
+            value_render_option='UNFORMATTED_VALUE')
+    except Exception as e:
+        print(f"  Warning: no se pudo leer Compras desde Google Sheets ({e})")
+        return None
+    if not crudo:
+        return []
+    cols = crudo[0]
+    out = []
+    for i, fila in enumerate(crudo[1:]):
+        d = dict(zip(cols, fila))
+        if str(d.get('tipo_doc', '')).strip() == 'guia_despacho':
+            continue
+        fecha = _fecha_serial(d.get('fecha'))
+        if not fecha and not str(d.get('ingrediente', '')).strip():
+            continue
+        d['_fecha'] = fecha
+        d['_orden'] = i
+        out.append(d)
+    return out
+
+def ventas_historial(dias_recientes=90):
+    """({sku: unidades vendidas últimos N días}, {'YYYY-MM': {sku: unidades}}),
+    sumando Vitacura y Pataguas, tipo venta, sin expandir packs."""
+    with open(ARCHIVO_JSON, encoding='utf-8') as f:
+        movs = json.load(f)['movimientos']
+    desde = (_HOY - pd.Timedelta(days=dias_recientes)).strftime('%Y-%m-%d')
+    recientes, por_mes = {}, {}
+    for m in movs:
+        if m['tipo'] != 'venta':
+            continue
+        sku, f = m['sku'], str(m['fecha'])[:10]
+        c = float(m.get('cantidad', 0) or 0)
+        if f > desde:
+            recientes[sku] = recientes.get(sku, 0) + c
+        por_mes.setdefault(f[:7], {})
+        por_mes[f[:7]][sku] = por_mes[f[:7]].get(sku, 0) + c
+    return recientes, por_mes
+
+def calcular_gestion(datos, precios_venta, compras):
+    """JSON de la pestaña Gestión. Todo lo que no se pueda calcular queda vacío
+    con un aviso, para no tumbar el resto del dashboard."""
+    avisos = []
+    if not precios_venta:
+        avisos.append('No se pudo leer la lista de precios de Bsale: no se calculan ganancias ni márgenes.')
+    if compras is None:
+        avisos.append('No se pudo leer la hoja Compras: no hay datos de compras ni proveedores.')
+        compras = []
+    try:
+        u90, u_mes = ventas_historial()
+    except Exception as e:
+        avisos.append(f'No se pudo leer el historial de ventas ({e}).')
+        u90, u_mes = {}, {}
+
+    # ── Platos ──
+    platos, receta_de = [], {}
+    for d in datos:
+        rec = d.get('receta') or []
+        if d.get('estado') == 'salsa' or not rec:
+            continue
+        sku = d['sku']
+        receta_de[sku] = rec
+        precio = precios_venta.get(sku)
+        con_costo = [l for l in rec if l.get('costo') is not None]
+        costo = sum(l['costo'] for l in con_costo)
+        faltan = [[l['ingrediente'], l.get('falta') or 'sin precio'] for l in rec if l.get('costo') is None]
+        top = sorted(con_costo, key=lambda l: -l['costo'])[:5]
+        p = {'sku': sku, 'nombre': d['nombre'], 'precio_iva': precio, 'costo_iva': round(costo, 1),
+             'completo': not faltan, 'faltan': faltan, 'unidades': int(round(u90.get(sku, 0))),
+             'ganancia_unidad': None, 'margen': None,
+             'top': [[l['ingrediente'], l['costo'], round(100 * l['costo'] / costo, 1) if costo else 0] for l in top]}
+        if precio:
+            p['ganancia_unidad'] = round((precio - costo) / IVA, 1)
+            p['margen'] = round(1 - costo / precio, 4)
+        platos.append(p)
+
+    # ── Compras por mes ──
+    lineas = []
+    for d in compras:
+        ing = str(d.get('ingrediente', '')).strip()
+        cant = num(d.get('cant_recibida'))
+        if cant is None:
+            cant = num(d.get('cant_base'))
+        unidad = canon_unidad(d.get('unidad_base')) or str(d.get('unidad_base', '')).strip().lower()
+        factor = num(d.get('factor')) or 1
+        pe = num(d.get('precio_efectivo')) or num(d.get('precio_lista'))
+        otro = not ing or es_flete(d) or str(d.get('categoria', '')).strip() == 'otro'
+        lineas.append({
+            'fecha': d['_fecha'], 'mes': d['_fecha'][:7], 'folio': str(d.get('folio', '')).strip(),
+            'rut': str(d.get('rut_proveedor', '')).strip(),
+            'proveedor': str(d.get('proveedor', '')).strip() or 'Sin proveedor',
+            'ingrediente': ing, 'grupo': 'Otros' if otro else grupo_gasto(ing),
+            'cant': cant or 0, 'unidad': unidad, 'total': num(d.get('total')) or 0,
+            'fact': num(d.get('cant_facturada')), 'recib': num(d.get('cant_recibida')),
+            'precio_unit': (pe / factor) if pe else None, 'flete': es_flete(d), '_orden': d['_orden'],
+            'foto': (str(d.get('foto', '')).split() or [''])[0]})
+
+    meses = sorted({l['mes'] for l in lineas if l['mes']})
+    compras_mes = {}
+    for m in meses:
+        ls = [l for l in lineas if l['mes'] == m]
+        vn = round(sum(u * precios_venta.get(s, 0) for s, u in u_mes.get(m, {}).items()) / IVA)
+        cm = {'total': round(sum(l['total'] for l in ls)),
+              'facturas': len({(l['rut'], l['folio']) for l in ls}),
+              'categorias': {}, 'proveedores': {}, 'ingredientes': {}, 'ventas_netas': vn}
+        cm['pct_ventas'] = round(100 * cm['total'] / vn, 1) if vn else None
+        for l in ls:
+            nom = l['ingrediente'] or '(sin ingrediente)'
+            cm['categorias'][l['grupo']] = round(cm['categorias'].get(l['grupo'], 0) + l['total'])
+            pv = cm['proveedores'].setdefault(l['proveedor'], {'monto': 0, 'facs': set(), 'ingredientes': {}})
+            pv['monto'] = round(pv['monto'] + l['total'])
+            pv['facs'].add((l['rut'], l['folio']))
+            pv['ingredientes'][nom] = round(pv['ingredientes'].get(nom, 0) + l['total'])
+            ig = cm['ingredientes'].setdefault(nom + '|' + l['unidad'],
+                                               {'ingrediente': nom, 'unidad': l['unidad'], 'cant': 0, 'monto': 0})
+            ig['cant'] = round(ig['cant'] + l['cant'], 3)
+            ig['monto'] = round(ig['monto'] + l['total'])
+        for pv in cm['proveedores'].values():
+            pv['facturas'] = len(pv.pop('facs'))
+        cm['ingredientes'] = sorted(cm['ingredientes'].values(), key=lambda x: -x['monto'])
+        compras_mes[m] = cm
+
+    # ── Facturas (más recientes primero) ──
+    fact = {}
+    for l in lineas:
+        f = fact.setdefault((l['rut'], l['folio']), {
+            'proveedor': l['proveedor'], 'folio': l['folio'], 'fecha': l['fecha'], 'mes': l['mes'],
+            'total': 0, 'ingredientes': [], 'falto': [], 'foto': l['foto']})
+        f['total'] = round(f['total'] + l['total'])
+        if l['ingrediente'] and not l['flete']:
+            f['ingredientes'].append(l['ingrediente'])
+        if l['fact'] is not None and l['recib'] is not None and l['recib'] < l['fact']:
+            f['falto'].append(l['ingrediente'])
+    facturas = sorted(fact.values(), key=lambda f: (f['fecha'], f['folio']), reverse=True)
+
+    diferencias = [{'fecha': l['fecha'], 'proveedor': l['proveedor'], 'folio': l['folio'],
+                    'ingrediente': l['ingrediente'], 'facturada': l['fact'], 'recibida': l['recib'],
+                    'unidad': l['unidad'], 'monto': round((l['fact'] - l['recib']) * (l['precio_unit'] or 0))}
+                   for l in lineas if l['fact'] is not None and l['recib'] is not None and l['recib'] < l['fact']]
+
+    calidad = [{'fecha': l['fecha'], 'proveedor': l['proveedor'], 'folio': l['folio'],
+                'problema': 'sin ingrediente asignado' if not l['ingrediente'] else 'sin unidad'}
+               for l in lineas if not l['ingrediente'] or not l['unidad']]
+
+    # ── Alzas de precio: última factura vs la anterior del mismo ingrediente ──
+    por_ing = {}
+    for l in lineas:
+        if l['ingrediente'] and not l['flete'] and l['precio_unit']:
+            por_ing.setdefault(norm_txt(l['ingrediente']), []).append(l)
+    # Minigráfico del ingrediente que más pesa en el costo de cada plato
+    for p in platos:
+        ls = por_ing.get(norm_txt(p['top'][0][0])) if p['top'] else None
+        if ls and len(ls) >= 2:
+            ls = sorted(ls, key=lambda l: (l['fecha'], l['_orden']))
+            p['hist'] = {'ingrediente': ls[-1]['ingrediente'], 'unidad': ls[-1]['unidad'],
+                         'historial': [[l['fecha'], round(l['precio_unit'], 2)] for l in ls]}
+    alertas, multi = [], []
+    for clave, ls in por_ing.items():
+        ls.sort(key=lambda l: (l['fecha'], l['_orden']))
+        hist = [[l['fecha'], round(l['precio_unit'], 2)] for l in ls]
+        prov = {}
+        for l in ls:
+            prov[l['proveedor']] = l
+        if len(prov) >= 2:
+            multi.append({'ingrediente': ls[-1]['ingrediente'], 'unidad': ls[-1]['unidad'],
+                          'proveedores': sorted([{'proveedor': k, 'precio': round(v['precio_unit'], 2),
+                                                  'fecha': v['fecha']} for k, v in prov.items()],
+                                                key=lambda x: x['precio'])})
+        if len(ls) < 2:
+            continue
+        ult, ant = ls[-1], ls[-2]
+        var = ult['precio_unit'] / ant['precio_unit'] - 1
+        if var < 0.05:
+            continue
+        afectados = []
+        for p in platos:
+            for lin in receta_de[p['sku']]:
+                if norm_txt(lin['ingrediente']) == clave and lin.get('costo') is not None and p['precio_iva']:
+                    antes = p['costo_iva'] - lin['costo'] * (1 - ant['precio_unit'] / ult['precio_unit'])
+                    afectados.append({'nombre': p['nombre'], 'margen_antes': round(1 - antes / p['precio_iva'], 4),
+                                      'margen_despues': p['margen']})
+        alertas.append({'ingrediente': ult['ingrediente'], 'unidad': ult['unidad'], 'variacion': round(var * 100, 1),
+                        'nivel': 'rojo' if var >= 0.15 else 'amarillo', 'precio_antes': round(ant['precio_unit'], 2),
+                        'precio_ahora': round(ult['precio_unit'], 2), 'fecha': ult['fecha'],
+                        'proveedor': ult['proveedor'], 'historial': hist, 'platos': afectados})
+    alertas.sort(key=lambda a: -a['variacion'])
+
+    return {'ok': bool(platos or lineas), 'avisos': avisos, 'platos': platos, 'alertas': alertas,
+            'meses': meses, 'compras_mes': compras_mes, 'facturas': facturas,
+            'diferencias_recepcion': diferencias, 'calidad': calidad, 'multi_proveedor': multi,
+            'grupos': list(GRUPOS_GASTO) + ['Otros']}
+
 def leer_json(oficina):
     with open(ARCHIVO_JSON, encoding='utf-8') as f:
         cache = json.load(f)
@@ -1775,6 +2050,56 @@ body.dark-mode .plan-aviso{background:#3a2f10;border-color:#6b5518;color:#ecd9a0
 @media(max-width:640px){
   .prod-explica{margin:12px 12px 0}
 }
+/* ── Gestión ── */
+.metricas.ges-3{grid-template-columns:repeat(3,1fr)}
+.ges-sec{margin-bottom:16px}
+.ges-aviso{margin:0 20px 12px}
+.ges-vacio{margin:0 20px;padding:24px;text-align:center;color:#64748b;background:var(--card-bg);border:var(--card-border);border-radius:12px}
+.ges-linea-chica{font-size:12px;color:#64748b;margin-top:3px;line-height:1.5}
+.ges-lista{padding:0 20px;display:grid;grid-template-columns:repeat(auto-fill,minmax(340px,1fr));gap:12px;align-items:start}
+.ges-plato{background:var(--card-bg);border:var(--card-border);border-radius:12px;padding:14px 16px;box-shadow:var(--shadow-sm);cursor:pointer}
+.ges-plato-top{display:flex;justify-content:space-between;align-items:flex-start;gap:12px}
+.ges-izq{min-width:0}
+.ges-nombre{font-size:15px;font-weight:700;text-transform:capitalize;line-height:1.3}
+.ges-der{text-align:right;flex:0 0 auto}
+.ges-gan{font-size:18px;font-weight:800;letter-spacing:-0.02em}
+.ges-gan-l{font-size:10px;color:#94a3b8;text-transform:uppercase;letter-spacing:0.05em}
+.ges-mg{font-size:13px;font-weight:700;margin-top:2px}
+.ges-inc{font-size:12px;font-weight:700;color:var(--warn-text);background:var(--warn-bg);border-radius:8px;padding:3px 8px;display:inline-block}
+.ges-detalle{margin-top:12px;padding-top:12px;border-top:1px solid var(--border-color);cursor:default}
+.ges-det-t{font-size:12px;font-weight:600;color:#475569;margin:8px 0 6px}
+.ges-barra-fila{display:grid;grid-template-columns:32% 1fr 112px;gap:8px;align-items:center;font-size:12px;margin-bottom:6px}
+.ges-barra-n{overflow-wrap:anywhere;line-height:1.25}
+.ges-barra{display:block;height:8px;background:var(--border-color);border-radius:4px;overflow:hidden}
+.ges-barra i{display:block;height:100%;background:var(--system-green);border-radius:4px}
+.ges-barra-v{color:#64748b;white-space:nowrap;text-align:right}
+.ges-faltan{font-size:12px;color:var(--warn-text);background:var(--warn-bg);border-radius:8px;padding:8px 10px;margin-top:8px;line-height:1.5}
+.ges-hist{margin-top:10px;font-size:12px}
+.ges-spark{display:block;margin-top:4px;flex:0 0 auto}
+.ges-alerta{border-radius:10px;padding:12px 14px;margin-bottom:10px;border:1px solid var(--warn-border);background:var(--warn-bg)}
+.ges-alerta.ges-rojo{border-color:var(--danger-border);background:var(--danger-bg)}
+.ges-alerta-top{display:flex;justify-content:space-between;gap:12px;align-items:center;font-size:13px}
+.ges-mes{padding:0 20px 12px;display:flex;align-items:center;gap:8px;font-size:12px;font-weight:600;color:#64748b}
+.ges-factura,.ges-prov{padding:10px 0;border-bottom:1px solid var(--border-color)}
+.ges-factura:last-child{border-bottom:none}
+.ges-prov{background:var(--card-bg);border:var(--card-border);border-radius:12px;padding:14px 16px;margin:0 20px 12px;box-shadow:var(--shadow-sm)}
+.ges-prov .ges-barra{margin-top:8px}
+.ges-factura-top{display:flex;justify-content:space-between;gap:12px;font-size:14px}
+.ges-falto{font-size:12px;color:var(--danger-text);margin-top:3px}
+.ges-var{margin-left:6px}
+.ges-tabla-head{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:6px}
+.ges-tabla{border-collapse:collapse;width:100%;font-size:12px}
+.ges-tabla th,.ges-tabla td{padding:8px 10px;border-bottom:1px solid var(--border-color);text-align:right;white-space:nowrap;vertical-align:top}
+.ges-tabla th:first-child,.ges-tabla td:first-child{text-align:left;position:sticky;left:0;background:var(--card-bg)}
+@media (max-width:640px){
+  .metricas.ges-3{grid-template-columns:repeat(2,1fr)}
+  .metricas.ges-3 .metrica:last-child{grid-column:1/-1}
+  .ges-lista{padding:0 12px;grid-template-columns:1fr}
+  .ges-aviso,.ges-mes{margin-left:12px;margin-right:12px;padding-left:0;padding-right:0}
+  .ges-vacio{margin:0 12px}
+  .ges-prov{margin:0 12px 12px}
+  .ges-barra-fila{grid-template-columns:30% 1fr 104px}
+}
 """
 
 JS = """
@@ -2173,8 +2498,8 @@ function toggleDarkMode(){
   localStorage.setItem('theme', activo ? 'dark' : 'light');
 }
 
-var VISTAS = ['vista-resumen','vista-productos','vista-guias','vista-analisis','vista-recetas','vista-rendimiento','vista-diciembre'];
-var NAVS   = ['nav-resumen','nav-productos','nav-guias','nav-analisis','nav-recetas','nav-rendimiento','nav-diciembre'];
+var VISTAS = ['vista-resumen','vista-productos','vista-guias','vista-analisis','vista-recetas','vista-rendimiento','vista-diciembre','vista-gestion'];
+var NAVS   = ['nav-resumen','nav-productos','nav-guias','nav-analisis','nav-recetas','nav-rendimiento','nav-diciembre','nav-gestion'];
 function switchVista(vistaId, navId, cb){
   VISTAS.forEach(function(v){document.getElementById(v).style.display='none';});
   NAVS.forEach(function(n){document.getElementById(n).classList.remove('nav-active');});
@@ -2209,7 +2534,7 @@ function mostrarRendimiento(){
   });
 }
 
-// ── Pestañas ocultas: Producción y Rendimiento ──
+// ── Pestañas ocultas: Producción, Rendimiento y Gestión ──
 // Aparecen al mantener apretado el logo 2 s; otra vez las oculta.
 // No se recuerda: al recargar vuelven a estar ocultas. No es seguridad
 // (el repo es público), solo evita que se vean a simple vista.
@@ -2232,6 +2557,282 @@ function toggleOcultas(){
   ['pointerup','pointerleave','pointercancel'].forEach(function(ev){ logo.addEventListener(ev, cancelar); });
   logo.addEventListener('contextmenu', function(e){ e.preventDefault(); });
 })();
+
+// ── Gestión: ganancia por plato, compras y proveedores ──
+var G_SEC = 'platos', G_FILT = 'todos', G_MES = '', G_ABIERTO = {};
+var G_MESES_ES = ['ene','feb','mar','abr','may','jun','jul','ago','sep','oct','nov','dic'];
+var G_SECCIONES = [['platos','Platos'],['compras','Compras'],['proveedores','Proveedores'],['pormes','Por mes']];
+function mostrarGestion(){
+  switchVista('vista-gestion','nav-gestion', function(){
+    if(!G_MES && GESTION.meses && GESTION.meses.length) G_MES = GESTION.meses[GESTION.meses.length-1];
+    renderGestion();
+  });
+}
+function gEsc(s){ return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+function gClp(n){ return (n<0?'-':'')+'$'+Math.abs(Math.round(n||0)).toLocaleString('es-CL'); }
+function gPct(x, d){ return (x*100).toFixed(d||0).replace('.',',')+'%'; }
+function gNum(n){ return (Math.round((n||0)*100)/100).toLocaleString('es-CL'); }
+function gMesTxt(m){ return G_MESES_ES[parseInt(m.slice(5,7),10)-1]+' '+m.slice(0,4); }
+function gFecha(f){ return f ? f.slice(8,10)+'/'+f.slice(5,7) : ''; }
+function gClaseMargen(m){ return m>=0.67 ? 'val-verde' : (m>=0.60 ? 'val-amarillo' : 'val-rojo'); }
+function gCelda(label, valor, sub, cls){
+  return '<div class="metrica"><div class="metrica-label">'+label+'</div><div class="metrica-valor activo '+(cls||'')+'">'+valor+'</div>'
+    +(sub?'<div class="metrica-sub">'+sub+'</div>':'')+'</div>';
+}
+function gSpark(h){
+  if(!h || h.length<2) return '';
+  var v = h.map(function(x){return x[1];}), mn = Math.min.apply(null,v), mx = Math.max.apply(null,v), rg = (mx-mn)||1;
+  var pts = v.map(function(y,i){ return (4+i*(112/(v.length-1))).toFixed(1)+','+(26-((y-mn)/rg)*20).toFixed(1); }).join(' ');
+  var ult = pts.split(' ').pop().split(',');
+  return '<svg class="ges-spark" viewBox="0 0 120 32" width="120" height="32" aria-hidden="true"><polyline points="'+pts+'" fill="none" stroke="var(--system-green)" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/><circle cx="'+ult[0]+'" cy="'+ult[1]+'" r="3" fill="var(--system-green)"/></svg>';
+}
+function setGSec(s){ G_SEC = s; renderGestion(); }
+function setGMes(m){ G_MES = m; renderGestion(); }
+function setGFiltro(f){ G_FILT = f; renderGestion(); }
+function gSelectorMes(){
+  if(!GESTION.meses || !GESTION.meses.length) return '';
+  return '<div class="ges-mes"><label for="ges-mes-sel">Mes</label><select id="ges-mes-sel" data-ges="mes">'
+    + GESTION.meses.slice().reverse().map(function(m){ return '<option value="'+m+'"'+(m===G_MES?' selected':'')+'>'+gMesTxt(m)+'</option>'; }).join('')
+    + '</select></div>';
+}
+function renderGestion(){
+  var chips = document.getElementById('ges-chips'), cuerpo = document.getElementById('ges-cuerpo');
+  chips.innerHTML = G_SECCIONES.map(function(s){
+    return '<button class="chip'+(G_SEC===s[0]?' chip-active':'')+'" data-ges="sec" data-v="'+s[0]+'">'+s[1]+'</button>';
+  }).join('');
+  var html = (GESTION.avisos||[]).map(function(a){ return '<div class="insight-warn ges-aviso">'+gEsc(a)+'</div>'; }).join('');
+  if(!GESTION.ok){
+    cuerpo.innerHTML = html + '<div class="ges-vacio">No hay datos de gestión disponibles.</div>';
+    return;
+  }
+  if(G_SEC==='platos') html += gRenderPlatos();
+  else if(G_SEC==='compras') html += gRenderCompras();
+  else if(G_SEC==='proveedores') html += gRenderProveedores();
+  else html += gRenderPorMes();
+  cuerpo.innerHTML = html;
+}
+
+// ── Platos ──
+function gRenderPlatos(){
+  var P = GESTION.platos || [];
+  var comp = P.filter(function(p){ return p.completo && p.precio_iva; });
+  var ingr = comp.reduce(function(a,p){ return a + p.precio_iva*p.unidades; }, 0);
+  var cost = comp.reduce(function(a,p){ return a + p.costo_iva*p.unidades; }, 0);
+  var margen = ingr ? 1 - cost/ingr : null;
+  var gan = comp.reduce(function(a,p){ return a + p.ganancia_unidad*p.unidades; }, 0);
+  var completos = P.filter(function(p){ return p.completo; }).length;
+  var h = '<div class="metricas ges-3">'
+    + gCelda('Margen promedio', margen==null?'—':gPct(margen), 'ponderado por lo que se vende · platos completos', margen==null?'':gClaseMargen(margen))
+    + gCelda('Ganancia últimos 90 días', gClp(gan), 'sin IVA · platos completos')
+    + gCelda('Platos con costo completo', completos+' de '+P.length, 'los demás tienen ingredientes sin precio')
+    + '</div>';
+  // Alertas de alza de precio
+  var A = GESTION.alertas || [];
+  if(A.length){
+    h += '<div class="ana-section ges-sec"><div class="ana-section-title">Alzas de precio de ingredientes</div>'
+      + A.map(function(a){
+          var pl = (a.platos||[]).map(function(p){
+            return '<div class="ges-linea-chica">'+gEsc(p.nombre)+': margen '+gPct(p.margen_antes)+' → <b>'+gPct(p.margen_despues)+'</b></div>';
+          }).join('');
+          return '<div class="ges-alerta ges-'+a.nivel+'"><div class="ges-alerta-top"><div><b>'+gEsc(a.ingrediente)+'</b> subió <b>'+gEsc(String(a.variacion).replace('.',','))+'%</b>'
+            +'<div class="ges-linea-chica">'+gClp(a.precio_antes)+' → '+gClp(a.precio_ahora)+' por '+gEsc(a.unidad)+' (neto) · '+gEsc(a.proveedor)+' · '+gFecha(a.fecha)+'</div></div>'
+            + gSpark(a.historial) + '</div>' + pl + '</div>';
+        }).join('') + '</div>';
+  }
+  h += '<div class="toolbar"><div class="chips">'
+    + [['todos','Todos'],['bajo','Margen bajo'],['incompletos','Incompletos']].map(function(f){
+        return '<button class="chip'+(G_FILT===f[0]?' chip-active':'')+'" data-ges="filt" data-v="'+f[0]+'">'+f[1]+'</button>';
+      }).join('') + '</div></div>';
+  var lista = P.filter(function(p){
+    if(G_FILT==='bajo') return p.completo && p.margen!=null && p.margen<0.60;
+    if(G_FILT==='incompletos') return !p.completo;
+    return true;
+  }).sort(function(a,b){
+    if(a.completo!==b.completo) return a.completo ? -1 : 1;
+    return (b.ganancia_unidad||0)*b.unidades - (a.ganancia_unidad||0)*a.unidades;
+  });
+  if(!lista.length) return h + '<div class="ges-vacio">No hay platos en este filtro.</div>';
+  h += '<div class="ges-lista">' + lista.map(function(p){ return gTarjetaPlato(p); }).join('') + '</div>';
+  return h;
+}
+function gTarjetaPlato(p){
+  var abierto = !!G_ABIERTO[p.sku];
+  var der;
+  if(p.completo && p.margen!=null){
+    der = '<div class="ges-der"><div class="ges-gan">'+gClp(p.ganancia_unidad)+'</div><div class="ges-gan-l">ganancia por unidad</div>'
+      +'<div class="ges-mg '+gClaseMargen(p.margen)+'">margen '+gPct(p.margen)+'</div></div>';
+  } else {
+    der = '<div class="ges-der"><div class="ges-inc">incompleto</div><div class="ges-gan-l">faltan '+p.faltan.length+' precios</div></div>';
+  }
+  var h = '<div class="ges-plato'+(abierto?' abierto':'')+'" data-ges="plato" data-v="'+gEsc(p.sku)+'"><div class="ges-plato-top"><div class="ges-izq">'
+    +'<div class="ges-nombre">'+gEsc(p.nombre.toLowerCase())+'</div>'
+    +'<div class="ges-linea-chica">'+p.unidades+' vendidos en 90 días'+(p.precio_iva?' · precio '+gClp(p.precio_iva):' · sin precio en Bsale')+'</div></div>'+der+'</div>';
+  if(abierto){
+    h += '<div class="ges-detalle"><div class="ges-det-t">Composición del costo ('+gClp(p.costo_iva)+(p.completo?'':' parcial')+')</div>'
+      + p.top.map(function(t){
+          return '<div class="ges-barra-fila"><span class="ges-barra-n">'+gEsc(t[0])+'</span><span class="ges-barra"><i style="width:'+Math.min(100,t[2])+'%"></i></span><span class="ges-barra-v">'+gClp(t[1])+' · '+Math.round(t[2])+'%</span></div>';
+        }).join('');
+    if(p.faltan.length){
+      h += '<div class="ges-faltan">Ingredientes sin costo: '+p.faltan.map(function(f){ return gEsc(f[0])+' ('+gEsc(f[1])+')'; }).join(', ')+'</div>';
+    }
+    if(p.hist){
+      h += '<div class="ges-hist"><div><b>'+gEsc(p.hist.ingrediente)+'</b> (ingrediente de mayor costo): precio en las últimas facturas (neto por '+gEsc(p.hist.unidad)+')</div>'+gSpark(p.hist.historial)
+        +'<div class="ges-linea-chica">'+p.hist.historial.map(function(x){ return gFecha(x[0])+' '+gClp(x[1]); }).join(' · ')+'</div></div>';
+    }
+    if(p.completo && p.ganancia_unidad!=null) h += '<div class="ges-det-t">Ganancia aportada en 90 días: <b>'+gClp(p.ganancia_unidad*p.unidades)+'</b> (sin IVA)</div>';
+    h += '</div>';
+  }
+  return h + '</div>';
+}
+
+// ── Compras ──
+function gRenderCompras(){
+  if(!GESTION.meses.length) return '<div class="ges-vacio">No hay facturas registradas.</div>';
+  var C = GESTION.compras_mes[G_MES];
+  var parcial = (G_MES === (new Date()).toISOString().slice(0,7));
+  var h = gSelectorMes() + '<div class="metricas ges-3">'
+    + gCelda('Comprado en el mes', gClp(C.total), 'neto, sin IVA'+(parcial?' · mes en curso':''))
+    + gCelda('Compras / ventas', C.pct_ventas==null?'—':String(C.pct_ventas).replace('.',',')+'%', 'aproximado: ventas netas = unidades × precio de lista ÷ 1,19')
+    + gCelda('Facturas', String(C.facturas), 'cargadas en el mes')
+    + '</div>';
+  var cats = Object.keys(C.categorias).sort(function(a,b){ return C.categorias[b]-C.categorias[a]; });
+  var mx = cats.length ? C.categorias[cats[0]] : 1;
+  h += '<div class="ana-section ges-sec"><div class="ana-section-title">Gasto por categoría</div>'
+    + cats.map(function(c){
+        return '<div class="ges-barra-fila"><span class="ges-barra-n">'+gEsc(c)+'</span><span class="ges-barra"><i style="width:'+Math.round(100*C.categorias[c]/mx)+'%"></i></span><span class="ges-barra-v">'+gClp(C.categorias[c])+' · '+Math.round(100*C.categorias[c]/(C.total||1))+'%</span></div>';
+      }).join('') + '</div>';
+  var F = GESTION.facturas.filter(function(f){ return f.mes===G_MES; });
+  h += '<div class="ana-section ges-sec"><div class="ana-section-title">Últimas facturas</div>'
+    + F.map(function(f){
+        return '<div class="ges-factura"><div class="ges-factura-top"><b>'+gEsc(f.proveedor)+'</b><span>'+gClp(f.total)+'</span></div>'
+          +'<div class="ges-linea-chica">'+gFecha(f.fecha)+' · folio '+gEsc(f.folio)+' · '+gEsc(f.ingredientes.join(', '))+'</div>'
+          +(f.falto.length?'<div class="ges-falto">Diferencia en recepción: '+gEsc(f.falto.join(', '))+'</div>':'')+'</div>';
+      }).join('') + '</div>';
+  var D = GESTION.diferencias_recepcion || [];
+  if(D.length){
+    h += '<div class="ana-section ges-sec"><div class="ana-section-title">Diferencias en recepción</div>'
+      + D.map(function(d){
+          return '<div class="ges-factura"><div class="ges-factura-top"><b>'+gEsc(d.ingrediente)+'</b><span>'+gClp(d.monto)+'</span></div><div class="ges-linea-chica">'
+            +gEsc(d.proveedor)+' · '+gFecha(d.fecha)+' · facturado '+gNum(d.facturada)+' '+gEsc(d.unidad)+', llegó '+gNum(d.recibida)+'</div></div>';
+        }).join('') + '</div>';
+  }
+  var Q = GESTION.calidad || [];
+  if(Q.length) h += '<div class="insight-warn ges-aviso">'+Q.length+' líneas de factura no tienen ingrediente o unidad asignada, por lo que no se consideran correctamente en los cálculos.</div>';
+  return h;
+}
+
+// ── Proveedores ──
+function gRenderProveedores(){
+  if(!GESTION.meses.length) return '<div class="ges-vacio">No hay facturas registradas.</div>';
+  var C = GESTION.compras_mes[G_MES], i = GESTION.meses.indexOf(G_MES);
+  var ant = i>0 ? GESTION.compras_mes[GESTION.meses[i-1]] : null;
+  var acum = {};
+  GESTION.meses.forEach(function(m){ var pv = GESTION.compras_mes[m].proveedores; Object.keys(pv).forEach(function(k){ acum[k] = (acum[k]||0) + pv[k].monto; }); });
+  var nombres = Object.keys(C.proveedores).sort(function(a,b){ return C.proveedores[b].monto - C.proveedores[a].monto; });
+  var mx = nombres.length ? C.proveedores[nombres[0]].monto : 1;
+  var h = gSelectorMes();
+  if(!nombres.length) h += '<div class="ges-vacio">Sin compras en este mes.</div>';
+  h += nombres.map(function(n){
+    var pv = C.proveedores[n], var_txt = '';
+    if(ant){
+      var a = ant.proveedores[n];
+      if(!a) var_txt = '<span class="ges-var">sin compras el mes anterior</span>';
+      else { var v = pv.monto/a.monto - 1; var_txt = '<span class="ges-var '+(v>0.05?'val-amarillo':'')+'">'+(v>=0?'+':'')+Math.round(v*100)+'% vs mes anterior</span>'; }
+    }
+    var ings = Object.keys(pv.ingredientes).sort(function(x,y){ return pv.ingredientes[y]-pv.ingredientes[x]; }).map(function(k){ return gEsc(k)+' '+gClp(pv.ingredientes[k]); }).join(' · ');
+    return '<div class="ges-prov"><div class="ges-factura-top"><b>'+gEsc(n)+'</b><span>'+gClp(pv.monto)+'</span></div>'
+      +'<div class="ges-barra"><i style="width:'+Math.round(100*pv.monto/mx)+'%"></i></div>'
+      +'<div class="ges-linea-chica">'+pv.facturas+' factura'+(pv.facturas===1?'':'s')+' · acumulado '+gClp(acum[n])+' '+var_txt+'</div>'
+      +'<div class="ges-linea-chica">Ingredientes comprados: '+ings+'</div></div>';
+  }).join('');
+  var M = GESTION.multi_proveedor || [];
+  if(M.length){
+    h += '<div class="ana-section ges-sec"><div class="ana-section-title">Comparación de precios entre proveedores</div>'
+      + M.map(function(m){
+          return '<div class="ges-factura"><b>'+gEsc(m.ingrediente)+'</b> <span class="ges-linea-chica">(neto por '+gEsc(m.unidad)+')</span>'
+            + m.proveedores.map(function(p,j){ return '<div class="ges-linea-chica'+(j===0?' val-verde':'')+'">'+gEsc(p.proveedor)+': '+gClp(p.precio)+' · '+gFecha(p.fecha)+(j===0?' (el más barato)':'')+'</div>'; }).join('')
+            +'</div>';
+        }).join('') + '</div>';
+  }
+  return h;
+}
+
+// ── Por mes (vista administrativa) ──
+function gTablaIngredientes(){
+  var filas = {};
+  GESTION.meses.forEach(function(m){
+    GESTION.compras_mes[m].ingredientes.forEach(function(x){
+      var k = x.ingrediente+'|'+x.unidad;
+      var f = filas[k] || (filas[k] = {ingrediente:x.ingrediente, unidad:x.unidad, m:{}, total:0});
+      f.m[m] = x; f.total += x.monto;
+    });
+  });
+  return Object.keys(filas).map(function(k){ return filas[k]; }).sort(function(a,b){ return b.total-a.total; });
+}
+function gTablaProveedores(){
+  var filas = {};
+  GESTION.meses.forEach(function(m){
+    var pv = GESTION.compras_mes[m].proveedores;
+    Object.keys(pv).forEach(function(n){ var f = filas[n] || (filas[n] = {proveedor:n, m:{}, total:0}); f.m[m] = pv[n].monto; f.total += pv[n].monto; });
+  });
+  return Object.keys(filas).map(function(k){ return filas[k]; }).sort(function(a,b){ return b.total-a.total; });
+}
+function gRenderPorMes(){
+  if(!GESTION.meses.length) return '<div class="ges-vacio">No hay facturas registradas.</div>';
+  var ms = GESTION.meses, I = gTablaIngredientes(), V = gTablaProveedores();
+  var h = '<div class="ana-section ges-sec"><div class="ges-tabla-head"><div class="ana-section-title">Ingrediente por mes (cantidad y monto neto)</div>'
+    +'<button class="btn" data-ges="csv" data-v="ing">Descargar CSV</button></div><div class="tabla-wrap"><table class="ges-tabla"><thead><tr><th>Ingrediente</th>'
+    + ms.map(function(m){ return '<th>'+gMesTxt(m)+'</th>'; }).join('') + '<th>Total</th></tr></thead><tbody>'
+    + I.map(function(f){
+        return '<tr><td>'+gEsc(f.ingrediente)+'</td>'+ms.map(function(m){
+          var x = f.m[m]; return '<td>'+(x?gNum(x.cant)+' '+gEsc(f.unidad)+'<br><b>'+gClp(x.monto)+'</b>':'—')+'</td>';
+        }).join('')+'<td><b>'+gClp(f.total)+'</b></td></tr>';
+      }).join('') + '</tbody></table></div></div>';
+  h += '<div class="ana-section ges-sec"><div class="ges-tabla-head"><div class="ana-section-title">Proveedor por mes (monto neto)</div>'
+    +'<button class="btn" data-ges="csv" data-v="prov">Descargar CSV</button></div><div class="tabla-wrap"><table class="ges-tabla"><thead><tr><th>Proveedor</th>'
+    + ms.map(function(m){ return '<th>'+gMesTxt(m)+'</th>'; }).join('') + '<th>Total</th></tr></thead><tbody>'
+    + V.map(function(f){
+        return '<tr><td>'+gEsc(f.proveedor)+'</td>'+ms.map(function(m){ return '<td>'+(f.m[m]!=null?gClp(f.m[m]):'—')+'</td>'; }).join('')+'<td><b>'+gClp(f.total)+'</b></td></tr>';
+      }).join('') + '</tbody></table></div></div>';
+  return h;
+}
+function gDescargarCSV(que){
+  var ms = GESTION.meses, filas = [], NL = String.fromCharCode(13,10);
+  var cel = function(v){ var s = String(v==null?'':v); return /[;"]/.test(s) ? '"'+s.replace(/"/g,'""')+'"' : s; };
+  if(que==='ing'){
+    var cab = ['Ingrediente','Unidad'];
+    ms.forEach(function(m){ cab.push('Cantidad '+m, 'Monto neto '+m); });
+    cab.push('Total neto'); filas.push(cab);
+    gTablaIngredientes().forEach(function(f){
+      var r = [f.ingrediente, f.unidad];
+      ms.forEach(function(m){ var x = f.m[m]; r.push(x?x.cant:'', x?x.monto:''); });
+      r.push(f.total); filas.push(r);
+    });
+  } else {
+    filas.push(['Proveedor'].concat(ms.map(function(m){ return 'Monto neto '+m; }), ['Total neto']));
+    gTablaProveedores().forEach(function(f){
+      filas.push([f.proveedor].concat(ms.map(function(m){ return f.m[m]!=null?f.m[m]:''; }), [f.total]));
+    });
+  }
+  var txt = String.fromCharCode(65279) + filas.map(function(r){ return r.map(cel).join(';'); }).join(NL);
+  var url = URL.createObjectURL(new Blob([txt], {type:'text/csv;charset=utf-8'}));
+  var a = document.createElement('a');
+  a.href = url; a.download = (que==='ing' ? 'compras_ingrediente_por_mes' : 'compras_proveedor_por_mes')+'.csv';
+  document.body.appendChild(a); a.click(); document.body.removeChild(a);
+  setTimeout(function(){ URL.revokeObjectURL(url); }, 1000);
+}
+document.getElementById('vista-gestion').addEventListener('click', function(e){
+  var t = e.target.closest('[data-ges]');
+  if(!t) return;
+  var k = t.getAttribute('data-ges'), v = t.getAttribute('data-v');
+  if(k==='sec') setGSec(v);
+  else if(k==='filt') setGFiltro(v);
+  else if(k==='csv') gDescargarCSV(v);
+  else if(k==='plato'){ G_ABIERTO[v] = !G_ABIERTO[v]; renderGestion(); }
+});
+document.getElementById('vista-gestion').addEventListener('change', function(e){
+  if(e.target.getAttribute('data-ges')==='mes') setGMes(e.target.value);
+});
 
 // ── Diciembre: meta del mes − ventas de diciembre − stock = falta producir ──
 var DIC_F = 'falta', DIC_O = '', DIC_C = '', DIC_SORT = {k:'falta', dir:-1};
@@ -4071,6 +4672,7 @@ HTML_TEMPLATE = """<!DOCTYPE html>
   <button class="navtab nav-oculta" id="nav-recetas" onclick="mostrarRecetas()">Producción</button>
   <button class="navtab nav-oculta" id="nav-rendimiento" onclick="mostrarRendimiento()">Rendimiento</button>
   <button class="navtab" id="nav-diciembre" onclick="mostrarDiciembre()">Diciembre</button>
+  <button class="navtab nav-oculta" id="nav-gestion" onclick="mostrarGestion()">Gestión</button>
 </nav>
 
 <!-- VISTA RESUMEN -->
@@ -4306,6 +4908,12 @@ HTML_TEMPLATE = """<!DOCTYPE html>
   </div>
 </div>
 
+<!-- VISTA GESTIÓN (ganancia por plato, compras y proveedores) -->
+<div id="vista-gestion" style="display:none">
+  <div class="ana-chips" id="ges-chips"></div>
+  <div id="ges-cuerpo"></div>
+</div>
+
 <!-- VISTA DICIEMBRE (meta del mes − ventas de diciembre − stock = lo que falta producir) -->
 <div id="vista-diciembre" style="display:none">
   <div class="rend-nota" id="dic-nota"></div>
@@ -4419,6 +5027,7 @@ const ALERTAS = ALERTAS_PLACEHOLDER;
 const ANA_DATA = ANA_DATA_PLACEHOLDER;
 const PROD_DATA = PROD_DATA_PLACEHOLDER;
 const DIC_DATA = DIC_DATA_PLACEHOLDER;
+const GESTION = GESTION_DATA_PLACEHOLDER;
 JS_PLACEHOLDER
 </script>
 </body>
@@ -4521,7 +5130,7 @@ def calcular_diciembre(stock, hoy=None):
                     ventas[k] = ventas.get(k, 0) + float(m.get('cantidad', 0) or 0)
     return calcular_diciembre_desde(meta, ventas, stock, hoy)
 
-def generar_html(datos, fecha_str, analisis=None, ultimo_update_str=None, produccion=None, diciembre=None, ultimo_update_iso=None):
+def generar_html(datos, fecha_str, analisis=None, ultimo_update_str=None, produccion=None, diciembre=None, ultimo_update_iso=None, gestion=None):
     data_json    = json.dumps(datos, ensure_ascii=False)
     prod_json = json.dumps(produccion or {'meses': [], 'cocineros': [], 'por_mes': {}}, ensure_ascii=False)
     analisis_json = json.dumps(analisis or {}, ensure_ascii=False)
@@ -4537,6 +5146,8 @@ def generar_html(datos, fecha_str, analisis=None, ultimo_update_str=None, produc
     js_final  = js_final.replace('ULTIMO_UPDATE_ISO_PLACEHOLDER', json.dumps(ultimo_update_iso or ''))
     html = HTML_TEMPLATE
     html = html.replace('CSS_PLACEHOLDER',            CSS)
+    gestion_json = json.dumps(gestion or {'ok': False, 'avisos': ['Sin datos de gestión.']}, ensure_ascii=False)
+    html = html.replace('GESTION_DATA_PLACEHOLDER',   gestion_json)   # antes de DATA_PLACEHOLDER
     html = html.replace('ANA_DATA_PLACEHOLDER',       analisis_json)  # antes de DATA_PLACEHOLDER
     html = html.replace('PROD_DATA_PLACEHOLDER',      prod_json)
     html = html.replace('DIC_DATA_PLACEHOLDER',       dic_json)
@@ -4575,7 +5186,14 @@ if __name__ == '__main__':
     diciembre = calcular_diciembre(STOCK_BSALE)
     if diciembre:
         print(f"  Diciembre: {diciembre['tot']['productos']} productos, falta producir {diciembre['tot']['falta_cocina']} u")
-    html = generar_html(datos, FECHA_STR, analisis, ultimo_update_str, produccion, diciembre, ultimo_update_iso)
+    print('\nCalculando gestión (precios de venta, costos y compras)...')
+    try:
+        gestion = calcular_gestion(datos, leer_precios_venta(), leer_compras())
+        print(f"  {len(gestion['platos'])} platos, {len(gestion['meses'])} meses de compras, {len(gestion['alertas'])} alertas de precio")
+    except Exception as e:
+        print(f'  Warning: falló la pestaña Gestión ({e})')
+        gestion = {'ok': False, 'avisos': [f'No se pudo calcular la gestión ({e}).']}
+    html = generar_html(datos, FECHA_STR, analisis, ultimo_update_str, produccion, diciembre, ultimo_update_iso, gestion)
     with open(ARCHIVO_HTML, 'w', encoding='utf-8') as f:
         f.write(html)
     print(f'Dashboard: {ARCHIVO_HTML}')
