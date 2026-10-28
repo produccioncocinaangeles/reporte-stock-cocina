@@ -1,5 +1,5 @@
 {
-  "ultimo_update": "2026-10-28T16:26:26",
+  "ultimo_update": "2026-10-28T17:25:56",
   "movimientos": [
     {
       "fecha": "2026-01-02",
@@ -104160,6 +104160,14 @@
       "doc_id": "R5425",
       "costo": 15000.0,
       "nota": "Recepcion / CRISTIAN LAGOS"
+    },
+    {
+      "fecha": "2026-10-28",
+      "sku": "RB",
+      "oficina": "PAT",
+      "tipo": "venta",
+      "cantidad": 1.0,
+      "doc_id": 22454
     }
   ],
   "docs_ignorar": [

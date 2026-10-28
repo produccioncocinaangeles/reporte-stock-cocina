@@ -2,67 +2,6 @@
   "fecha": "2026-10-28",
   "entradas": [],
   "salidas": [],
-  "recepciones": [
-    {
-      "sku": "EPL",
-      "oficina": "VIT",
-      "cantidad": 1.0,
-      "nota": "Recepcion / CRISTIAN LAGOS"
-    },
-    {
-      "sku": "CDM",
-      "oficina": "VIT",
-      "cantidad": 12.0,
-      "nota": "Recepcion / CRISTIAN LAGOS"
-    },
-    {
-      "sku": "ZEITUN",
-      "oficina": "PAT",
-      "cantidad": 6.0,
-      "nota": "Ajuste de Stock: Bernardita  Alamos"
-    },
-    {
-      "sku": "CDL",
-      "oficina": "VIT",
-      "cantidad": 9.0,
-      "nota": "Recepcion / CRISTIAN LAGOS"
-    },
-    {
-      "sku": "CHF",
-      "oficina": "VIT",
-      "cantidad": 6.0,
-      "nota": "Recepcion / CRISTIAN LAGOS"
-    },
-    {
-      "sku": "TMF",
-      "oficina": "VIT",
-      "cantidad": 4.0,
-      "nota": "Recepcion / CRISTIAN LAGOS"
-    },
-    {
-      "sku": "TBN",
-      "oficina": "VIT",
-      "cantidad": 8.0,
-      "nota": "Recepcion / CRISTIAN LAGOS"
-    },
-    {
-      "sku": "TFC",
-      "oficina": "VIT",
-      "cantidad": 6.0,
-      "nota": "Recepcion / CRISTIAN LAGOS"
-    },
-    {
-      "sku": "TL",
-      "oficina": "VIT",
-      "cantidad": 6.0,
-      "nota": "Recepcion / CRISTIAN LAGOS"
-    },
-    {
-      "sku": "EC",
-      "oficina": "VIT",
-      "cantidad": 10.0,
-      "nota": "Recepcion / CRISTIAN LAGOS"
-    }
-  ],
+  "recepciones": [],
   "consumos": []
 }
