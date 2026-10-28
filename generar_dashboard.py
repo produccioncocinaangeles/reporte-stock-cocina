@@ -2534,7 +2534,7 @@ function mostrarRendimiento(){
   });
 }
 
-// ── Pestañas ocultas: Producción y Rendimiento ──
+// ── Pestañas ocultas: Producción, Rendimiento y Gestión ──
 // Aparecen al mantener apretado el logo 2 s; otra vez las oculta.
 // No se recuerda: al recargar vuelven a estar ocultas. No es seguridad
 // (el repo es público), solo evita que se vean a simple vista.
@@ -4672,7 +4672,7 @@ HTML_TEMPLATE = """<!DOCTYPE html>
   <button class="navtab nav-oculta" id="nav-recetas" onclick="mostrarRecetas()">Producción</button>
   <button class="navtab nav-oculta" id="nav-rendimiento" onclick="mostrarRendimiento()">Rendimiento</button>
   <button class="navtab" id="nav-diciembre" onclick="mostrarDiciembre()">Diciembre</button>
-  <button class="navtab" id="nav-gestion" onclick="mostrarGestion()">Gestión</button>
+  <button class="navtab nav-oculta" id="nav-gestion" onclick="mostrarGestion()">Gestión</button>
 </nav>
 
 <!-- VISTA RESUMEN -->
