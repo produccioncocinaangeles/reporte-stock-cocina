@@ -512,6 +512,9 @@ GRUPOS_GASTO = {
 }
 GRUPO_DE_INGREDIENTE = {norm_txt(i): g for g, lst in GRUPOS_GASTO.items() for i in lst}
 
+# Lo que la app de bodega marca como no-producción va a su propio grupo de gasto.
+GRUPO_DE_CATEGORIA = {'aseo': 'Aseo', 'almuerzo_personal': 'Almuerzo personal'}
+
 def grupo_gasto(ingrediente):
     return GRUPO_DE_INGREDIENTE.get(norm_txt(str(ingrediente or '')), 'Otros')
 
@@ -655,12 +658,13 @@ def calcular_gestion(datos, precios_venta, compras):
         unidad = canon_unidad(d.get('unidad_base')) or str(d.get('unidad_base', '')).strip().lower()
         factor = num(d.get('factor')) or 1
         pe = num(d.get('precio_efectivo')) or num(d.get('precio_lista'))
-        otro = not ing or es_flete(d) or str(d.get('categoria', '')).strip() == 'otro'
+        cat = str(d.get('categoria', '')).strip()
+        otro = not ing or es_flete(d) or cat == 'otro'
         lineas.append({
             'fecha': d['_fecha'], 'mes': d['_fecha'][:7], 'folio': str(d.get('folio', '')).strip(),
             'rut': str(d.get('rut_proveedor', '')).strip(),
             'proveedor': str(d.get('proveedor', '')).strip() or 'Sin proveedor',
-            'ingrediente': ing, 'grupo': 'Otros' if otro else grupo_gasto(ing),
+            'ingrediente': ing, 'grupo': 'Otros' if otro else GRUPO_DE_CATEGORIA.get(cat) or grupo_gasto(ing),
             'cant': cant or 0, 'unidad': unidad, 'total': num(d.get('total')) or 0,
             'fact': num(d.get('cant_facturada')), 'recib': num(d.get('cant_recibida')),
             'precio_unit': (pe / factor) if pe else None, 'flete': es_flete(d), '_orden': d['_orden'],
@@ -784,7 +788,7 @@ def calcular_gestion(datos, precios_venta, compras):
     return {'ok': bool(platos or lineas), 'avisos': avisos, 'platos': platos, 'alertas': alertas,
             'meses': meses, 'compras_mes': compras_mes, 'facturas': facturas,
             'diferencias_recepcion': diferencias, 'calidad': calidad, 'multi_proveedor': multi,
-            'ingredientes': ingredientes, 'grupos': list(GRUPOS_GASTO) + ['Otros']}
+            'ingredientes': ingredientes, 'grupos': list(GRUPOS_GASTO) + list(GRUPO_DE_CATEGORIA.values()) + ['Otros']}
 
 def leer_json(oficina):
     with open(ARCHIVO_JSON, encoding='utf-8') as f:
