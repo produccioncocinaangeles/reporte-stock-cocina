@@ -1,7 +1,51 @@
 {
-  "fecha": "2026-10-28",
+  "fecha": "2026-10-29",
   "entradas": [],
   "salidas": [],
-  "recepciones": [],
-  "consumos": []
+  "recepciones": [
+    {
+      "sku": "CM",
+      "oficina": "VIT",
+      "cantidad": 9.0,
+      "nota": "Recepcion / CRISTIAN LAGOS"
+    },
+    {
+      "sku": "PC",
+      "oficina": "VIT",
+      "cantidad": 9.0,
+      "nota": "Recepcion / CRISTIAN LAGOS"
+    },
+    {
+      "sku": "PAC",
+      "oficina": "VIT",
+      "cantidad": 11.0,
+      "nota": "Recepcion / CRISTIAN LAGOS"
+    },
+    {
+      "sku": "PCM",
+      "oficina": "VIT",
+      "cantidad": 4.0,
+      "nota": "Recepcion / CRISTIAN LAGOS"
+    },
+    {
+      "sku": "PCP",
+      "oficina": "VIT",
+      "cantidad": 21.0,
+      "nota": "Recepcion / CRISTIAN LAGOS"
+    },
+    {
+      "sku": "MIGNON",
+      "oficina": "PAT",
+      "cantidad": 1.0,
+      "nota": "Ajuste de Stock: Bernardita  Alamos"
+    }
+  ],
+  "consumos": [
+    {
+      "sku": "BBR",
+      "oficina": "PAT",
+      "cantidad": 2.0,
+      "nota": "se enviaron en algun momento a vitacura por frezer dañado"
+    }
+  ]
 }
