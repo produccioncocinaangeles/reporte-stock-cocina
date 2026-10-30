@@ -131,7 +131,7 @@ SALSAS = {
     'SLS-MYM': {'nombre': 'SALSA MOSTAZA Y MIEL',    'skus': ['RB']},
     'SLS-OLI': {'nombre': 'SALSA AL OLIVO',          'skus': ['CP', 'TPU']},
     'SLS-AGR': {'nombre': 'SALSA AGRIDULCE',         'skus': ['CAMA']},
-    'SLS-PES': {'nombre': 'SALSA PESTO DE RÚCULA',   'skus': ['CF']},
+    'SLS-PES': {'nombre': 'SALSA PESTO DE RÚCULA',   'skus': ['CF'], 'elaborado': 'Pesto Rucula'},  # así se llama su receta en Elaborados
     'SLS-MAL': {'nombre': 'SALSA MOSTAZA ALIMONADA', 'skus': ['TF']},
     'SLS-ACR': {'nombre': 'SALSA ACARAMELADA',       'skus': ['LA']},
     'SLS-NIK': {'nombre': 'SALSA NIKKEI',            'skus': ['TA', 'TS']},
@@ -235,8 +235,8 @@ def leer_recetas():
     recetas = {}
     producto_actual = ''
     for fila in filas:
-        fila = (fila + [''] * 5)[:5]
-        producto, _sku_formula, ingrediente, cantidad, unidad = fila
+        fila = (fila + [''] * 6)[:6]
+        producto, _sku_formula, ingrediente, cantidad, unidad, merma_txt = fila
         if producto.strip():
             producto_actual = producto.strip()
         if not ingrediente.strip():
@@ -248,12 +248,20 @@ def leer_recetas():
             cant = float(cantidad) if cantidad.strip() else 0.0
         except ValueError:
             cant = 0.0
-        recetas.setdefault(sku, []).append({
+        linea = {
             'ingrediente': ingrediente.strip(),
             'cantidad':    cant,
             'unidad':      unidad.strip(),
             'elaborado':   norm_txt(ingrediente) in elaborados,
-        })
+        }
+        # Merma propia de esta línea (columna F "Merma %"): manda sobre la merma
+        # general del ingrediente, porque el mismo corte rinde distinto según el plato.
+        m = num(merma_txt)
+        if m:
+            m = m / 100 if m > 1 else m
+            if 0 < m < 1:
+                linea['merma_linea'] = m
+        recetas.setdefault(sku, []).append(linea)
     return recetas
 
 # ─── COSTOS ──────────────────────────────────────────────────
@@ -429,6 +437,81 @@ def leer_costos():
                 'unidad': str(fila[3]).strip()})
     return precios, elaborados
 
+# Salsas cuya receta en Elaborados es un lote y no 1 porción: {salsa_norm: porciones
+# que rinde la tanda}. None = todavía no se sabe -> no se suma al plato (sumar el
+# lote entero inflaría su costo muchas veces). Hoy todas las recetas de salsa están
+# por porción (Agridulce y Nikkei se pasaron a porción el 30-oct), así que está vacío.
+PORCIONES_POR_TANDA = {}
+
+def leer_packaging():
+    """Hojas Packaging (por producto: etiqueta, envase, tapa/cartón y si lleva
+    frasco de salsa) y Precios Packaging (precio con IVA por ítem).
+    Devuelve ({sku: [ítems]}, {ítem: precio o None si no tiene precio})."""
+    if not RECETAS_SHEET_ID or gspread is None or not os.path.exists(GOOGLE_SERVICE_ACCOUNT_FILE):
+        return {}, {}
+    try:
+        libro = gspread.service_account(filename=GOOGLE_SERVICE_ACCOUNT_FILE).open_by_key(RECETAS_SHEET_ID)
+        asign = libro.worksheet('Packaging').get_all_values()[1:]
+        lista = libro.worksheet('Precios Packaging').get_all_values(value_render_option='UNFORMATTED_VALUE')[1:]
+    except Exception as e:
+        print(f"  Warning: no se pudo leer packaging desde Google Sheets ({e})")
+        return {}, {}
+    precios_pack = {str(f[0]).strip().upper(): num(f[1]) for f in lista if f and str(f[0]).strip()}
+    por_sku = {}
+    for f in asign:
+        f = (f + [''] * 6)[:6]
+        sku = f[0].strip()
+        if not sku:
+            continue
+        items = [x.strip().upper() for x in f[2:5] if x.strip()]
+        if f[5].strip().lower() in ('si', 'sí', 'x', 'true'):
+            items.append('FRASCO SALSA')
+        por_sku[sku] = items
+    return por_sku, precios_pack
+
+def agregar_packaging_a_recetas(recetas, por_sku, precios_pack):
+    """Suma el packaging de cada plato a su receta (1 de cada ítem por unidad) y
+    devuelve los precios en el formato de leer_costos para costearlos. Un ítem sin
+    precio queda como línea sin costo (el plato sale incompleto, no se omite en
+    silencio). Un plato sin receta no se toca."""
+    precios = {}
+    for sku, items in por_sku.items():
+        receta = recetas.get(sku)
+        if not receta:
+            continue
+        for item in items:
+            nombre = f"{item.title()} (packaging)"
+            clave = norm_txt(nombre)
+            p = precios_pack.get(item)
+            if p is not None and clave not in precios:
+                precios[clave] = {'precio': p, 'unidad': 'un', 'fuente': 'manual', 'fecha': '',
+                                  'proveedor': '', 'merma': 0}
+            receta.append({'ingrediente': nombre, 'cantidad': 1.0, 'unidad': 'un',
+                           'elaborado': False, 'packaging': True})
+    return precios
+
+def agregar_salsas_a_recetas(recetas):
+    """Suma a la receta de cada plato su salsa (SALSAS): 1 porción por unidad
+    del plato, costeada con la receta del elaborado en la hoja Elaborados. Así
+    el costo y el margen del plato la incluyen sin cargarla a mano en cada
+    receta. Un plato sin receta no se toca (no se inventa un costo parcial) y
+    si la salsa ya está en su receta tampoco se duplica."""
+    for info in SALSAS.values():
+        nombre = info.get('elaborado') or info['nombre'].title()
+        clave = norm_txt(nombre)
+        porciones = PORCIONES_POR_TANDA.get(clave, 1)
+        if porciones is None:
+            print(f"  Aviso: {nombre} no se suma al costo de sus platos (falta cuántas porciones rinde la tanda)")
+            continue
+        for sku in info['skus']:
+            receta = recetas.get(sku)
+            if not receta:
+                continue
+            if any(norm_txt(l['ingrediente']) == norm_txt(nombre) for l in receta):
+                continue
+            receta.append({'ingrediente': nombre, 'cantidad': 1.0 / porciones, 'unidad': 'un',
+                           'elaborado': True, 'salsa_auto': True})
+
 def costear_recetas(recetas, precios, elaborados):
     """Agrega a cada línea de receta 'costo' ($ por 1 unidad del producto, o None)
     y, si no se pudo, 'falta' con el motivo. El total por producto lo suma el JS.
@@ -464,6 +547,8 @@ def costear_recetas(recetas, precios, elaborados):
                 return None, f'elaborado por {base}, receta en {unidad}'
             c_unit, motivo = costo_elaborado(clave, visitando)
             return (None, motivo) if c_unit is None else (cant * f * c_unit, None)
+        if clave == 'agua':
+            return 0.0, None  # el agua no se costea
         info = precios.get(clave)
         if not info:
             return None, 'sin precio'
@@ -472,7 +557,8 @@ def costear_recetas(recetas, precios, elaborados):
         f = factor_unidad(unidad, info['unidad'])
         if f is None:
             return None, f"precio en {info['unidad']}, receta en {unidad}"
-        return cant * f * info['precio'] / (1 - info['merma']), None
+        merma = linea.get('merma_linea', info['merma'])
+        return cant * f * info['precio'] / (1 - merma), None
 
     for receta in recetas.values():
         for linea in receta:
@@ -511,6 +597,9 @@ GRUPOS_GASTO = {
     'Envases': ['bolsa', 'caja de rollo', 'fuente mediana', 'fuente grande', 'greda', 'paila', 'paila chica'],
 }
 GRUPO_DE_INGREDIENTE = {norm_txt(i): g for g, lst in GRUPOS_GASTO.items() for i in lst}
+
+# Lo que la app de bodega marca como no-producción va a su propio grupo de gasto.
+GRUPO_DE_CATEGORIA = {'aseo': 'Aseo', 'almuerzo_personal': 'Almuerzo personal'}
 
 def grupo_gasto(ingrediente):
     return GRUPO_DE_INGREDIENTE.get(norm_txt(str(ingrediente or '')), 'Otros')
@@ -655,12 +744,13 @@ def calcular_gestion(datos, precios_venta, compras):
         unidad = canon_unidad(d.get('unidad_base')) or str(d.get('unidad_base', '')).strip().lower()
         factor = num(d.get('factor')) or 1
         pe = num(d.get('precio_efectivo')) or num(d.get('precio_lista'))
-        otro = not ing or es_flete(d) or str(d.get('categoria', '')).strip() == 'otro'
+        cat = str(d.get('categoria', '')).strip()
+        otro = not ing or es_flete(d) or cat == 'otro'
         lineas.append({
             'fecha': d['_fecha'], 'mes': d['_fecha'][:7], 'folio': str(d.get('folio', '')).strip(),
             'rut': str(d.get('rut_proveedor', '')).strip(),
             'proveedor': str(d.get('proveedor', '')).strip() or 'Sin proveedor',
-            'ingrediente': ing, 'grupo': 'Otros' if otro else grupo_gasto(ing),
+            'ingrediente': ing, 'grupo': 'Otros' if otro else GRUPO_DE_CATEGORIA.get(cat) or grupo_gasto(ing),
             'cant': cant or 0, 'unidad': unidad, 'total': num(d.get('total')) or 0,
             'fact': num(d.get('cant_facturada')), 'recib': num(d.get('cant_recibida')),
             'precio_unit': (pe / factor) if pe else None, 'flete': es_flete(d), '_orden': d['_orden'],
@@ -784,7 +874,7 @@ def calcular_gestion(datos, precios_venta, compras):
     return {'ok': bool(platos or lineas), 'avisos': avisos, 'platos': platos, 'alertas': alertas,
             'meses': meses, 'compras_mes': compras_mes, 'facturas': facturas,
             'diferencias_recepcion': diferencias, 'calidad': calidad, 'multi_proveedor': multi,
-            'ingredientes': ingredientes, 'grupos': list(GRUPOS_GASTO) + ['Otros']}
+            'ingredientes': ingredientes, 'grupos': list(GRUPOS_GASTO) + list(GRUPO_DE_CATEGORIA.values()) + ['Otros']}
 
 def leer_json(oficina):
     with open(ARCHIVO_JSON, encoding='utf-8') as f:
@@ -1031,7 +1121,10 @@ def procesar():
     recetas = leer_recetas()
     print(f"  {len(recetas)} productos con receta cargada" if recetas else "  Sin RECETAS_SHEET_ID configurado o sin datos (tab Recetas quedará vacío)")
     precios, elaborados = leer_costos()
-    costear_recetas(recetas, precios, elaborados)
+    agregar_salsas_a_recetas(recetas)
+    por_sku_pack, precios_pack = leer_packaging()
+    precios_pack_costeo = agregar_packaging_a_recetas(recetas, por_sku_pack, precios_pack)
+    costear_recetas(recetas, {**precios, **precios_pack_costeo}, elaborados)
     print(f"  {len(precios)} ingredientes con precio ({sum(1 for p in precios.values() if p['fuente']=='factura')} de factura)")
 
     # OJO: las fórmulas que dependen del stock (vit/pat/total, dias_*, estado,
@@ -1130,7 +1223,7 @@ def procesar():
         print(f"  OK {sku} - {NOMBRES[sku][:30]}")
 
     print("Calculando salsas...")
-    resultados += calcular_salsas(resultados, recetas)
+    resultados += calcular_salsas(resultados, recetas, precios, elaborados)
 
     # 'ord' = posición original (antes de ordenar). El stock en vivo del
     # navegador re-ordena la lista y lo usa para desempatar igual que acá.
@@ -1147,7 +1240,7 @@ def buffer_semanal(vel):
         return 0
     return max(1, round(vel * 7))
 
-def calcular_salsas(resultados, recetas):
+def calcular_salsas(resultados, recetas, precios, elaborados):
     """Salsas: no tienen SKU ni stock en Bsale, se derivan del stock/velocidad
     de los platos que las usan. Mínimo sugerido por sucursal = stock actual del
     plato + una semana de venta promedio (colchón que en agregado también cubre
@@ -1160,6 +1253,18 @@ def calcular_salsas(resultados, recetas):
         platos = [por_sku[s] for s in info['skus'] if s in por_sku]
         if not platos:
             continue
+        # Receta de la salsa = su elaborado en la hoja Elaborados (no está en
+        # Recetas, que es por plato). Por porción; si la receta es una tanda
+        # y se sabe cuántas porciones rinde se divide, y si no se muestra la
+        # tanda completa marcada como tal.
+        clave = norm_txt(info.get('elaborado') or info['nombre'].title())
+        porciones = PORCIONES_POR_TANDA.get(clave, 1)
+        lineas = [dict(l) for l in elaborados.get(clave, [])]
+        if porciones:
+            for l in lineas:
+                l['cantidad'] = l['cantidad'] / porciones
+        tanda = porciones is None and bool(lineas)
+        costear_recetas({salsa_sku: lineas}, precios, elaborados)
         sug_vit = sum(p['vit'] + buffer_semanal(p['vel_vit']) for p in platos)
         sug_pat = sum(p['pat'] + buffer_semanal(p['vel_pat']) for p in platos)
         salsas.append({
@@ -1175,7 +1280,7 @@ def calcular_salsas(resultados, recetas):
             'n_lotes': 0, 'prom_lote': 0,
             'periodos_sin_stock_vit': [], 'dias_sin_stock_vit': 0,
             'lotes': [], 'movs': [], 'ventas_mes': [],
-            'receta': recetas.get(salsa_sku, []),
+            'receta': lineas, 'receta_tanda': tanda,
             'platos_asociados': [p['nombre'] for p in platos],
         })
         print(f"  OK {salsa_sku} - {info['nombre'][:30]} (Vit {sug_vit} / Pat {sug_pat})")
@@ -3141,7 +3246,8 @@ function renderProduccion(data, animate){
     else if(recetaIncompleta(p)) meta += ' · <span class="prod-warn">⚠ receta incompleta</span>';
     if(tieneReceta){
       var cp = costoProducto(p);
-      if(!cp.faltan) meta += ' · Costo <strong>'+clpCosto(cp.total)+'</strong>';
+      if(p.receta_tanda) meta += ' · Receta de la tanda completa';
+      else if(!cp.faltan) meta += ' · Costo <strong>'+clpCosto(cp.total)+'</strong>';
       else if(cp.total>0) meta += ' · Costo parcial '+clpCosto(cp.total)+' <span class="prod-warn">(faltan '+cp.faltan+' precios)</span>';
       else meta += ' · <span class="prod-warn">sin precios</span>';
     }
@@ -3181,7 +3287,7 @@ function prodDetalleHtml(p){
     return '<tr'+(sinDato?' class="prod-sin-dato"':'')+'><td>'+ing.ingrediente+(ing.elaborado?' <span class="badge-elab">se prepara</span>':'')+'</td><td style="text-align:right;font-weight:600;white-space:nowrap">'+cant+'</td><td style="text-align:right;white-space:nowrap">'+costo+'</td></tr>';
   }).join('');
   var cp = costoProducto(p);
-  filas += '<tr><td><strong>Costo por unidad</strong></td><td></td><td style="text-align:right;white-space:nowrap"><strong>'+clpCosto(cp.total)+'</strong>'
+  filas += '<tr><td><strong>'+(p.receta_tanda?'Costo de la tanda':'Costo por unidad')+'</strong></td><td></td><td style="text-align:right;white-space:nowrap"><strong>'+clpCosto(cp.total)+'</strong>'
     +(cp.faltan?'<br><span class="prod-warn" style="font-size:11px">parcial: faltan '+cp.faltan+'</span>':'')+'</td></tr>';
   var opts = p.receta.filter(function(i){ return i.cantidad>0; }).map(function(i){
     return '<option value="'+i.cantidad+'">'+i.ingrediente+(i.unidad?' ('+i.unidad+')':'')+'</option>';
@@ -3195,7 +3301,7 @@ function prodDetalleHtml(p){
       +'</div>'
     : '';
   return '<div style="padding:12px 16px">'
-    +'<h4 class="prod-h4">Receta por 1 unidad</h4>'
+    +'<h4 class="prod-h4">'+(p.receta_tanda?'Receta de la tanda completa (aún no se define cuántas porciones rinde)':'Receta por 1 unidad')+'</h4>'
     +'<table class="movs-table"><tbody>'+filas+'</tbody></table>'
     +inverso
     +'</div>';
