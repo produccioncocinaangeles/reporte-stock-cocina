@@ -1,51 +1,111 @@
 {
-  "fecha": "2026-10-29",
+  "fecha": "2026-10-30",
   "entradas": [],
   "salidas": [],
   "recepciones": [
     {
-      "sku": "CM",
-      "oficina": "VIT",
-      "cantidad": 9.0,
-      "nota": "Recepcion / CRISTIAN LAGOS"
+      "sku": "PV",
+      "oficina": "PAT",
+      "cantidad": 2.0,
+      "nota": "Recepcion / YALECI CHIQUINQUIRA"
     },
     {
-      "sku": "PC",
-      "oficina": "VIT",
-      "cantidad": 9.0,
-      "nota": "Recepcion / CRISTIAN LAGOS"
-    },
-    {
-      "sku": "PAC",
-      "oficina": "VIT",
-      "cantidad": 11.0,
-      "nota": "Recepcion / CRISTIAN LAGOS"
-    },
-    {
-      "sku": "PCM",
-      "oficina": "VIT",
+      "sku": "CP",
+      "oficina": "PAT",
       "cantidad": 4.0,
-      "nota": "Recepcion / CRISTIAN LAGOS"
+      "nota": "Recepcion / YALECI CHIQUINQUIRA"
     },
     {
-      "sku": "PCP",
-      "oficina": "VIT",
-      "cantidad": 21.0,
-      "nota": "Recepcion / CRISTIAN LAGOS"
+      "sku": "CL",
+      "oficina": "PAT",
+      "cantidad": 1.0,
+      "nota": "Recepcion / YALECI CHIQUINQUIRA"
+    },
+    {
+      "sku": "CLC",
+      "oficina": "PAT",
+      "cantidad": 1.0,
+      "nota": "Recepcion / YALECI CHIQUINQUIRA"
+    },
+    {
+      "sku": "CDM",
+      "oficina": "PAT",
+      "cantidad": 3.0,
+      "nota": "Recepcion / YALECI CHIQUINQUIRA"
+    },
+    {
+      "sku": "EC",
+      "oficina": "PAT",
+      "cantidad": 2.0,
+      "nota": "Recepcion / YALECI CHIQUINQUIRA"
+    },
+    {
+      "sku": "EJ",
+      "oficina": "PAT",
+      "cantidad": 2.0,
+      "nota": "Recepcion / YALECI CHIQUINQUIRA"
+    },
+    {
+      "sku": "EM",
+      "oficina": "PAT",
+      "cantidad": 1.0,
+      "nota": "Recepcion / YALECI CHIQUINQUIRA"
+    },
+    {
+      "sku": "FC",
+      "oficina": "PAT",
+      "cantidad": 2.0,
+      "nota": "Recepcion / YALECI CHIQUINQUIRA"
     },
     {
       "sku": "MIGNON",
       "oficina": "PAT",
-      "cantidad": 1.0,
-      "nota": "Ajuste de Stock: Bernardita  Alamos"
+      "cantidad": 4.0,
+      "nota": "Recepcion / YALECI CHIQUINQUIRA"
+    },
+    {
+      "sku": "ÑP",
+      "oficina": "PAT",
+      "cantidad": 2.0,
+      "nota": "Recepcion / YALECI CHIQUINQUIRA"
+    },
+    {
+      "sku": "PCP",
+      "oficina": "PAT",
+      "cantidad": 8.0,
+      "nota": "Recepcion / YALECI CHIQUINQUIRA"
+    },
+    {
+      "sku": "RB",
+      "oficina": "PAT",
+      "cantidad": 3.0,
+      "nota": "Recepcion / YALECI CHIQUINQUIRA"
+    },
+    {
+      "sku": "TLS",
+      "oficina": "PAT",
+      "cantidad": 3.0,
+      "nota": "Recepcion / YALECI CHIQUINQUIRA"
+    },
+    {
+      "sku": "TBN",
+      "oficina": "PAT",
+      "cantidad": 4.0,
+      "nota": "Recepcion / YALECI CHIQUINQUIRA"
+    },
+    {
+      "sku": "TFC",
+      "oficina": "PAT",
+      "cantidad": 3.0,
+      "nota": "Recepcion / YALECI CHIQUINQUIRA"
     }
   ],
   "consumos": [
     {
-      "sku": "BBR",
+      "sku": "MIGNON",
       "oficina": "PAT",
-      "cantidad": 2.0,
-      "nota": "se enviaron en algun momento a vitacura por frezer dañado"
+      "cantidad": 1.0,
+      "nota": "SE LO HABIA AGREGADO BERNA"
     }
   ]
 }
