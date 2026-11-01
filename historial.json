@@ -1,5 +1,5 @@
 {
-  "ultimo_update": "2026-10-30T22:27:02",
+  "ultimo_update": "2026-10-31T21:48:04",
   "movimientos": [
     {
       "fecha": "2026-01-02",
@@ -105022,6 +105022,373 @@
       "cantidad": 1.0,
       "doc_id": "C1762",
       "nota": "SE LO HABIA AGREGADO BERNA"
+    },
+    {
+      "fecha": "2026-10-31",
+      "sku": "PCP",
+      "oficina": "VIT",
+      "tipo": "venta",
+      "cantidad": 1.0,
+      "doc_id": 22489
+    },
+    {
+      "fecha": "2026-10-31",
+      "sku": "TA",
+      "oficina": "VIT",
+      "tipo": "venta",
+      "cantidad": 1.0,
+      "doc_id": 22489
+    },
+    {
+      "fecha": "2026-10-31",
+      "sku": "TCM",
+      "oficina": "VIT",
+      "tipo": "venta",
+      "cantidad": 1.0,
+      "doc_id": 22491
+    },
+    {
+      "fecha": "2026-10-31",
+      "sku": "CLC",
+      "oficina": "VIT",
+      "tipo": "venta",
+      "cantidad": 1.0,
+      "doc_id": 22495
+    },
+    {
+      "fecha": "2026-10-31",
+      "sku": "PCM",
+      "oficina": "VIT",
+      "tipo": "venta",
+      "cantidad": 1.0,
+      "doc_id": 22496
+    },
+    {
+      "fecha": "2026-10-31",
+      "sku": "PCM",
+      "oficina": "VIT",
+      "tipo": "venta",
+      "cantidad": 1.0,
+      "doc_id": 22500
+    },
+    {
+      "fecha": "2026-10-31",
+      "sku": "TBN",
+      "oficina": "VIT",
+      "tipo": "venta",
+      "cantidad": 1.0,
+      "doc_id": 22501
+    },
+    {
+      "fecha": "2026-10-31",
+      "sku": "CHF",
+      "oficina": "VIT",
+      "tipo": "venta",
+      "cantidad": 1.0,
+      "doc_id": 22504
+    },
+    {
+      "fecha": "2026-10-31",
+      "sku": "RA",
+      "oficina": "VIT",
+      "tipo": "venta",
+      "cantidad": 1.0,
+      "doc_id": 22505
+    },
+    {
+      "fecha": "2026-10-31",
+      "sku": "ÑC",
+      "oficina": "PAT",
+      "tipo": "venta",
+      "cantidad": 1.0,
+      "doc_id": 22487
+    },
+    {
+      "fecha": "2026-10-31",
+      "sku": "CJ",
+      "oficina": "PAT",
+      "tipo": "venta",
+      "cantidad": 1.0,
+      "doc_id": 22487
+    },
+    {
+      "fecha": "2026-10-31",
+      "sku": "CLC",
+      "oficina": "PAT",
+      "tipo": "venta",
+      "cantidad": 1.0,
+      "doc_id": 22488
+    },
+    {
+      "fecha": "2026-10-31",
+      "sku": "OP",
+      "oficina": "PAT",
+      "tipo": "venta",
+      "cantidad": 1.0,
+      "doc_id": 22490
+    },
+    {
+      "fecha": "2026-10-31",
+      "sku": "LCM",
+      "oficina": "PAT",
+      "tipo": "venta",
+      "cantidad": 1.0,
+      "doc_id": 22492
+    },
+    {
+      "fecha": "2026-10-31",
+      "sku": "RM",
+      "oficina": "PAT",
+      "tipo": "venta",
+      "cantidad": 1.0,
+      "doc_id": 22493
+    },
+    {
+      "fecha": "2026-10-31",
+      "sku": "PCP",
+      "oficina": "PAT",
+      "tipo": "venta",
+      "cantidad": 1.0,
+      "doc_id": 22494
+    },
+    {
+      "fecha": "2026-10-31",
+      "sku": "T",
+      "oficina": "PAT",
+      "tipo": "venta",
+      "cantidad": 1.0,
+      "doc_id": 22497
+    },
+    {
+      "fecha": "2026-10-31",
+      "sku": "TF",
+      "oficina": "PAT",
+      "tipo": "venta",
+      "cantidad": 1.0,
+      "doc_id": 22497
+    },
+    {
+      "fecha": "2026-10-31",
+      "sku": "CAMA",
+      "oficina": "PAT",
+      "tipo": "venta",
+      "cantidad": 1.0,
+      "doc_id": 22497
+    },
+    {
+      "fecha": "2026-10-31",
+      "sku": "MCL",
+      "oficina": "PAT",
+      "tipo": "venta",
+      "cantidad": 2.0,
+      "doc_id": 22498
+    },
+    {
+      "fecha": "2026-10-31",
+      "sku": "CM",
+      "oficina": "PAT",
+      "tipo": "venta",
+      "cantidad": 1.0,
+      "doc_id": 22499
+    },
+    {
+      "fecha": "2026-10-31",
+      "sku": "CAMA",
+      "oficina": "PAT",
+      "tipo": "venta",
+      "cantidad": 4.0,
+      "doc_id": 22502
+    },
+    {
+      "fecha": "2026-10-31",
+      "sku": "LF",
+      "oficina": "PAT",
+      "tipo": "venta",
+      "cantidad": 3.0,
+      "doc_id": 22502
+    },
+    {
+      "fecha": "2026-10-31",
+      "sku": "FCT",
+      "oficina": "PAT",
+      "tipo": "venta",
+      "cantidad": 3.0,
+      "doc_id": 22503
+    },
+    {
+      "fecha": "2026-10-31",
+      "sku": "PCP",
+      "oficina": "PAT",
+      "tipo": "venta",
+      "cantidad": 1.0,
+      "doc_id": 22506
+    },
+    {
+      "fecha": "2026-10-31",
+      "sku": "CLC",
+      "oficina": "VIT",
+      "tipo": "produccion",
+      "cantidad": 17.0,
+      "doc_id": "R5433",
+      "costo": 45000.0,
+      "nota": "Recepcion / CRISTIAN LAGOS"
+    },
+    {
+      "fecha": "2026-10-31",
+      "sku": "EJ",
+      "oficina": "VIT",
+      "tipo": "produccion",
+      "cantidad": 1.0,
+      "doc_id": "R5433",
+      "costo": 15.0,
+      "nota": "Recepcion / CRISTIAN LAGOS"
+    },
+    {
+      "fecha": "2026-10-31",
+      "sku": "MIGNON",
+      "oficina": "VIT",
+      "tipo": "produccion",
+      "cantidad": 2.0,
+      "doc_id": "R5433",
+      "costo": 29000.0,
+      "nota": "Recepcion / CRISTIAN LAGOS"
+    },
+    {
+      "fecha": "2026-10-31",
+      "sku": "PAC",
+      "oficina": "VIT",
+      "tipo": "produccion",
+      "cantidad": 6.0,
+      "doc_id": "R5433",
+      "costo": 23000.0,
+      "nota": "Recepcion / CRISTIAN LAGOS"
+    },
+    {
+      "fecha": "2026-10-31",
+      "sku": "THF",
+      "oficina": "VIT",
+      "tipo": "produccion",
+      "cantidad": 9.0,
+      "doc_id": "R5433",
+      "costo": 0.0,
+      "nota": "Recepcion / CRISTIAN LAGOS"
+    },
+    {
+      "fecha": "2026-10-31",
+      "sku": "CF",
+      "oficina": "VIT",
+      "tipo": "consumo",
+      "cantidad": 1.0,
+      "doc_id": "C1763",
+      "nota": "cristhian martita regalo cocina ponde regalo mc"
+    },
+    {
+      "fecha": "2026-10-31",
+      "sku": "CHF",
+      "oficina": "VIT",
+      "tipo": "consumo",
+      "cantidad": 1.0,
+      "doc_id": "C1763",
+      "nota": "cristhian martita regalo cocina ponde regalo mc"
+    },
+    {
+      "fecha": "2026-10-31",
+      "sku": "EC",
+      "oficina": "VIT",
+      "tipo": "consumo",
+      "cantidad": 1.0,
+      "doc_id": "C1763",
+      "nota": "cristhian martita regalo cocina ponde regalo mc"
+    },
+    {
+      "fecha": "2026-10-31",
+      "sku": "LF",
+      "oficina": "VIT",
+      "tipo": "consumo",
+      "cantidad": 1.0,
+      "doc_id": "C1763",
+      "nota": "cristhian martita regalo cocina ponde regalo mc"
+    },
+    {
+      "fecha": "2026-10-31",
+      "sku": "MCJ",
+      "oficina": "VIT",
+      "tipo": "consumo",
+      "cantidad": 1.0,
+      "doc_id": "C1763",
+      "nota": "cristhian martita regalo cocina ponde regalo mc"
+    },
+    {
+      "fecha": "2026-10-31",
+      "sku": "MCL",
+      "oficina": "VIT",
+      "tipo": "consumo",
+      "cantidad": 1.0,
+      "doc_id": "C1763",
+      "nota": "cristhian martita regalo cocina ponde regalo mc"
+    },
+    {
+      "fecha": "2026-10-31",
+      "sku": "ÑP",
+      "oficina": "VIT",
+      "tipo": "consumo",
+      "cantidad": 1.0,
+      "doc_id": "C1763",
+      "nota": "cristhian martita regalo cocina ponde regalo mc"
+    },
+    {
+      "fecha": "2026-10-31",
+      "sku": "PP",
+      "oficina": "VIT",
+      "tipo": "consumo",
+      "cantidad": 2.0,
+      "doc_id": "C1763",
+      "nota": "cristhian martita regalo cocina ponde regalo mc"
+    },
+    {
+      "fecha": "2026-10-31",
+      "sku": "PCP",
+      "oficina": "VIT",
+      "tipo": "consumo",
+      "cantidad": 1.0,
+      "doc_id": "C1763",
+      "nota": "cristhian martita regalo cocina ponde regalo mc"
+    },
+    {
+      "fecha": "2026-10-31",
+      "sku": "RPP",
+      "oficina": "VIT",
+      "tipo": "consumo",
+      "cantidad": 1.0,
+      "doc_id": "C1763",
+      "nota": "cristhian martita regalo cocina ponde regalo mc"
+    },
+    {
+      "fecha": "2026-10-31",
+      "sku": "TA",
+      "oficina": "VIT",
+      "tipo": "consumo",
+      "cantidad": 1.0,
+      "doc_id": "C1763",
+      "nota": "cristhian martita regalo cocina ponde regalo mc"
+    },
+    {
+      "fecha": "2026-10-31",
+      "sku": "TF",
+      "oficina": "VIT",
+      "tipo": "consumo",
+      "cantidad": 1.0,
+      "doc_id": "C1763",
+      "nota": "cristhian martita regalo cocina ponde regalo mc"
+    },
+    {
+      "fecha": "2026-10-31",
+      "sku": "HDV",
+      "oficina": "VIT",
+      "tipo": "consumo",
+      "cantidad": 1.0,
+      "doc_id": "C1763",
+      "nota": "cristhian martita regalo cocina ponde regalo mc"
     }
   ],
   "docs_ignorar": [
@@ -105374,6 +105741,6 @@
       "venta"
     ]
   ],
-  "ultima_recepcion_id": 5432,
-  "ultimo_consumo_id": 1762
+  "ultima_recepcion_id": 5433,
+  "ultimo_consumo_id": 1763
 }

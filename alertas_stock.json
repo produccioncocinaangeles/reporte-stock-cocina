@@ -1,111 +1,117 @@
 {
-  "fecha": "2026-10-30",
+  "fecha": "2026-10-31",
   "entradas": [],
   "salidas": [],
   "recepciones": [
     {
-      "sku": "PV",
-      "oficina": "PAT",
-      "cantidad": 2.0,
-      "nota": "Recepcion / YALECI CHIQUINQUIRA"
-    },
-    {
-      "sku": "CP",
-      "oficina": "PAT",
-      "cantidad": 4.0,
-      "nota": "Recepcion / YALECI CHIQUINQUIRA"
-    },
-    {
-      "sku": "CL",
-      "oficina": "PAT",
-      "cantidad": 1.0,
-      "nota": "Recepcion / YALECI CHIQUINQUIRA"
-    },
-    {
       "sku": "CLC",
-      "oficina": "PAT",
-      "cantidad": 1.0,
-      "nota": "Recepcion / YALECI CHIQUINQUIRA"
-    },
-    {
-      "sku": "CDM",
-      "oficina": "PAT",
-      "cantidad": 3.0,
-      "nota": "Recepcion / YALECI CHIQUINQUIRA"
-    },
-    {
-      "sku": "EC",
-      "oficina": "PAT",
-      "cantidad": 2.0,
-      "nota": "Recepcion / YALECI CHIQUINQUIRA"
+      "oficina": "VIT",
+      "cantidad": 17.0,
+      "nota": "Recepcion / CRISTIAN LAGOS"
     },
     {
       "sku": "EJ",
-      "oficina": "PAT",
-      "cantidad": 2.0,
-      "nota": "Recepcion / YALECI CHIQUINQUIRA"
-    },
-    {
-      "sku": "EM",
-      "oficina": "PAT",
+      "oficina": "VIT",
       "cantidad": 1.0,
-      "nota": "Recepcion / YALECI CHIQUINQUIRA"
-    },
-    {
-      "sku": "FC",
-      "oficina": "PAT",
-      "cantidad": 2.0,
-      "nota": "Recepcion / YALECI CHIQUINQUIRA"
+      "nota": "Recepcion / CRISTIAN LAGOS"
     },
     {
       "sku": "MIGNON",
-      "oficina": "PAT",
-      "cantidad": 4.0,
-      "nota": "Recepcion / YALECI CHIQUINQUIRA"
-    },
-    {
-      "sku": "ÑP",
-      "oficina": "PAT",
+      "oficina": "VIT",
       "cantidad": 2.0,
-      "nota": "Recepcion / YALECI CHIQUINQUIRA"
+      "nota": "Recepcion / CRISTIAN LAGOS"
     },
     {
-      "sku": "PCP",
-      "oficina": "PAT",
-      "cantidad": 8.0,
-      "nota": "Recepcion / YALECI CHIQUINQUIRA"
+      "sku": "PAC",
+      "oficina": "VIT",
+      "cantidad": 6.0,
+      "nota": "Recepcion / CRISTIAN LAGOS"
     },
     {
-      "sku": "RB",
-      "oficina": "PAT",
-      "cantidad": 3.0,
-      "nota": "Recepcion / YALECI CHIQUINQUIRA"
-    },
-    {
-      "sku": "TLS",
-      "oficina": "PAT",
-      "cantidad": 3.0,
-      "nota": "Recepcion / YALECI CHIQUINQUIRA"
-    },
-    {
-      "sku": "TBN",
-      "oficina": "PAT",
-      "cantidad": 4.0,
-      "nota": "Recepcion / YALECI CHIQUINQUIRA"
-    },
-    {
-      "sku": "TFC",
-      "oficina": "PAT",
-      "cantidad": 3.0,
-      "nota": "Recepcion / YALECI CHIQUINQUIRA"
+      "sku": "THF",
+      "oficina": "VIT",
+      "cantidad": 9.0,
+      "nota": "Recepcion / CRISTIAN LAGOS"
     }
   ],
   "consumos": [
     {
-      "sku": "MIGNON",
-      "oficina": "PAT",
+      "sku": "CF",
+      "oficina": "VIT",
       "cantidad": 1.0,
-      "nota": "SE LO HABIA AGREGADO BERNA"
+      "nota": "cristhian martita regalo cocina ponde regalo mc"
+    },
+    {
+      "sku": "CHF",
+      "oficina": "VIT",
+      "cantidad": 1.0,
+      "nota": "cristhian martita regalo cocina ponde regalo mc"
+    },
+    {
+      "sku": "EC",
+      "oficina": "VIT",
+      "cantidad": 1.0,
+      "nota": "cristhian martita regalo cocina ponde regalo mc"
+    },
+    {
+      "sku": "LF",
+      "oficina": "VIT",
+      "cantidad": 1.0,
+      "nota": "cristhian martita regalo cocina ponde regalo mc"
+    },
+    {
+      "sku": "MCJ",
+      "oficina": "VIT",
+      "cantidad": 1.0,
+      "nota": "cristhian martita regalo cocina ponde regalo mc"
+    },
+    {
+      "sku": "MCL",
+      "oficina": "VIT",
+      "cantidad": 1.0,
+      "nota": "cristhian martita regalo cocina ponde regalo mc"
+    },
+    {
+      "sku": "ÑP",
+      "oficina": "VIT",
+      "cantidad": 1.0,
+      "nota": "cristhian martita regalo cocina ponde regalo mc"
+    },
+    {
+      "sku": "PP",
+      "oficina": "VIT",
+      "cantidad": 2.0,
+      "nota": "cristhian martita regalo cocina ponde regalo mc"
+    },
+    {
+      "sku": "PCP",
+      "oficina": "VIT",
+      "cantidad": 1.0,
+      "nota": "cristhian martita regalo cocina ponde regalo mc"
+    },
+    {
+      "sku": "RPP",
+      "oficina": "VIT",
+      "cantidad": 1.0,
+      "nota": "cristhian martita regalo cocina ponde regalo mc"
+    },
+    {
+      "sku": "TA",
+      "oficina": "VIT",
+      "cantidad": 1.0,
+      "nota": "cristhian martita regalo cocina ponde regalo mc"
+    },
+    {
+      "sku": "TF",
+      "oficina": "VIT",
+      "cantidad": 1.0,
+      "nota": "cristhian martita regalo cocina ponde regalo mc"
+    },
+    {
+      "sku": "HDV",
+      "oficina": "VIT",
+      "cantidad": 1.0,
+      "nota": "cristhian martita regalo cocina ponde regalo mc"
     }
   ]
 }
