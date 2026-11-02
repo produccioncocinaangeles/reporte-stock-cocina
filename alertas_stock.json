@@ -1,14 +1,7 @@
 {
-  "fecha": "2026-11-01",
+  "fecha": "2026-11-02",
   "entradas": [],
   "salidas": [],
-  "recepciones": [
-    {
-      "sku": "BURMA",
-      "oficina": "PAT",
-      "cantidad": 4.0,
-      "nota": "Ajuste de Stock: Bernardita  Alamos"
-    }
-  ],
+  "recepciones": [],
   "consumos": []
 }

@@ -1,5 +1,5 @@
 {
-  "ultimo_update": "2026-11-01T22:20:44",
+  "ultimo_update": "2026-11-02T16:43:15",
   "movimientos": [
     {
       "fecha": "2026-01-02",
@@ -105599,6 +105599,54 @@
       "doc_id": "R5434",
       "costo": 9000.0,
       "nota": "Ajuste de Stock: Bernardita  Alamos"
+    },
+    {
+      "fecha": "2026-11-02",
+      "sku": "CL",
+      "oficina": "PAT",
+      "tipo": "venta",
+      "cantidad": 1.0,
+      "doc_id": 22518
+    },
+    {
+      "fecha": "2026-11-02",
+      "sku": "PAC",
+      "oficina": "PAT",
+      "tipo": "venta",
+      "cantidad": 1.0,
+      "doc_id": 22518
+    },
+    {
+      "fecha": "2026-11-02",
+      "sku": "FC",
+      "oficina": "PAT",
+      "tipo": "venta",
+      "cantidad": 1.0,
+      "doc_id": 22518
+    },
+    {
+      "fecha": "2026-11-02",
+      "sku": "RB",
+      "oficina": "PAT",
+      "tipo": "venta",
+      "cantidad": 1.0,
+      "doc_id": 22518
+    },
+    {
+      "fecha": "2026-11-02",
+      "sku": "CM",
+      "oficina": "PAT",
+      "tipo": "venta",
+      "cantidad": 4.0,
+      "doc_id": 22519
+    },
+    {
+      "fecha": "2026-11-02",
+      "sku": "PULLED",
+      "oficina": "PAT",
+      "tipo": "venta",
+      "cantidad": 2.0,
+      "doc_id": 22519
     }
   ],
   "docs_ignorar": [
