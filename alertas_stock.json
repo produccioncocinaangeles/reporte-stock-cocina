@@ -1,117 +1,14 @@
 {
-  "fecha": "2026-10-31",
+  "fecha": "2026-11-01",
   "entradas": [],
   "salidas": [],
   "recepciones": [
     {
-      "sku": "CLC",
-      "oficina": "VIT",
-      "cantidad": 17.0,
-      "nota": "Recepcion / CRISTIAN LAGOS"
-    },
-    {
-      "sku": "EJ",
-      "oficina": "VIT",
-      "cantidad": 1.0,
-      "nota": "Recepcion / CRISTIAN LAGOS"
-    },
-    {
-      "sku": "MIGNON",
-      "oficina": "VIT",
-      "cantidad": 2.0,
-      "nota": "Recepcion / CRISTIAN LAGOS"
-    },
-    {
-      "sku": "PAC",
-      "oficina": "VIT",
-      "cantidad": 6.0,
-      "nota": "Recepcion / CRISTIAN LAGOS"
-    },
-    {
-      "sku": "THF",
-      "oficina": "VIT",
-      "cantidad": 9.0,
-      "nota": "Recepcion / CRISTIAN LAGOS"
+      "sku": "BURMA",
+      "oficina": "PAT",
+      "cantidad": 4.0,
+      "nota": "Ajuste de Stock: Bernardita  Alamos"
     }
   ],
-  "consumos": [
-    {
-      "sku": "CF",
-      "oficina": "VIT",
-      "cantidad": 1.0,
-      "nota": "cristhian martita regalo cocina ponde regalo mc"
-    },
-    {
-      "sku": "CHF",
-      "oficina": "VIT",
-      "cantidad": 1.0,
-      "nota": "cristhian martita regalo cocina ponde regalo mc"
-    },
-    {
-      "sku": "EC",
-      "oficina": "VIT",
-      "cantidad": 1.0,
-      "nota": "cristhian martita regalo cocina ponde regalo mc"
-    },
-    {
-      "sku": "LF",
-      "oficina": "VIT",
-      "cantidad": 1.0,
-      "nota": "cristhian martita regalo cocina ponde regalo mc"
-    },
-    {
-      "sku": "MCJ",
-      "oficina": "VIT",
-      "cantidad": 1.0,
-      "nota": "cristhian martita regalo cocina ponde regalo mc"
-    },
-    {
-      "sku": "MCL",
-      "oficina": "VIT",
-      "cantidad": 1.0,
-      "nota": "cristhian martita regalo cocina ponde regalo mc"
-    },
-    {
-      "sku": "ÑP",
-      "oficina": "VIT",
-      "cantidad": 1.0,
-      "nota": "cristhian martita regalo cocina ponde regalo mc"
-    },
-    {
-      "sku": "PP",
-      "oficina": "VIT",
-      "cantidad": 2.0,
-      "nota": "cristhian martita regalo cocina ponde regalo mc"
-    },
-    {
-      "sku": "PCP",
-      "oficina": "VIT",
-      "cantidad": 1.0,
-      "nota": "cristhian martita regalo cocina ponde regalo mc"
-    },
-    {
-      "sku": "RPP",
-      "oficina": "VIT",
-      "cantidad": 1.0,
-      "nota": "cristhian martita regalo cocina ponde regalo mc"
-    },
-    {
-      "sku": "TA",
-      "oficina": "VIT",
-      "cantidad": 1.0,
-      "nota": "cristhian martita regalo cocina ponde regalo mc"
-    },
-    {
-      "sku": "TF",
-      "oficina": "VIT",
-      "cantidad": 1.0,
-      "nota": "cristhian martita regalo cocina ponde regalo mc"
-    },
-    {
-      "sku": "HDV",
-      "oficina": "VIT",
-      "cantidad": 1.0,
-      "nota": "cristhian martita regalo cocina ponde regalo mc"
-    }
-  ]
+  "consumos": []
 }

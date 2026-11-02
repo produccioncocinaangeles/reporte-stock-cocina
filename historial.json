@@ -1,5 +1,5 @@
 {
-  "ultimo_update": "2026-10-31T21:48:04",
+  "ultimo_update": "2026-11-01T22:20:44",
   "movimientos": [
     {
       "fecha": "2026-01-02",
@@ -105389,6 +105389,216 @@
       "cantidad": 1.0,
       "doc_id": "C1763",
       "nota": "cristhian martita regalo cocina ponde regalo mc"
+    },
+    {
+      "fecha": "2026-11-01",
+      "sku": "MIGNON",
+      "oficina": "VIT",
+      "tipo": "venta",
+      "cantidad": 2.0,
+      "doc_id": 22507
+    },
+    {
+      "fecha": "2026-11-01",
+      "sku": "PAC",
+      "oficina": "VIT",
+      "tipo": "venta",
+      "cantidad": 1.0,
+      "doc_id": 22507
+    },
+    {
+      "fecha": "2026-11-01",
+      "sku": "AS",
+      "oficina": "VIT",
+      "tipo": "venta",
+      "cantidad": 1.0,
+      "doc_id": 22507
+    },
+    {
+      "fecha": "2026-11-01",
+      "sku": "FLAPP",
+      "oficina": "VIT",
+      "tipo": "venta",
+      "cantidad": 1.0,
+      "doc_id": 22507
+    },
+    {
+      "fecha": "2026-11-01",
+      "sku": "PCP",
+      "oficina": "VIT",
+      "tipo": "venta",
+      "cantidad": 1.0,
+      "doc_id": 22510
+    },
+    {
+      "fecha": "2026-11-01",
+      "sku": "AS",
+      "oficina": "VIT",
+      "tipo": "venta",
+      "cantidad": 1.0,
+      "doc_id": 22510
+    },
+    {
+      "fecha": "2026-11-01",
+      "sku": "EPC",
+      "oficina": "VIT",
+      "tipo": "venta",
+      "cantidad": 1.0,
+      "doc_id": 22511
+    },
+    {
+      "fecha": "2026-11-01",
+      "sku": "CHF",
+      "oficina": "VIT",
+      "tipo": "venta",
+      "cantidad": 1.0,
+      "doc_id": 22513
+    },
+    {
+      "fecha": "2026-11-01",
+      "sku": "BAP",
+      "oficina": "VIT",
+      "tipo": "venta",
+      "cantidad": 1.0,
+      "doc_id": 22514
+    },
+    {
+      "fecha": "2026-11-01",
+      "sku": "CHF",
+      "oficina": "VIT",
+      "tipo": "venta",
+      "cantidad": 1.0,
+      "doc_id": 22514
+    },
+    {
+      "fecha": "2026-11-01",
+      "sku": "TF",
+      "oficina": "VIT",
+      "tipo": "venta",
+      "cantidad": 1.0,
+      "doc_id": 22516
+    },
+    {
+      "fecha": "2026-11-01",
+      "sku": "AS",
+      "oficina": "VIT",
+      "tipo": "venta",
+      "cantidad": 1.0,
+      "doc_id": 22516
+    },
+    {
+      "fecha": "2026-11-01",
+      "sku": "CAC",
+      "oficina": "VIT",
+      "tipo": "venta",
+      "cantidad": 1.0,
+      "doc_id": 22516
+    },
+    {
+      "fecha": "2026-11-01",
+      "sku": "CHF",
+      "oficina": "VIT",
+      "tipo": "venta",
+      "cantidad": 1.0,
+      "doc_id": 22516
+    },
+    {
+      "fecha": "2026-11-01",
+      "sku": "FCT",
+      "oficina": "VIT",
+      "tipo": "venta",
+      "cantidad": 1.0,
+      "doc_id": 22516
+    },
+    {
+      "fecha": "2026-11-01",
+      "sku": "MMR",
+      "oficina": "PAT",
+      "tipo": "venta",
+      "cantidad": 1.0,
+      "doc_id": 22508
+    },
+    {
+      "fecha": "2026-11-01",
+      "sku": "EPL",
+      "oficina": "PAT",
+      "tipo": "venta",
+      "cantidad": 1.0,
+      "doc_id": 22508
+    },
+    {
+      "fecha": "2026-11-01",
+      "sku": "MIGNON",
+      "oficina": "PAT",
+      "tipo": "venta",
+      "cantidad": 1.0,
+      "doc_id": 22509
+    },
+    {
+      "fecha": "2026-11-01",
+      "sku": "PAC",
+      "oficina": "PAT",
+      "tipo": "venta",
+      "cantidad": 1.0,
+      "doc_id": 22509
+    },
+    {
+      "fecha": "2026-11-01",
+      "sku": "TLS",
+      "oficina": "PAT",
+      "tipo": "venta",
+      "cantidad": 2.0,
+      "doc_id": 22512
+    },
+    {
+      "fecha": "2026-11-01",
+      "sku": "CBN",
+      "oficina": "PAT",
+      "tipo": "venta",
+      "cantidad": 2.0,
+      "doc_id": 22512
+    },
+    {
+      "fecha": "2026-11-01",
+      "sku": "TBN",
+      "oficina": "PAT",
+      "tipo": "venta",
+      "cantidad": 1.0,
+      "doc_id": 22515
+    },
+    {
+      "fecha": "2026-11-01",
+      "sku": "LS",
+      "oficina": "PAT",
+      "tipo": "venta",
+      "cantidad": 2.0,
+      "doc_id": 22517
+    },
+    {
+      "fecha": "2026-11-01",
+      "sku": "BURMA",
+      "oficina": "PAT",
+      "tipo": "venta",
+      "cantidad": 2.0,
+      "doc_id": 22517
+    },
+    {
+      "fecha": "2026-11-01",
+      "sku": "BADIAC",
+      "oficina": "PAT",
+      "tipo": "venta",
+      "cantidad": 1.0,
+      "doc_id": 22517
+    },
+    {
+      "fecha": "2026-11-01",
+      "sku": "BURMA",
+      "oficina": "PAT",
+      "tipo": "produccion",
+      "cantidad": 4.0,
+      "doc_id": "R5434",
+      "costo": 9000.0,
+      "nota": "Ajuste de Stock: Bernardita  Alamos"
     }
   ],
   "docs_ignorar": [
@@ -105741,6 +105951,6 @@
       "venta"
     ]
   ],
-  "ultima_recepcion_id": 5433,
+  "ultima_recepcion_id": 5434,
   "ultimo_consumo_id": 1763
 }
