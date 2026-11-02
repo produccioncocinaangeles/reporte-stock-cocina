@@ -6026,9 +6026,9 @@ HTML_TEMPLATE = """<!DOCTYPE html>
   <button class="navtab" id="nav-guias" onclick="mostrarGuias()">Guías</button>
   <button class="navtab" id="nav-analisis" onclick="mostrarAnalisis()">Análisis</button>
   <button class="navtab nav-oculta" id="nav-recetas" onclick="mostrarRecetas()">Producción</button>
+  <button class="navtab nav-oculta" id="nav-gestion" onclick="mostrarGestion()">Gestión</button>
   <button class="navtab nav-oculta" id="nav-rendimiento" onclick="mostrarRendimiento()">Rendimiento</button>
   <button class="navtab" id="nav-diciembre" onclick="mostrarDiciembre()">Diciembre</button>
-  <button class="navtab nav-oculta" id="nav-gestion" onclick="mostrarGestion()">Gestión</button>
 </nav>
 
 <!-- VISTA RESUMEN -->
