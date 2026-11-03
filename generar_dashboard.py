@@ -794,8 +794,21 @@ def _fecha_serial(v):
     """Fecha de una celda de Sheets (serial numérico o texto) -> 'YYYY-MM-DD' o ''."""
     if isinstance(v, (int, float)) and v:
         return (pd.Timestamp('1899-12-30') + pd.Timedelta(days=v)).strftime('%Y-%m-%d')
+    import re
+    txt = str(v if v is not None else '').strip()
+    if not txt:
+        return ''
+    # Texto: aaaa-mm-dd o día/mes/año (formato chileno). pandas 3 ya no acepta dayfirst en Timestamp.
+    m = re.match(r'^(\d{4})-(\d{1,2})-(\d{1,2})', txt)
+    a, mes, d = (m.group(1), m.group(2), m.group(3)) if m else (None, None, None)
+    if not m:
+        m = re.match(r'^(\d{1,2})[/-](\d{1,2})[/-](\d{4})', txt)
+        if m:
+            d, mes, a = m.group(1), m.group(2), m.group(3)
     try:
-        return pd.Timestamp(str(v), dayfirst=True).strftime('%Y-%m-%d') if str(v).strip() else ''
+        if m:
+            return pd.Timestamp(year=int(a), month=int(mes), day=int(d)).strftime('%Y-%m-%d')
+        return pd.Timestamp(txt).strftime('%Y-%m-%d')
     except Exception:
         return ''
 
@@ -994,7 +1007,220 @@ def consumo_teorico(platos):
     out.sort(key=lambda a: -a['u90'])
     return {'ingredientes': out, 'platos': n, 'platos_con_huecos': con_huecos}
 
-def calcular_gestion(datos, precios_venta, compras, inventario=None):
+ESTADOS_REVISION = ('Pendiente de revisión', 'Revisada', 'Aprobada', 'Rechazada', 'Anulada')
+HOJAS_DOCUMENTOS = ('Facturas', 'Documentos_Control', 'Pagos', 'Documentos_Historial')
+
+def rut_norm(v):
+    """RUT sin puntos ni espacios y en mayúscula: '96.974.300-0' y '96974300-0' son el mismo."""
+    return str(v or '').replace('.', '').replace(' ', '').strip().upper()
+
+def folio_txt(v):
+    if isinstance(v, float) and v.is_integer():
+        v = int(v)
+    return str(v if v is not None else '').strip()
+
+def clave_doc(rut, tipo, folio):
+    """Identidad de un documento: proveedor (RUT) + tipo de documento + folio."""
+    return (rut_norm(rut), str(tipo or '').strip().lower(), folio_txt(folio).upper())
+
+def leer_documentos():
+    """Hojas de la administración de facturas: Facturas (el documento original, escrita por la
+    app de bodega y que este dashboard nunca modifica), Documentos_Control (vencimiento y estado de
+    revisión), Pagos (un pago por fila) y Documentos_Historial (cambios, solo se agregan filas).
+    Devuelve {hoja: lista de dicts, o None si la hoja no existe}; None si no se pudo leer nada."""
+    if not RECETAS_SHEET_ID or gspread is None or not os.path.exists(GOOGLE_SERVICE_ACCOUNT_FILE):
+        return None
+    try:
+        libro = gspread.service_account(filename=GOOGLE_SERVICE_ACCOUNT_FILE).open_by_key(RECETAS_SHEET_ID)
+        existentes = {h.title: h for h in libro.worksheets()}
+        out = {}
+        for nombre in HOJAS_DOCUMENTOS:
+            ws = existentes.get(nombre)
+            if ws is None:
+                out[nombre] = None
+                continue
+            filas = ws.get_all_values(value_render_option='UNFORMATTED_VALUE')
+            cols = filas[0] if filas else []
+            out[nombre] = [dict(zip(cols, f)) for f in filas[1:] if any(str(x).strip() for x in f)]
+        return out
+    except Exception as e:
+        print(f"  Warning: no se pudieron leer las hojas de documentos ({e})")
+        return None
+
+def calcular_documentos(docs, lineas):
+    """Administración de facturas y recepciones. Mantiene separados los tres conceptos:
+      · FACTURA = el documento (hoja Facturas): proveedor, tipo, folio, neto, IVA, total.
+      · COMPRA  = las líneas de ingredientes del documento (hoja Compras).
+      · RECEPCIÓN = lo que llegó frente a lo facturado, calculado desde las líneas de Compras.
+    El estado de revisión sale de Documentos_Control y el de pago de la suma de Pagos. Un documento
+    sin fila de control está 'Pendiente de revisión' y uno sin pagos 'Pendiente de pago': es la
+    ausencia de registros, no un dato inventado. Solo es 'Pagada' si los pagos suman el total.
+    Nada se escribe en las hojas originales."""
+    if docs is None:
+        return None
+    hoy = _HOY.strftime('%Y-%m-%d')
+    avisos = []
+    facturas, control = docs.get('Facturas') or [], docs.get('Documentos_Control') or []
+    pagos_f, hist_f = docs.get('Pagos') or [], docs.get('Documentos_Historial') or []
+    rev_valido = {norm_txt(e): e for e in ESTADOS_REVISION}
+
+    por_doc = {}
+    for l in lineas:
+        por_doc.setdefault(clave_doc(l['rut'], l['tipo_doc'], l['folio']), []).append(l)
+
+    base, repetidos = {}, {}
+    for f in facturas:
+        k = clave_doc(f.get('rut_proveedor'), f.get('tipo_doc'), f.get('folio'))
+        if not k[2]:
+            avisos.append('Hay una fila de la hoja Facturas sin folio: no se puede identificar el documento.')
+            continue
+        if k in base:
+            repetidos.setdefault(k, [base[k]]).append(f)
+        else:
+            base[k] = f
+
+    ctrl, ctrl_rep = {}, {}
+    for c in control:
+        k = clave_doc(c.get('rut_proveedor'), c.get('tipo_doc'), c.get('folio'))
+        if k in ctrl:
+            ctrl_rep[k] = ctrl_rep.get(k, 1) + 1
+        ctrl[k] = c            # si hay dos filas, manda la última (y se avisa)
+    pagos_por, pagos_malos = {}, 0
+    for p in pagos_f:
+        k, m = clave_doc(p.get('rut_proveedor'), p.get('tipo_doc'), p.get('folio')), num(p.get('monto'))
+        if m is None or m <= 0:
+            pagos_malos += 1
+            continue
+        pagos_por.setdefault(k, []).append({'fecha': _fecha_serial(p.get('fecha_pago')), 'monto': round(m),
+                                            'medio': str(p.get('medio', '')).strip(), 'ref': str(p.get('referencia', '')).strip(),
+                                            'nota': str(p.get('nota', '')).strip()})
+    hist_por = {}
+    for h in hist_f:
+        k = clave_doc(h.get('rut_proveedor'), h.get('tipo_doc'), h.get('folio'))
+        fh = h.get('fecha_hora')
+        hist_por.setdefault(k, []).append({'cuando': _fecha_serial(fh) if isinstance(fh, (int, float)) else str(fh or '').strip(),
+                                           'campo': str(h.get('campo', '')).strip(), 'antes': str(h.get('valor_anterior', '')).strip(),
+                                           'despues': str(h.get('valor_nuevo', '')).strip(), 'motivo': str(h.get('motivo', '')).strip(),
+                                           'origen': str(h.get('origen', '')).strip()})
+
+    claves = list(base) + [k for k in por_doc if k not in base]
+    out = []
+    for k in claves:
+        f, ls = base.get(k), por_doc.get(k, [])
+        proveedor = (str(f.get('proveedor', '')).strip() if f else '') or (ls[0]['proveedor'] if ls else '')
+        fecha = _fecha_serial(f.get('fecha')) if f else (min((l['fecha'] for l in ls if l['fecha']), default=''))
+        neto, iva_, otros, total = (num(f.get(x)) for x in ('neto', 'iva', 'otros_impuestos', 'total')) if f else (None,) * 4
+        otros = otros or 0
+        suma_calc = round(sum(l['total'] for l in ls))
+        tiene_pie = f is not None and neto is not None and total is not None
+        av = []
+
+        # Revisión
+        c = ctrl.get(k)
+        est_txt = str(c.get('estado_revision', '')).strip() if c else ''
+        revision = rev_valido.get(norm_txt(est_txt)) if est_txt else None
+        if est_txt and not revision:
+            av.append(f'Estado de revisión no reconocido en Documentos_Control: "{est_txt}".')
+        revision_registrada = bool(revision)
+        revision = revision or 'Pendiente de revisión'
+        anulada = revision == 'Anulada'
+        venc = _fecha_serial(c.get('fecha_vencimiento')) if c else ''
+
+        # Recepción (desde las líneas de la compra, no desde la factura)
+        con_dato = [l for l in ls if not l['flete'] and l['fact'] is not None and l['recib'] is not None]
+        difs = [l for l in con_dato if estado_recepcion(l['fact'], l['recib']) in ('faltante', 'excedente')]
+        recepcion = 'Sin dato' if not con_dato else ('Con diferencias' if difs else 'Sin diferencias')
+
+        # Pago: solo "Pagada" si lo pagado cubre el total
+        ps = sorted(pagos_por.get(k, []), key=lambda p: p['fecha'])
+        pagado = sum(p['monto'] for p in ps)
+        if anulada:
+            estado_pago = None
+        elif total is not None and pagado > 0 and pagado >= total - 0.5:
+            estado_pago = 'Pagada'
+        else:
+            estado_pago = 'Pendiente de pago'
+        saldo = round(total - pagado) if total is not None and not anulada else None
+        parcial = estado_pago == 'Pendiente de pago' and pagado > 0 and total is not None
+        if total is None and pagado > 0:
+            av.append('Hay pagos pero el documento no tiene total registrado: no se puede comprobar que esté pagado completo.')
+        if total is not None and pagado > total + 0.5:
+            av.append(f'Los pagos registrados (${round(pagado):,}) superan el total del documento.'.replace(',', '.'))
+
+        # Cuadratura (solo informa; no corrige nada)
+        cuad = {'lineas': None, 'iva': None, 'total': None}
+        if neto is not None:
+            cuad['lineas'] = round(suma_calc - neto)
+            if f.get('tipo_doc') != 'sin_factura' and iva_ is not None:
+                cuad['iva'] = round(iva_ - neto * (IVA - 1))
+            if total is not None and iva_ is not None:
+                cuad['total'] = round(neto + iva_ + otros - total)
+        vencida = bool(venc) and venc < hoy and estado_pago == 'Pendiente de pago' and revision != 'Rechazada'
+
+        foto = str(f.get('foto', '')).strip() if f else ''
+        out.append({
+            'id': '|'.join(k), 'rut': k[0] or '', 'tipo_doc': k[1], 'folio': folio_txt(f.get('folio')) if f else k[2],
+            'proveedor': proveedor or 'Sin proveedor', 'fecha': fecha, 'mes': fecha[:7], 'forma_pago': str(f.get('forma_pago', '')).strip() if f else '',
+            'neto': round(neto) if neto is not None else None, 'iva': round(iva_) if iva_ is not None else None,
+            'otros': round(otros), 'total': round(total) if total is not None else None,
+            'origen_totales': str(f.get('origen_totales', '')).strip() if f else '',
+            'tiene_pie': tiene_pie, 'n_lineas': len(ls), 'suma_lineas': suma_calc,
+            'revision': revision, 'revision_registrada': revision_registrada, 'venc': venc,
+            'recepcion': recepcion, 'n_difs': len(difs),
+            'estado_pago': estado_pago, 'pagado': round(pagado), 'saldo': saldo, 'parcial': parcial, 'n_pagos': len(ps),
+            'vencida': vencida, 'cuad': cuad,
+            'doc_foto': bool(foto) and foto not in ('SIN FOTO', 'SIN DOCUMENTO'), 'doc_sin': foto in ('SIN FOTO', 'SIN DOCUMENTO'),
+            'doc_extra': bool(c and str(c.get('enlace_documento', '')).strip()),
+            'nota': str(c.get('nota', '')).strip() if c else '',
+            'lineas': [{'ingrediente': l['ingrediente'] or '(sin ingrediente)', 'fact': l['fact'], 'recib': l['recib'], 'uc': l['uc'] or l['unidad'],
+                        'total': round(l['total']), 'flete': l['flete'],
+                        'estado': estado_recepcion(l['fact'], l['recib']) if not l['flete'] else 'sin dato'} for l in ls],
+            'pagos': ps, 'historial': sorted(hist_por.get(k, []), key=lambda h: h['cuando'], reverse=True)[:30],
+            'avisos': av})
+    out.sort(key=lambda d: (d['fecha'], d['folio']), reverse=True)
+
+    # ── Duplicados: misma clave (proveedor + tipo + folio) ──
+    duplicados = []
+    for k, rows in repetidos.items():
+        duplicados.append({'tipo': 'clave', 'donde': 'Facturas', 'proveedor': str(rows[0].get('proveedor', '')).strip(), 'rut': k[0], 'tipo_doc': k[1],
+                           'folio': k[2], 'n': len(rows), 'detalle': [{'fecha': _fecha_serial(r.get('fecha')), 'total': num(r.get('total'))} for r in rows]})
+    for k, ls in por_doc.items():
+        fechas = sorted({l['fecha'] for l in ls if l['fecha']})
+        if len(fechas) > 1:
+            duplicados.append({'tipo': 'clave', 'donde': 'Compras', 'proveedor': ls[0]['proveedor'], 'rut': k[0], 'tipo_doc': k[1], 'folio': k[2],
+                               'n': len(fechas), 'detalle': [{'fecha': f, 'total': None} for f in fechas]})
+    for k, n in ctrl_rep.items():
+        duplicados.append({'tipo': 'clave', 'donde': 'Documentos_Control', 'proveedor': '', 'rut': k[0], 'tipo_doc': k[1], 'folio': k[2], 'n': n, 'detalle': []})
+    # Posibles: mismo proveedor, misma fecha y mismo total pero folio distinto (no es la misma clave: se avisa, no se asume)
+    grupos = {}
+    for d in out:
+        if d['total'] and d['fecha'] and d['tipo_doc'] != 'sin_factura':
+            grupos.setdefault((d['rut'] or d['proveedor'].lower(), d['fecha'], d['total']), []).append(d)
+    posibles = [{'proveedor': g[0]['proveedor'], 'fecha': g[0]['fecha'], 'total': g[0]['total'], 'folios': [x['folio'] for x in g]}
+                for g in grupos.values() if len({x['folio'] for x in g}) > 1]
+
+    ids = {d['id'] for d in out}
+    huerfanos = {'control': sorted({'|'.join(k) for k in ctrl if '|'.join(k) not in ids}),
+                 'pagos': sorted({'|'.join(k) for k in pagos_por if '|'.join(k) not in ids}),
+                 'historial': sorted({'|'.join(k) for k in hist_por if '|'.join(k) not in ids})}
+    vigentes = [d for d in out if d['revision'] != 'Anulada']
+    por_pagar = [d for d in vigentes if d['estado_pago'] == 'Pendiente de pago' and d['revision'] != 'Rechazada']
+    res = {'total': len(out), 'sin_pie': sum(1 for d in out if not d['tiene_pie']),
+           'por_revision': {e: sum(1 for d in out if d['revision'] == e) for e in ESTADOS_REVISION},
+           'revision_sin_registro': sum(1 for d in out if not d['revision_registrada']),
+           'con_diferencias': sum(1 for d in out if d['recepcion'] == 'Con diferencias'),
+           'pendientes_pago': len(por_pagar), 'pagadas': sum(1 for d in vigentes if d['estado_pago'] == 'Pagada'),
+           'parciales': sum(1 for d in por_pagar if d['parcial']),
+           'saldo_total': sum(d['saldo'] for d in por_pagar if d['saldo'] is not None),
+           'saldo_sin_total': sum(1 for d in por_pagar if d['saldo'] is None),
+           'vencidas': sum(1 for d in out if d['vencida']), 'sin_vencimiento': sum(1 for d in vigentes if not d['venc']),
+           'sin_documento': sum(1 for d in out if not d['doc_foto'] and not d['doc_extra']),
+           'descuadre_lineas': sum(1 for d in out if d['cuad']['lineas']), 'pagos_invalidos': pagos_malos}
+    return {'hojas': {h: docs.get(h) is not None for h in HOJAS_DOCUMENTOS}, 'avisos': avisos, 'documentos': out,
+            'duplicados': duplicados, 'posibles_duplicados': posibles, 'huerfanos': huerfanos, 'resumen': res,
+            'estados_revision': list(ESTADOS_REVISION)}
+
+def calcular_gestion(datos, precios_venta, compras, inventario=None, documentos=None):
     """JSON de la pestaña Gestión. Todo lo que no se pueda calcular queda vacío
     con un aviso, para no tumbar el resto del dashboard."""
     avisos = []
@@ -1291,7 +1517,14 @@ def calcular_gestion(datos, precios_venta, compras, inventario=None):
            'por_tipo': {t: sum(1 for m in mov if m['tipo'] == t) for t in INVENTARIO_TIPOS},
            'otros_tipos': sum(1 for m in mov if m['tipo'] not in INVENTARIO_TIPOS)}
 
+    try:
+        docs_adm = calcular_documentos(documentos, lineas)
+    except Exception as e:
+        avisos.append(f'No se pudo calcular la administración de documentos ({e}).')
+        docs_adm = None
+
     return {'ok': bool(platos or lineas), 'avisos': avisos, 'calculado': _HOY.strftime('%Y-%m-%d'),
+            'documentos': docs_adm,
             'compras_lineas': compras_lineas, 'proveedores_analisis': proveedores_analisis, 'aumentos': aumentos,
             'comparacion': comparacion, 'ingredientes_manual': ingredientes_manual,
             'consumo_teorico': consumo_teorico(platos), 'inventario': inv,
@@ -2728,6 +2961,8 @@ body.dark-mode .plan-aviso{background:#3a2f10;border-color:#6b5518;color:#ecd9a0
 .ges-tabla.ges-prov-tabla th,.ges-tabla.ges-prov-tabla td{padding:6px 4px;white-space:normal;position:static;background:none}
 .ges-tabla.ges-prov-tabla th:first-child,.ges-tabla.ges-prov-tabla td:first-child{width:34%;padding-left:0}
 .ges-factura-top{display:flex;justify-content:space-between;gap:12px;font-size:14px}
+.ges-doc-badges{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
+.ges-nota-doc{margin:0 20px 12px}
 .ges-falto{font-size:12px;color:var(--danger-text);margin-top:3px}
 .ges-var{margin-left:6px}
 .ges-tabla-head{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:6px}
@@ -3229,8 +3464,9 @@ var G_AREAS = [
     {id:'inventario', nombre:'Inventario', ok:true},
     {id:'pedido', nombre:'Pedido sugerido', desc:'Cantidades a comprar según consumo y stock mínimo. Requiere registros de inventario.'}]},
   {id:'admin', nombre:'Administración', subs:[
-    {id:'facturacion', nombre:'Facturación e IVA', desc:'Neto, IVA y total por documento, tomados de la hoja Facturas de la planilla.'},
-    {id:'conciliacion', nombre:'Conciliación de compras', desc:'Cuadratura entre la suma de las líneas cargadas y el neto de cada factura.'}]},
+    {id:'documentos', nombre:'Facturas y recepciones', ok:true},
+    {id:'duplicados', nombre:'Duplicados y cuadratura', ok:true},
+    {id:'facturacion', nombre:'Facturación e IVA', desc:'Neto, IVA y total por documento, tomados de la hoja Facturas de la planilla.'}]},
   {id:'analisis', nombre:'Análisis del negocio', subs:[
     {id:'compras_ventas', nombre:'Compras frente a ventas', desc:'Análisis de las compras respecto de las ventas, con cobertura completa de facturas.'},
     {id:'margenes', nombre:'Evolución de márgenes', desc:'Cómo cambia el margen de cada plato a medida que cambian los costos. Requiere guardar el historial de costos.'}]},
@@ -3295,6 +3531,8 @@ function gRenderSub(a, s){
   if(s.id==='compras') return gRenderCompras();
   if(s.id==='analisis_prov') return gRenderAnalisisProv();
   if(s.id==='inventario') return gRenderInventario();
+  if(s.id==='documentos') return gRenderDocumentos();
+  if(s.id==='duplicados') return gRenderDuplicados();
   if(s.id==='alertas') return gRenderAlertas();
   if(s.id==='recepcion') return gRenderRecepcion();
   if(s.id==='calidad') return gRenderCalidad();
@@ -4116,10 +4354,168 @@ function gInvResultados(){
   return h;
 }
 function gRefrescarListas(){
-  var a = document.getElementById('ges-ing-res'), b = document.getElementById('ges-comp-res'), c = document.getElementById('ges-inv-res');
+  var a = document.getElementById('ges-ing-res'), b = document.getElementById('ges-comp-res'), c = document.getElementById('ges-inv-res'), dd = document.getElementById('ges-doc-res');
+  if(dd) dd.innerHTML = gDocResultados();
   if(a) a.innerHTML = gIngResultados();
   if(b) b.innerHTML = gCompResultados();
   if(c) c.innerHTML = gInvResultados();
+}
+
+// ── Administración de facturas y recepciones ──
+// Factura = el documento (hoja Facturas). Compra = sus líneas (hoja Compras). Recepción = lo que llegó
+// frente a lo facturado. Son tres cosas distintas y aquí se muestran por separado.
+var G_DOC = {mes:'', prov:'', rev:'', rec:'', q:''}, G_DOC_ABIERTO = {};
+var G_DOC_REV = {'Pendiente de revisión':'gris', 'Revisada':'ok', 'Aprobada':'ok', 'Rechazada':'inc', 'Anulada':'gris'};
+function gDocTipo(t){
+  var m = {factura:'Factura', sin_factura:'Compra sin factura', nota_credito:'Nota de crédito', nota_debito:'Nota de débito', boleta:'Boleta', guia_despacho:'Guía de despacho'};
+  return m[t] || t || '—';
+}
+function gDocs(){ return (GESTION.documentos && GESTION.documentos.documentos) || []; }
+function gBadge(txt, cls){ return '<span class="ges-estado ges-estado-'+cls+'">'+gEsc(txt)+'</span>'; }
+function gDocEstRec(d){ return d.recepcion==='Con diferencias' ? 'Con diferencias' : (d.recepcion==='Sin diferencias' ? 'Sin diferencias' : 'Sin dato de recepción'); }
+function gDocEstPago(d){
+  if(d.estado_pago===null) return 'No aplica (anulada)';
+  return d.estado_pago + (d.parcial ? ' · abonado '+gClp(d.pagado)+', saldo '+gClp(d.saldo) : '');
+}
+function gDocBadges(d){
+  return '<div class="ges-doc-badges">'
+    + gBadge('Revisión: '+d.revision, G_DOC_REV[d.revision]||'gris')
+    + gBadge('Recepción: '+gDocEstRec(d), d.recepcion==='Con diferencias' ? 'inc' : (d.recepcion==='Sin diferencias' ? 'ok' : 'gris'))
+    + '</div>';
+}
+function gDocAvisoSinDatos(){
+  return '<div class="insight-warn ges-aviso ges-aviso-in">No se pudieron leer las hojas de documentos de la planilla (Facturas, Documentos_Control, Pagos). No se muestra ningún documento: no se inventan.</div>';
+}
+function gRenderDocumentos(){
+  var D = GESTION.documentos;
+  if(!D) return gDocAvisoSinDatos();
+  var R = D.resumen, docs = D.documentos, h = '';
+  var faltan = Object.keys(D.hojas).filter(function(k){ return !D.hojas[k] && k!=='Pagos'; });
+  if(faltan.length) h += '<div class="insight-warn ges-aviso ges-aviso-in">Falta en la planilla la hoja: '+faltan.map(gEsc).join(', ')+'. Sin ella no hay estados ni historial registrados.</div>';
+  (D.avisos||[]).forEach(function(a){ h += '<div class="insight-warn ges-aviso ges-aviso-in">'+gEsc(a)+'</div>'; });
+  if(!docs.length) return h + '<div class="ges-vacio">No hay documentos registrados.</div>';
+  h += '<div class="metricas ges-3">'
+    + gCelda('Documentos', String(R.total), R.sin_pie ? R.sin_pie+' sin pie registrado (neto, IVA, total)' : 'todos con neto, IVA y total')
+    + gCelda('Pendientes de revisión', String(R.por_revision['Pendiente de revisión']), R.revision_sin_registro+' sin ningún registro de revisión')
+    + gCelda('Con diferencias de recepción', String(R.con_diferencias), 'llegó distinto de lo facturado', R.con_diferencias ? 'val-rojo' : '')
+    + '</div>';
+  h += '<div class="ges-linea-chica ges-nota-doc">Cada documento se identifica por proveedor + tipo + folio. Un documento sin registro de revisión figura como Pendiente de revisión: es la falta de registros, no un dato supuesto. Los datos originales de la factura no se modifican.</div>';
+  function opt(v, t, sel){ return '<option value="'+gEsc(v)+'"'+(sel?' selected':'')+'>'+gEsc(t)+'</option>'; }
+  var meses = {}, provs = {};
+  docs.forEach(function(d){ if(d.mes) meses[d.mes] = 1; provs[d.proveedor] = 1; });
+  h += '<div class="ges-rent-ctl">'
+    + '<label class="ges-ctl">Mes<select data-ges="doc-mes">'+opt('','Todos',G_DOC.mes==='')+Object.keys(meses).sort().reverse().map(function(m){ return opt(m, gMesTxt(m), G_DOC.mes===m); }).join('')+'</select></label>'
+    + '<label class="ges-ctl">Proveedor<select data-ges="doc-prov">'+opt('','Todos',G_DOC.prov==='')+Object.keys(provs).sort().map(function(p){ return opt(p, p, G_DOC.prov===p); }).join('')+'</select></label>'
+    + '<label class="ges-ctl">Revisión<select data-ges="doc-rev">'+opt('','Todas',G_DOC.rev==='')+D.estados_revision.map(function(e){ return opt(e, e, G_DOC.rev===e); }).join('')+'</select></label>'
+    + '<label class="ges-ctl">Recepción<select data-ges="doc-rec">'+opt('','Todas',G_DOC.rec==='')+['Con diferencias','Sin diferencias','Sin dato'].map(function(e){ return opt(e, e==='Sin dato' ? 'Sin dato de recepción' : e, G_DOC.rec===e); }).join('')+'</select></label>'
+    + '<label class="ges-ctl">Folio o proveedor<input type="text" data-ges="doc-q" placeholder="Buscar" value="'+gEsc(G_DOC.q)+'" autocomplete="off"></label></div>'
+    + '<div id="ges-doc-res">'+gDocResultados()+'</div>';
+  return h;
+}
+function gDocFiltrados(){
+  var f = G_DOC;
+  return gDocs().filter(function(d){
+    if(f.mes && d.mes!==f.mes) return false;
+    if(f.prov && d.proveedor!==f.prov) return false;
+    if(f.rev && d.revision!==f.rev) return false;
+    if(f.rec && d.recepcion!==f.rec) return false;
+    if(f.q && !gMatch(f.q, d.proveedor+' '+d.folio+' '+d.rut)) return false;
+    return true;
+  });
+}
+function gDocResultados(){
+  var F = gDocFiltrados();
+  if(!F.length) return '<div class="ges-vacio">Ningún documento coincide con los filtros.</div>';
+  var tot = F.reduce(function(a,d){ return a + (d.total||0); }, 0);
+  return '<div class="ana-section ges-sec"><div class="ges-linea-chica">'+F.length+' documento'+(F.length===1?'':'s')+' · '+gClp(tot)+' en total con IVA (solo los que tienen total registrado)</div>'
+    + F.map(gDocCard).join('') + '</div>';
+}
+function gDocCard(d){
+  var ab = !!G_DOC_ABIERTO[d.id];
+  var c = '<div class="ges-prov'+(ab?' abierto':'')+'" data-ges="doc" data-v="'+gEsc(d.id)+'">'
+    + '<div class="ges-factura-top"><b>'+gEsc(d.proveedor)+'</b><span>'+(d.total!=null ? gClp(d.total) : 'sin total registrado')+'</span></div>'
+    + '<div class="ges-linea-chica">'+gDocTipo(d.tipo_doc)+' N° '+gEsc(d.folio)+' · fecha '+(gFechaL(d.fecha)||'sin fecha')+' · '+(d.venc ? 'vence '+gFechaL(d.venc) : 'sin vencimiento registrado')+'</div>'
+    + gDocBadges(d)
+    + '<div class="ges-prov-toggle">Ver ficha del documento <span class="ges-flecha">'+(ab?'▲':'▼')+'</span></div>';
+  if(ab) c += '<div data-ges="nop">'+gDocFicha(d)+'</div>';
+  return c + '</div>';
+}
+function gDocProblemas(d){
+  var p = [];
+  if(!d.tiene_pie) p.push('Sin pie registrado (neto, IVA o total): no se puede cuadrar con las líneas');
+  else {
+    if(d.cuad.lineas) p.push('Las líneas suman '+gClp(d.suma_lineas)+' y el neto es '+gClp(d.neto)+' (diferencia de '+gClp(d.cuad.lineas)+')');
+    if(d.cuad.iva!=null && Math.abs(d.cuad.iva)>2) p.push('El IVA difiere en '+gClp(d.cuad.iva)+' del 19% del neto');
+    if(d.cuad.total!=null && Math.abs(d.cuad.total)>1) p.push('Neto + IVA no es igual al total (diferencia de '+gClp(d.cuad.total)+')');
+  }
+  return p;
+}
+function gDocFicha(d){
+  var ND = 'no registrado';
+  function fila(a, b){ return '<div><span>'+a+'</span><b>'+b+'</b></div>'; }
+  var doc = d.doc_foto ? 'Foto guardada en Drive' : (d.doc_sin ? 'Sin documento guardado' : 'sin registro');
+  if(d.doc_extra) doc += ' · PDF o imagen adicional registrado';
+  var h = '<div class="ges-ficha-ing">'
+    + fila('Proveedor', gEsc(d.proveedor)) + fila('RUT', gEsc(d.rut || 'sin RUT')) + fila('Tipo de documento', gDocTipo(d.tipo_doc)) + fila('Folio', gEsc(d.folio))
+    + fila('Fecha de emisión', gFechaL(d.fecha) || ND) + fila('Fecha de vencimiento', d.venc ? gFechaL(d.venc) : ND)
+    + fila('Neto', d.neto!=null ? gClp(d.neto) : ND) + fila('IVA', d.iva!=null ? gClp(d.iva) : ND) + fila('Total', d.total!=null ? gClp(d.total) : ND)
+    + fila('Forma de pago escrita en la factura', gEsc(d.forma_pago || ND)) + fila('Documento (PDF o imagen)', gEsc(doc))
+    + fila('Estado de revisión', gEsc(d.revision)+(d.revision_registrada ? '' : ' (sin registro)'))
+    + fila('Estado de recepción', gEsc(gDocEstRec(d)))
+    + '</div>';
+  if(d.nota) h += '<div class="ges-linea-chica">Nota: '+gEsc(d.nota)+'</div>';
+  var pr = gDocProblemas(d);
+  h += '<div class="ges-det-t">Cuadratura con las líneas de compra</div>'
+    + (pr.length ? pr.map(function(t){ return '<div class="ges-linea-chica">'+gEsc(t)+'</div>'; }).join('')
+                 : '<div class="ges-linea-chica">Cuadra: las '+d.n_lineas+' líneas suman '+gClp(d.suma_lineas)+', igual que el neto; el IVA y el total coinciden.</div>');
+  if(d.origen_totales) h += '<div class="ges-linea-chica">Origen de los totales: '+gEsc(d.origen_totales)+'</div>';
+  h += '<div class="ges-det-t">Líneas de compra y recepción</div>';
+  if(!d.lineas.length) h += '<div class="ges-linea-chica">Este documento no tiene líneas en la hoja Compras.</div>';
+  else h += '<table class="ges-tabla ges-prov-tabla ges-txt"><thead><tr><th>Ingrediente</th><th>Facturada</th><th>Recibida</th><th>Estado</th></tr></thead><tbody>'
+    + d.lineas.map(function(l){
+        var e = G_ESTADOS[l.estado] || G_ESTADOS['sin dato'];
+        return '<tr><td>'+gEsc(l.ingrediente)+(l.flete ? ' (flete)' : '')+'</td><td>'+(l.fact!=null ? gNum(l.fact)+' '+gEsc(l.uc) : '—')+'</td><td>'+(l.recib!=null ? gNum(l.recib)+' '+gEsc(l.uc) : '—')+'</td><td>'+(l.flete ? '—' : e[0])+'</td></tr>';
+      }).join('') + '</tbody></table>';
+  h += '<div class="ges-det-t">Historial de modificaciones</div>';
+  if(!d.historial.length) h += '<div class="ges-linea-chica">Sin modificaciones registradas en la hoja Documentos_Historial.</div>';
+  else h += '<table class="ges-tabla ges-prov-tabla ges-txt"><thead><tr><th>Cuándo</th><th>Campo</th><th>Antes → después</th></tr></thead><tbody>'
+    + d.historial.map(function(x){ return '<tr><td>'+gEsc(gFechaL(x.cuando)||x.cuando)+'</td><td>'+gEsc(x.campo)+'</td><td>'+gEsc(x.antes||'—')+' → '+gEsc(x.despues||'—')+(x.motivo ? '<br><span class="ges-linea-chica">'+gEsc(x.motivo)+'</span>' : '')+'</td></tr>'; }).join('') + '</tbody></table>';
+  (d.avisos||[]).forEach(function(a){ h += '<div class="insight-warn ges-aviso ges-aviso-in">'+gEsc(a)+'</div>'; });
+  return h;
+}
+function gRenderDuplicados(){
+  var D = GESTION.documentos;
+  if(!D) return gDocAvisoSinDatos();
+  var docs = D.documentos, h = '';
+  h += '<div class="ana-section ges-sec"><div class="ana-section-title">Control de duplicados</div>'
+    + '<div class="ges-linea-chica">Un documento se identifica por proveedor (RUT) + tipo de documento + folio. El mismo folio con otro tipo (por ejemplo una nota de crédito) no cuenta como duplicado.</div>';
+  if(!D.duplicados.length) h += '<div class="ges-fila-est">'+gBadge('Sin duplicados','ok')+'</div><div class="ges-linea-chica">No hay documentos repetidos en Facturas, Compras ni Documentos_Control.</div>';
+  else h += '<div class="tabla-wrap"><table class="ges-tabla ges-txt"><thead><tr><th>Proveedor</th><th>Tipo</th><th>Folio</th><th>Dónde</th><th>Veces</th></tr></thead><tbody>'
+    + D.duplicados.map(function(x){ return '<tr><td>'+gEsc(x.proveedor||x.rut||'—')+'</td><td>'+gDocTipo(x.tipo_doc)+'</td><td>'+gEsc(x.folio)+'</td><td>'+gEsc(x.donde)+'</td><td>'+x.n+'</td></tr>'; }).join('') + '</tbody></table></div>';
+  if(D.posibles_duplicados.length)
+    h += '<div class="ges-det-t">Posibles duplicados (revisar a mano)</div><div class="ges-linea-chica">Mismo proveedor, misma fecha y mismo total, pero con folios distintos. No es la misma clave, por eso solo se avisa.</div>'
+      + '<div class="tabla-wrap"><table class="ges-tabla ges-txt"><thead><tr><th>Proveedor</th><th>Fecha</th><th>Total</th><th>Folios</th></tr></thead><tbody>'
+      + D.posibles_duplicados.map(function(x){ return '<tr><td>'+gEsc(x.proveedor)+'</td><td>'+gFechaL(x.fecha)+'</td><td>'+gClp(x.total)+'</td><td>'+x.folios.map(gEsc).join(', ')+'</td></tr>'; }).join('') + '</tbody></table></div>';
+  h += '<div class="ges-linea-chica">Al cargar una factura, la app de bodega hoy compara solo RUT y folio contra la hoja Compras (no el tipo de documento ni la hoja Facturas). Este control lo revisa después de cargado.</div></div>';
+
+  var malos = docs.filter(function(d){ return gDocProblemas(d).length; });
+  h += '<div class="ana-section ges-sec"><div class="ana-section-title">Cuadratura de documentos</div>'
+    + '<div class="ges-linea-chica">Compara la suma de las líneas de compra con el neto del documento, el IVA con el 19% del neto y neto + IVA con el total. Solo informa: no corrige ningún dato.</div>'
+    + '<div class="ges-fila-est">'+gBadge((docs.length-malos.length)+' de '+docs.length+' cuadran', malos.length ? 'gris' : 'ok')+'</div>';
+  if(malos.length) h += '<div class="tabla-wrap"><table class="ges-tabla ges-txt"><thead><tr><th>Proveedor</th><th>Folio</th><th>Fecha</th><th>Qué no cuadra</th></tr></thead><tbody>'
+    + malos.map(function(d){ return '<tr><td>'+gEsc(d.proveedor)+'</td><td>'+gEsc(d.folio)+'</td><td>'+gFecha(d.fecha)+'</td><td>'+gDocProblemas(d).map(gEsc).join('<br>')+'</td></tr>'; }).join('') + '</tbody></table></div>';
+  h += '</div>';
+
+  var hu = D.huerfanos, nh = hu.control.length + hu.historial.length;
+  if(nh){
+    h += '<div class="ana-section ges-sec"><div class="ana-section-title">Registros que no calzan con ningún documento</div>'
+      + '<div class="ges-linea-chica">Filas con proveedor, tipo y folio que no existen en Facturas ni en Compras. No se crean documentos a partir de ellas.</div>';
+    [['Documentos_Control', hu.control], ['Documentos_Historial', hu.historial]].forEach(function(r){
+      if(r[1].length) h += '<div class="ges-linea-chica"><b>'+r[0]+':</b> '+r[1].map(function(x){ return gEsc(x.split('|').join(' · ')); }).join('; ')+'</div>';
+    });
+    h += '</div>';
+  }
+  return h;
 }
 
 function gDescargarCSV(que){
@@ -4167,6 +4563,7 @@ document.getElementById('vista-gestion').addEventListener('click', function(e){
   else if(k==='plato'){ G_ABIERTO[v] = !G_ABIERTO[v]; renderGestion(); }
   else if(k==='prov'){ G_PROV_ABIERTO[v] = !G_PROV_ABIERTO[v]; renderGestion(); }
   else if(k==='ing'){ G_ING_ABIERTO[v] = !G_ING_ABIERTO[v]; renderGestion(); }
+  else if(k==='doc'){ G_DOC_ABIERTO[v] = !G_DOC_ABIERTO[v]; renderGestion(); }
 });
 document.getElementById('vista-gestion').addEventListener('change', function(e){
   var k = e.target.getAttribute('data-ges');
@@ -4175,6 +4572,10 @@ document.getElementById('vista-gestion').addEventListener('change', function(e){
   else if(k==='comp-mes'){ G_COMP.mes = e.target.value; gRefrescarListas(); }
   else if(k==='comp-prov'){ G_COMP.prov = e.target.value; gRefrescarListas(); }
   else if(k==='comp-est'){ G_COMP.estado = e.target.value; gRefrescarListas(); }
+  else if(k==='doc-mes'){ G_DOC.mes = e.target.value; gRefrescarListas(); }
+  else if(k==='doc-prov'){ G_DOC.prov = e.target.value; gRefrescarListas(); }
+  else if(k==='doc-rev'){ G_DOC.rev = e.target.value; gRefrescarListas(); }
+  else if(k==='doc-rec'){ G_DOC.rec = e.target.value; gRefrescarListas(); }
   else if(k==='rent-ord'){ G_RENT.orden = e.target.value; gRefrescarRent(); }
   else if(k==='sim-plato'){ G_SIM.sku = e.target.value; G_SIM.precio = ''; renderGestion(); }
 });
@@ -4185,6 +4586,7 @@ document.getElementById('vista-gestion').addEventListener('input', function(e){
   else if(k==='ing-q'){ G_ING_Q = e.target.value; gRefrescarListas(); }
   else if(k==='comp-q'){ G_COMP.q = e.target.value; gRefrescarListas(); }
   else if(k==='inv-q'){ G_INV_Q = e.target.value; gRefrescarListas(); }
+  else if(k==='doc-q'){ G_DOC.q = e.target.value; gRefrescarListas(); }
   else if(k==='sim-precio'){ G_SIM.precio = e.target.value; gRefrescarRent(); }
   else if(k==='sim-obj'){ G_SIM.objetivo = e.target.value; gRefrescarRent(); }
 });
@@ -6545,7 +6947,7 @@ if __name__ == '__main__':
         print(f"  Diciembre: {diciembre['tot']['productos']} productos, falta producir {diciembre['tot']['falta_cocina']} u")
     print('\nCalculando gestión (precios de venta, costos y compras)...')
     try:
-        gestion = calcular_gestion(datos, leer_precios_venta(), leer_compras(), leer_inventario())
+        gestion = calcular_gestion(datos, leer_precios_venta(), leer_compras(), leer_inventario(), leer_documentos())
         print(f"  {len(gestion['platos'])} platos, {len(gestion['meses'])} meses de compras, {len(gestion['alertas'])} alertas de precio")
     except Exception as e:
         print(f'  Warning: falló la pestaña Gestión ({e})')
