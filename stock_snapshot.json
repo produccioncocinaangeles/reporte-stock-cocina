@@ -2,68 +2,68 @@
   "fecha": "2026-11-03",
   "stock": {
     "OP": {
-      "vit": 1,
-      "pat": 1
+      "vit": 7,
+      "pat": 4
     },
     "RPP": {
       "vit": 3,
       "pat": 5
     },
     "MCL": {
-      "vit": 1,
+      "vit": 0,
       "pat": 0
     },
     "CJ": {
-      "vit": 6,
-      "pat": 2
+      "vit": 5,
+      "pat": 3
     },
     "CLC": {
-      "vit": 17,
-      "pat": 2
+      "vit": 12,
+      "pat": 6
     },
     "MCJ": {
       "vit": 0,
       "pat": 2
     },
     "RC": {
-      "vit": 3,
-      "pat": 2
+      "vit": 12,
+      "pat": 3
     },
     "LA": {
       "vit": 12,
-      "pat": 5
+      "pat": 4
     },
     "RM": {
-      "vit": 1,
-      "pat": 1
+      "vit": 7,
+      "pat": 5
     },
     "LCM": {
-      "vit": 4,
-      "pat": 2
+      "vit": 9,
+      "pat": 3
     },
     "TLS": {
-      "vit": 7,
-      "pat": 3
+      "vit": 2,
+      "pat": 5
     },
     "CL": {
       "vit": 4,
       "pat": 4
     },
     "LS": {
-      "vit": 5,
-      "pat": 2
+      "vit": 3,
+      "pat": 1
     },
     "LJC": {
       "vit": 1,
       "pat": 2
     },
     "PC": {
-      "vit": 14,
-      "pat": 2
+      "vit": 12,
+      "pat": 4
     },
     "MMR": {
-      "vit": 8,
-      "pat": 4
+      "vit": 7,
+      "pat": 5
     },
     "TS": {
       "vit": 3,
@@ -75,27 +75,27 @@
     },
     "TSA": {
       "vit": 2,
-      "pat": 2
+      "pat": 1
     },
     "RB": {
-      "vit": 7,
-      "pat": 3
+      "vit": 5,
+      "pat": 4
     },
     "CF": {
       "vit": 0,
       "pat": 7
     },
     "RS": {
-      "vit": 4,
-      "pat": 2
+      "vit": 2,
+      "pat": 3
     },
     "FCT": {
-      "vit": 4,
-      "pat": 0
+      "vit": 2,
+      "pat": 2
     },
     "PCM": {
-      "vit": 4,
-      "pat": 2
+      "vit": 3,
+      "pat": 3
     },
     "ÑP": {
       "vit": 2,
@@ -103,19 +103,19 @@
     },
     "TF": {
       "vit": 0,
-      "pat": 2
+      "pat": 1
     },
     "MCC": {
-      "vit": 20,
+      "vit": 17,
       "pat": 6
     },
     "CAMA": {
-      "vit": 27,
-      "pat": 4
+      "vit": 23,
+      "pat": 8
     },
     "TPP": {
-      "vit": 6,
-      "pat": 2
+      "vit": 5,
+      "pat": 3
     },
     "RA": {
       "vit": 4,
@@ -123,14 +123,14 @@
     },
     "AS": {
       "vit": 5,
-      "pat": 5
+      "pat": 4
     },
     "PAC": {
-      "vit": 35,
-      "pat": 2
+      "vit": 32,
+      "pat": 4
     },
     "EM": {
-      "vit": 14,
+      "vit": 13,
       "pat": 4
     },
     "ÑC": {
@@ -138,24 +138,24 @@
       "pat": 2
     },
     "EJ": {
-      "vit": 10,
-      "pat": 3
+      "vit": 8,
+      "pat": 5
     },
     "BAP": {
       "vit": 13,
       "pat": 6
     },
     "MIGNON": {
-      "vit": 11,
-      "pat": 2
+      "vit": 6,
+      "pat": 5
     },
     "PV": {
       "vit": 3,
       "pat": 4
     },
     "TA": {
-      "vit": 0,
-      "pat": 3
+      "vit": 20,
+      "pat": 1
     },
     "MMRM": {
       "vit": 0,
@@ -178,23 +178,23 @@
       "pat": 0
     },
     "CM": {
-      "vit": 5,
-      "pat": 0
+      "vit": 3,
+      "pat": 2
     },
     "TCM": {
       "vit": 2,
       "pat": 2
     },
     "PCP": {
-      "vit": 14,
-      "pat": 8
+      "vit": 11,
+      "pat": 9
     },
     "EC": {
-      "vit": 10,
-      "pat": 3
+      "vit": 8,
+      "pat": 5
     },
     "CC": {
-      "vit": 9,
+      "vit": 8,
       "pat": 3
     },
     "SSA": {
@@ -202,7 +202,7 @@
       "pat": 3
     },
     "LM": {
-      "vit": 1,
+      "vit": 0,
       "pat": 3
     },
     "CAC": {
@@ -210,7 +210,7 @@
       "pat": 3
     },
     "TPU": {
-      "vit": 9,
+      "vit": 8,
       "pat": 5
     },
     "SA": {
@@ -222,8 +222,8 @@
       "pat": 3
     },
     "CBN": {
-      "vit": 3,
-      "pat": 2
+      "vit": 2,
+      "pat": 3
     },
     "CDL": {
       "vit": 14,
@@ -238,19 +238,19 @@
       "pat": 4
     },
     "FC": {
-      "vit": 7,
-      "pat": 3
+      "vit": 6,
+      "pat": 4
     },
     "GHD": {
       "vit": 0,
       "pat": 0
     },
     "P": {
-      "vit": 4,
-      "pat": 2
+      "vit": 3,
+      "pat": 3
     },
     "TBN": {
-      "vit": 1,
+      "vit": 0,
       "pat": 3
     },
     "TCF": {
