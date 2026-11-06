@@ -1,26 +1,129 @@
 {
-  "fecha": "2026-11-04",
+  "fecha": "2026-11-05",
   "entradas": [],
   "salidas": [],
   "recepciones": [
     {
-      "sku": "LM",
+      "sku": "MPAS",
       "oficina": "VIT",
-      "cantidad": 6.0,
+      "cantidad": 2.0,
       "nota": "Recepcion / CRISTIAN LAGOS"
+    },
+    {
+      "sku": "GHD",
+      "oficina": "VIT",
+      "cantidad": 10.0,
+      "nota": "Recepcion / CRISTIAN LAGOS"
+    },
+    {
+      "sku": "CJ",
+      "oficina": "PAT",
+      "cantidad": 1.0,
+      "nota": "Recepcion / YALECI CHIQUINQUIRA"
+    },
+    {
+      "sku": "EPC",
+      "oficina": "PAT",
+      "cantidad": 2.0,
+      "nota": "Recepcion / YALECI CHIQUINQUIRA"
+    },
+    {
+      "sku": "GHD",
+      "oficina": "PAT",
+      "cantidad": 5.0,
+      "nota": "Recepcion / YALECI CHIQUINQUIRA"
+    },
+    {
+      "sku": "HDV",
+      "oficina": "PAT",
+      "cantidad": 1.0,
+      "nota": "Recepcion / YALECI CHIQUINQUIRA"
+    },
+    {
+      "sku": "LF",
+      "oficina": "PAT",
+      "cantidad": 3.0,
+      "nota": "Recepcion / YALECI CHIQUINQUIRA"
+    },
+    {
+      "sku": "LS",
+      "oficina": "PAT",
+      "cantidad": 1.0,
+      "nota": "Recepcion / YALECI CHIQUINQUIRA"
     },
     {
       "sku": "MCL",
+      "oficina": "PAT",
+      "cantidad": 6.0,
+      "nota": "Recepcion / YALECI CHIQUINQUIRA"
+    },
+    {
+      "sku": "PC",
+      "oficina": "PAT",
+      "cantidad": 2.0,
+      "nota": "Recepcion / YALECI CHIQUINQUIRA"
+    },
+    {
+      "sku": "TSA",
+      "oficina": "PAT",
+      "cantidad": 1.0,
+      "nota": "Recepcion / YALECI CHIQUINQUIRA"
+    },
+    {
+      "sku": "TA",
+      "oficina": "PAT",
+      "cantidad": 4.0,
+      "nota": "Recepcion / YALECI CHIQUINQUIRA"
+    },
+    {
+      "sku": "TL",
+      "oficina": "PAT",
+      "cantidad": 1.0,
+      "nota": "Recepcion / YALECI CHIQUINQUIRA"
+    },
+    {
+      "sku": "PAC",
       "oficina": "VIT",
-      "cantidad": 21.0,
+      "cantidad": 3.0,
       "nota": "Recepcion / CRISTIAN LAGOS"
     },
     {
-      "sku": "FLOR",
-      "oficina": "PAT",
-      "cantidad": 6.0,
+      "sku": "ÑJ",
+      "oficina": "VIT",
+      "cantidad": 11.0,
+      "nota": "Recepcion / CRISTIAN LAGOS"
+    },
+    {
+      "sku": "PP",
+      "oficina": "VIT",
+      "cantidad": 2.0,
+      "nota": "Recepcion / CRISTIAN LAGOS"
+    },
+    {
+      "sku": "GHD",
+      "oficina": "VIT",
+      "cantidad": 1.0,
       "nota": "Recepcion / CRISTIAN LAGOS"
     }
   ],
-  "consumos": []
+  "consumos": [
+    {
+      "sku": "RC",
+      "oficina": "VIT",
+      "cantidad": 1.0,
+      "nota": "MAL CONTEO"
+    },
+    {
+      "sku": "RM",
+      "oficina": "VIT",
+      "cantidad": 1.0,
+      "nota": "SE INGRESO MAL"
+    },
+    {
+      "sku": "MPAS",
+      "oficina": "PAT",
+      "cantidad": 2.0,
+      "nota": "PARA PEDIDO DE LAS PATAGUAS"
+    }
+  ]
 }
