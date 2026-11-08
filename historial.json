@@ -1,5 +1,5 @@
 {
-  "ultimo_update": "2026-11-06T22:42:46",
+  "ultimo_update": "2026-11-07T22:11:32",
   "movimientos": [
     {
       "fecha": "2026-01-02",
@@ -107543,6 +107543,418 @@
       "cantidad": 3.0,
       "doc_id": "C1769",
       "nota": "Ajuste de Stock: Bernardita  Alamos"
+    },
+    {
+      "fecha": "2026-11-07",
+      "sku": "LA",
+      "oficina": "VIT",
+      "tipo": "venta",
+      "cantidad": 1.0,
+      "doc_id": 22585
+    },
+    {
+      "fecha": "2026-11-07",
+      "sku": "PCP",
+      "oficina": "VIT",
+      "tipo": "venta",
+      "cantidad": 1.0,
+      "doc_id": 22585
+    },
+    {
+      "fecha": "2026-11-07",
+      "sku": "MPAS",
+      "oficina": "VIT",
+      "tipo": "venta",
+      "cantidad": 2.0,
+      "doc_id": 22588
+    },
+    {
+      "fecha": "2026-11-07",
+      "sku": "PCP",
+      "oficina": "VIT",
+      "tipo": "venta",
+      "cantidad": 1.0,
+      "doc_id": 22588
+    },
+    {
+      "fecha": "2026-11-07",
+      "sku": "CC",
+      "oficina": "VIT",
+      "tipo": "venta",
+      "cantidad": 2.0,
+      "doc_id": 22588
+    },
+    {
+      "fecha": "2026-11-07",
+      "sku": "ÑP",
+      "oficina": "VIT",
+      "tipo": "venta",
+      "cantidad": 1.0,
+      "doc_id": 22590
+    },
+    {
+      "fecha": "2026-11-07",
+      "sku": "CLC",
+      "oficina": "VIT",
+      "tipo": "venta",
+      "cantidad": 1.0,
+      "doc_id": 22590
+    },
+    {
+      "fecha": "2026-11-07",
+      "sku": "CBN",
+      "oficina": "VIT",
+      "tipo": "venta",
+      "cantidad": 1.0,
+      "doc_id": 22591
+    },
+    {
+      "fecha": "2026-11-07",
+      "sku": "RB",
+      "oficina": "VIT",
+      "tipo": "venta",
+      "cantidad": 1.0,
+      "doc_id": 22593
+    },
+    {
+      "fecha": "2026-11-07",
+      "sku": "POND",
+      "oficina": "VIT",
+      "tipo": "venta",
+      "cantidad": 2.0,
+      "doc_id": 22600
+    },
+    {
+      "fecha": "2026-11-07",
+      "sku": "POND",
+      "oficina": "VIT",
+      "tipo": "venta",
+      "cantidad": 2.0,
+      "doc_id": 22602
+    },
+    {
+      "fecha": "2026-11-07",
+      "sku": "D",
+      "oficina": "VIT",
+      "tipo": "venta",
+      "cantidad": 1.0,
+      "doc_id": 22602
+    },
+    {
+      "fecha": "2026-11-07",
+      "sku": "LF",
+      "oficina": "PAT",
+      "tipo": "despacho",
+      "cantidad": 1.0,
+      "doc_id": 22589
+    },
+    {
+      "fecha": "2026-11-07",
+      "sku": "CP",
+      "oficina": "PAT",
+      "tipo": "despacho",
+      "cantidad": 1.0,
+      "doc_id": 22589
+    },
+    {
+      "fecha": "2026-11-07",
+      "sku": "T",
+      "oficina": "PAT",
+      "tipo": "despacho",
+      "cantidad": 1.0,
+      "doc_id": 22589
+    },
+    {
+      "fecha": "2026-11-07",
+      "sku": "CDL",
+      "oficina": "PAT",
+      "tipo": "despacho",
+      "cantidad": 1.0,
+      "doc_id": 22589
+    },
+    {
+      "fecha": "2026-11-07",
+      "sku": "ÑP",
+      "oficina": "PAT",
+      "tipo": "despacho",
+      "cantidad": 1.0,
+      "doc_id": 22589
+    },
+    {
+      "fecha": "2026-11-07",
+      "sku": "T",
+      "oficina": "PAT",
+      "tipo": "despacho",
+      "cantidad": 2.0,
+      "doc_id": 22603
+    },
+    {
+      "fecha": "2026-11-07",
+      "sku": "EJ",
+      "oficina": "PAT",
+      "tipo": "venta",
+      "cantidad": 1.0,
+      "doc_id": 22586
+    },
+    {
+      "fecha": "2026-11-07",
+      "sku": "EC",
+      "oficina": "PAT",
+      "tipo": "venta",
+      "cantidad": 1.0,
+      "doc_id": 22586
+    },
+    {
+      "fecha": "2026-11-07",
+      "sku": "RB",
+      "oficina": "PAT",
+      "tipo": "venta",
+      "cantidad": 1.0,
+      "doc_id": 22587
+    },
+    {
+      "fecha": "2026-11-07",
+      "sku": "MCJ",
+      "oficina": "PAT",
+      "tipo": "venta",
+      "cantidad": 1.0,
+      "doc_id": 22587
+    },
+    {
+      "fecha": "2026-11-07",
+      "sku": "TA",
+      "oficina": "PAT",
+      "tipo": "venta",
+      "cantidad": 1.0,
+      "doc_id": 22587
+    },
+    {
+      "fecha": "2026-11-07",
+      "sku": "CF",
+      "oficina": "PAT",
+      "tipo": "venta",
+      "cantidad": 1.0,
+      "doc_id": 22587
+    },
+    {
+      "fecha": "2026-11-07",
+      "sku": "CDM",
+      "oficina": "PAT",
+      "tipo": "venta",
+      "cantidad": 1.0,
+      "doc_id": 22587
+    },
+    {
+      "fecha": "2026-11-07",
+      "sku": "CL",
+      "oficina": "PAT",
+      "tipo": "venta",
+      "cantidad": 1.0,
+      "doc_id": 22587
+    },
+    {
+      "fecha": "2026-11-07",
+      "sku": "T",
+      "oficina": "PAT",
+      "tipo": "venta",
+      "cantidad": 1.0,
+      "doc_id": 22587
+    },
+    {
+      "fecha": "2026-11-07",
+      "sku": "TIRAS",
+      "oficina": "PAT",
+      "tipo": "venta",
+      "cantidad": 1.0,
+      "doc_id": 22587
+    },
+    {
+      "fecha": "2026-11-07",
+      "sku": "MCJ",
+      "oficina": "PAT",
+      "tipo": "venta",
+      "cantidad": 1.0,
+      "doc_id": 22592
+    },
+    {
+      "fecha": "2026-11-07",
+      "sku": "MCC",
+      "oficina": "PAT",
+      "tipo": "venta",
+      "cantidad": 1.0,
+      "doc_id": 22592
+    },
+    {
+      "fecha": "2026-11-07",
+      "sku": "TBN",
+      "oficina": "PAT",
+      "tipo": "venta",
+      "cantidad": 1.0,
+      "doc_id": 22594
+    },
+    {
+      "fecha": "2026-11-07",
+      "sku": "TL",
+      "oficina": "PAT",
+      "tipo": "venta",
+      "cantidad": 1.0,
+      "doc_id": 22594
+    },
+    {
+      "fecha": "2026-11-07",
+      "sku": "MIGNON",
+      "oficina": "PAT",
+      "tipo": "venta",
+      "cantidad": 1.0,
+      "doc_id": 22595
+    },
+    {
+      "fecha": "2026-11-07",
+      "sku": "AS",
+      "oficina": "PAT",
+      "tipo": "venta",
+      "cantidad": 1.0,
+      "doc_id": 22595
+    },
+    {
+      "fecha": "2026-11-07",
+      "sku": "CAMA",
+      "oficina": "PAT",
+      "tipo": "venta",
+      "cantidad": 1.0,
+      "doc_id": 22596
+    },
+    {
+      "fecha": "2026-11-07",
+      "sku": "CL",
+      "oficina": "PAT",
+      "tipo": "venta",
+      "cantidad": 1.0,
+      "doc_id": 22597
+    },
+    {
+      "fecha": "2026-11-07",
+      "sku": "FC",
+      "oficina": "PAT",
+      "tipo": "venta",
+      "cantidad": 1.0,
+      "doc_id": 22598
+    },
+    {
+      "fecha": "2026-11-07",
+      "sku": "LF",
+      "oficina": "PAT",
+      "tipo": "venta",
+      "cantidad": 2.0,
+      "doc_id": 22599
+    },
+    {
+      "fecha": "2026-11-07",
+      "sku": "MPAS",
+      "oficina": "VIT",
+      "tipo": "produccion",
+      "cantidad": 2.0,
+      "doc_id": "R5453",
+      "costo": 0.0,
+      "nota": "Ajuste de Stock: CRISTIAN LAGOS"
+    },
+    {
+      "fecha": "2026-11-07",
+      "sku": "LF",
+      "oficina": "VIT",
+      "tipo": "produccion",
+      "cantidad": 1.0,
+      "doc_id": "R5454",
+      "costo": 36500.0,
+      "nota": "Recepcion / CRISTIAN LAGOS"
+    },
+    {
+      "fecha": "2026-11-07",
+      "sku": "CP",
+      "oficina": "VIT",
+      "tipo": "produccion",
+      "cantidad": 1.0,
+      "doc_id": "R5454",
+      "costo": 0.0,
+      "nota": "Recepcion / CRISTIAN LAGOS"
+    },
+    {
+      "fecha": "2026-11-07",
+      "sku": "T",
+      "oficina": "VIT",
+      "tipo": "produccion",
+      "cantidad": 1.0,
+      "doc_id": "R5454",
+      "costo": 916.67,
+      "nota": "Recepcion / CRISTIAN LAGOS"
+    },
+    {
+      "fecha": "2026-11-07",
+      "sku": "CDL",
+      "oficina": "VIT",
+      "tipo": "produccion",
+      "cantidad": 1.0,
+      "doc_id": "R5454",
+      "costo": 20000.0,
+      "nota": "Recepcion / CRISTIAN LAGOS"
+    },
+    {
+      "fecha": "2026-11-07",
+      "sku": "ÑP",
+      "oficina": "VIT",
+      "tipo": "produccion",
+      "cantidad": 1.0,
+      "doc_id": "R5454",
+      "costo": 33000.0,
+      "nota": "Recepcion / CRISTIAN LAGOS"
+    },
+    {
+      "fecha": "2026-11-07",
+      "sku": "POND",
+      "oficina": "VIT",
+      "tipo": "produccion",
+      "cantidad": 2.0,
+      "doc_id": "R5455",
+      "costo": 14000.0,
+      "nota": "Ajuste de Stock: CRISTIAN LAGOS"
+    },
+    {
+      "fecha": "2026-11-07",
+      "sku": "POND",
+      "oficina": "VIT",
+      "tipo": "produccion",
+      "cantidad": 2.0,
+      "doc_id": "R5456",
+      "costo": 14000.0,
+      "nota": "212"
+    },
+    {
+      "fecha": "2026-11-07",
+      "sku": "T",
+      "oficina": "VIT",
+      "tipo": "produccion",
+      "cantidad": 2.0,
+      "doc_id": "R5457",
+      "costo": 916.67,
+      "nota": "Recepcion / CRISTIAN LAGOS"
+    },
+    {
+      "fecha": "2026-11-07",
+      "sku": "P",
+      "oficina": "VIT",
+      "tipo": "consumo",
+      "cantidad": 2.0,
+      "doc_id": "C1770",
+      "nota": "Ajuste de Stock: CRISTIAN LAGOS"
+    },
+    {
+      "fecha": "2026-11-07",
+      "sku": "P",
+      "oficina": "VIT",
+      "tipo": "produccion",
+      "cantidad": 1.0,
+      "doc_id": 0,
+      "inferido": true
     }
   ],
   "docs_ignorar": [
@@ -107895,6 +108307,6 @@
       "venta"
     ]
   ],
-  "ultima_recepcion_id": 5452,
-  "ultimo_consumo_id": 1769
+  "ultima_recepcion_id": 5457,
+  "ultimo_consumo_id": 1770
 }

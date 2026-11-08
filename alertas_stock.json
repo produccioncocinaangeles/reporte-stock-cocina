@@ -1,63 +1,75 @@
 {
-  "fecha": "2026-11-06",
-  "entradas": [],
+  "fecha": "2026-11-07",
+  "entradas": [
+    {
+      "sku": "P",
+      "oficina": "VIT",
+      "cantidad": 1.0
+    }
+  ],
   "salidas": [],
   "recepciones": [
     {
-      "sku": "TBN",
+      "sku": "MPAS",
       "oficina": "VIT",
-      "cantidad": 1.0,
+      "cantidad": 2.0,
       "nota": "Ajuste de Stock: CRISTIAN LAGOS"
     },
     {
-      "sku": "FC",
+      "sku": "LF",
       "oficina": "VIT",
-      "cantidad": 6.0,
+      "cantidad": 1.0,
       "nota": "Recepcion / CRISTIAN LAGOS"
     },
     {
-      "sku": "CBN",
+      "sku": "CP",
       "oficina": "VIT",
-      "cantidad": 6.0,
+      "cantidad": 1.0,
       "nota": "Recepcion / CRISTIAN LAGOS"
-    },
-    {
-      "sku": "BURMA",
-      "oficina": "PAT",
-      "cantidad": 6.0,
-      "nota": "Ajuste de Stock: Bernardita  Alamos"
     },
     {
       "sku": "T",
       "oficina": "VIT",
       "cantidad": 1.0,
+      "nota": "Recepcion / CRISTIAN LAGOS"
+    },
+    {
+      "sku": "CDL",
+      "oficina": "VIT",
+      "cantidad": 1.0,
+      "nota": "Recepcion / CRISTIAN LAGOS"
+    },
+    {
+      "sku": "ÑP",
+      "oficina": "VIT",
+      "cantidad": 1.0,
+      "nota": "Recepcion / CRISTIAN LAGOS"
+    },
+    {
+      "sku": "POND",
+      "oficina": "VIT",
+      "cantidad": 2.0,
       "nota": "Ajuste de Stock: CRISTIAN LAGOS"
     },
     {
-      "sku": "CBN",
-      "oficina": "PAT",
-      "cantidad": 4.0,
-      "nota": "Recepcion / YALECI CHIQUINQUIRA"
+      "sku": "POND",
+      "oficina": "VIT",
+      "cantidad": 2.0,
+      "nota": "212"
+    },
+    {
+      "sku": "T",
+      "oficina": "VIT",
+      "cantidad": 2.0,
+      "nota": "Recepcion / CRISTIAN LAGOS"
     }
   ],
   "consumos": [
     {
-      "sku": "TBN",
-      "oficina": "PAT",
-      "cantidad": 1.0,
+      "sku": "P",
+      "oficina": "VIT",
+      "cantidad": 2.0,
       "nota": "Ajuste de Stock: CRISTIAN LAGOS"
-    },
-    {
-      "sku": "GHD",
-      "oficina": "PAT",
-      "cantidad": 1.0,
-      "nota": "Ajuste de Stock: Bernardita  Alamos"
-    },
-    {
-      "sku": "PV",
-      "oficina": "PAT",
-      "cantidad": 3.0,
-      "nota": "Ajuste de Stock: Bernardita  Alamos"
     }
   ]
 }
