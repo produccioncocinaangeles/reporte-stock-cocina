@@ -1,5 +1,5 @@
 {
-  "fecha": "2026-11-07",
+  "fecha": "2026-11-08",
   "entradas": [
     {
       "sku": "P",
@@ -7,69 +7,23 @@
       "cantidad": 1.0
     }
   ],
-  "salidas": [],
-  "recepciones": [
+  "salidas": [
     {
-      "sku": "MPAS",
+      "sku": "LCM",
       "oficina": "VIT",
-      "cantidad": 2.0,
-      "nota": "Ajuste de Stock: CRISTIAN LAGOS"
+      "cantidad": 1.0
     },
     {
-      "sku": "LF",
+      "sku": "PCM",
       "oficina": "VIT",
-      "cantidad": 1.0,
-      "nota": "Recepcion / CRISTIAN LAGOS"
+      "cantidad": 1.0
     },
     {
-      "sku": "CP",
+      "sku": "TA",
       "oficina": "VIT",
-      "cantidad": 1.0,
-      "nota": "Recepcion / CRISTIAN LAGOS"
-    },
-    {
-      "sku": "T",
-      "oficina": "VIT",
-      "cantidad": 1.0,
-      "nota": "Recepcion / CRISTIAN LAGOS"
-    },
-    {
-      "sku": "CDL",
-      "oficina": "VIT",
-      "cantidad": 1.0,
-      "nota": "Recepcion / CRISTIAN LAGOS"
-    },
-    {
-      "sku": "ÑP",
-      "oficina": "VIT",
-      "cantidad": 1.0,
-      "nota": "Recepcion / CRISTIAN LAGOS"
-    },
-    {
-      "sku": "POND",
-      "oficina": "VIT",
-      "cantidad": 2.0,
-      "nota": "Ajuste de Stock: CRISTIAN LAGOS"
-    },
-    {
-      "sku": "POND",
-      "oficina": "VIT",
-      "cantidad": 2.0,
-      "nota": "212"
-    },
-    {
-      "sku": "T",
-      "oficina": "VIT",
-      "cantidad": 2.0,
-      "nota": "Recepcion / CRISTIAN LAGOS"
+      "cantidad": 1.0
     }
   ],
-  "consumos": [
-    {
-      "sku": "P",
-      "oficina": "VIT",
-      "cantidad": 2.0,
-      "nota": "Ajuste de Stock: CRISTIAN LAGOS"
-    }
-  ]
+  "recepciones": [],
+  "consumos": []
 }
