@@ -1,13 +1,6 @@
 {
-  "fecha": "2026-11-08",
+  "fecha": "2026-11-10",
   "entradas": [
-    {
-      "sku": "P",
-      "oficina": "VIT",
-      "cantidad": 1.0
-    }
-  ],
-  "salidas": [
     {
       "sku": "LCM",
       "oficina": "VIT",
@@ -24,6 +17,14 @@
       "cantidad": 1.0
     }
   ],
-  "recepciones": [],
+  "salidas": [],
+  "recepciones": [
+    {
+      "sku": "RS",
+      "oficina": "VIT",
+      "cantidad": 11.0,
+      "nota": "Recepcion / CRISTIAN LAGOS"
+    }
+  ],
   "consumos": []
 }
