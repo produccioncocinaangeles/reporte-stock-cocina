@@ -1,26 +1,57 @@
 {
-  "fecha": "2026-11-11",
-  "entradas": [],
+  "fecha": "2026-11-12",
+  "entradas": [
+    {
+      "sku": "HDV",
+      "oficina": "VIT",
+      "cantidad": 1.0
+    }
+  ],
   "salidas": [],
   "recepciones": [
     {
-      "sku": "MCJ",
+      "sku": "PCP",
       "oficina": "VIT",
-      "cantidad": 11.0,
+      "cantidad": 96.0,
       "nota": "Recepcion / CRISTIAN LAGOS"
     },
     {
-      "sku": "MCL",
+      "sku": "TS",
+      "oficina": "VIT",
+      "cantidad": 9.0,
+      "nota": "Recepcion / CRISTIAN LAGOS"
+    },
+    {
+      "sku": "MIGNON",
+      "oficina": "VIT",
+      "cantidad": 30.0,
+      "nota": "Recepcion / CRISTIAN LAGOS"
+    },
+    {
+      "sku": "RB",
+      "oficina": "VIT",
+      "cantidad": 16.0,
+      "nota": "Recepcion / CRISTIAN LAGOS"
+    },
+    {
+      "sku": "FCT",
       "oficina": "VIT",
       "cantidad": 1.0,
       "nota": "Recepcion / CRISTIAN LAGOS"
-    },
-    {
-      "sku": "TIRAS",
-      "oficina": "VIT",
-      "cantidad": 14.0,
-      "nota": "Recepcion / CRISTIAN LAGOS"
     }
   ],
-  "consumos": []
+  "consumos": [
+    {
+      "sku": "EM",
+      "oficina": "VIT",
+      "cantidad": 4.0,
+      "nota": "cristhian evento"
+    },
+    {
+      "sku": "LF",
+      "oficina": "VIT",
+      "cantidad": 1.0,
+      "nota": "cristhian evento"
+    }
+  ]
 }
