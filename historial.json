@@ -1,5 +1,5 @@
 {
-  "ultimo_update": "2026-11-13T23:01:48",
+  "ultimo_update": "2026-11-14T22:34:31",
   "movimientos": [
     {
       "fecha": "2026-01-02",
@@ -110397,6 +110397,454 @@
       "cantidad": 2.0,
       "doc_id": 0,
       "inferido": true
+    },
+    {
+      "fecha": "2026-11-14",
+      "sku": "HDV",
+      "oficina": "VIT",
+      "tipo": "despacho",
+      "cantidad": 4.0,
+      "doc_id": 22693
+    },
+    {
+      "fecha": "2026-11-14",
+      "sku": "AS",
+      "oficina": "VIT",
+      "tipo": "venta",
+      "cantidad": 1.0,
+      "doc_id": 22684
+    },
+    {
+      "fecha": "2026-11-14",
+      "sku": "LA",
+      "oficina": "VIT",
+      "tipo": "venta",
+      "cantidad": 1.0,
+      "doc_id": 22684
+    },
+    {
+      "fecha": "2026-11-14",
+      "sku": "TS",
+      "oficina": "VIT",
+      "tipo": "venta",
+      "cantidad": 1.0,
+      "doc_id": 22684
+    },
+    {
+      "fecha": "2026-11-14",
+      "sku": "CDM",
+      "oficina": "VIT",
+      "tipo": "venta",
+      "cantidad": 1.0,
+      "doc_id": 22684
+    },
+    {
+      "fecha": "2026-11-14",
+      "sku": "D",
+      "oficina": "VIT",
+      "tipo": "venta",
+      "cantidad": 1.0,
+      "doc_id": 22684
+    },
+    {
+      "fecha": "2026-11-14",
+      "sku": "EC",
+      "oficina": "VIT",
+      "tipo": "venta",
+      "cantidad": 1.0,
+      "doc_id": 22696
+    },
+    {
+      "fecha": "2026-11-14",
+      "sku": "CC",
+      "oficina": "VIT",
+      "tipo": "venta",
+      "cantidad": 1.0,
+      "doc_id": 22710
+    },
+    {
+      "fecha": "2026-11-14",
+      "sku": "BURMA",
+      "oficina": "PAT",
+      "tipo": "despacho",
+      "cantidad": 2.0,
+      "doc_id": 22697
+    },
+    {
+      "fecha": "2026-11-14",
+      "sku": "BURMA",
+      "oficina": "PAT",
+      "tipo": "despacho",
+      "cantidad": 1.0,
+      "doc_id": 22701
+    },
+    {
+      "fecha": "2026-11-14",
+      "sku": "BURMA",
+      "oficina": "PAT",
+      "tipo": "despacho",
+      "cantidad": 2.0,
+      "doc_id": 22702
+    },
+    {
+      "fecha": "2026-11-14",
+      "sku": "BURMA",
+      "oficina": "PAT",
+      "tipo": "despacho",
+      "cantidad": 2.0,
+      "doc_id": 22703
+    },
+    {
+      "fecha": "2026-11-14",
+      "sku": "BURMA",
+      "oficina": "PAT",
+      "tipo": "despacho",
+      "cantidad": 1.0,
+      "doc_id": 22704
+    },
+    {
+      "fecha": "2026-11-14",
+      "sku": "BURMA",
+      "oficina": "PAT",
+      "tipo": "despacho",
+      "cantidad": 2.0,
+      "doc_id": 22705
+    },
+    {
+      "fecha": "2026-11-14",
+      "sku": "BURMA",
+      "oficina": "PAT",
+      "tipo": "despacho",
+      "cantidad": 2.0,
+      "doc_id": 22706
+    },
+    {
+      "fecha": "2026-11-14",
+      "sku": "BURMA",
+      "oficina": "PAT",
+      "tipo": "despacho",
+      "cantidad": 1.0,
+      "doc_id": 22707
+    },
+    {
+      "fecha": "2026-11-14",
+      "sku": "BURMA",
+      "oficina": "PAT",
+      "tipo": "despacho",
+      "cantidad": 3.0,
+      "doc_id": 22708
+    },
+    {
+      "fecha": "2026-11-14",
+      "sku": "BURMA",
+      "oficina": "PAT",
+      "tipo": "despacho",
+      "cantidad": 1.0,
+      "doc_id": 22709
+    },
+    {
+      "fecha": "2026-11-14",
+      "sku": "TIRAS",
+      "oficina": "PAT",
+      "tipo": "venta",
+      "cantidad": 1.0,
+      "doc_id": 22685
+    },
+    {
+      "fecha": "2026-11-14",
+      "sku": "CF",
+      "oficina": "PAT",
+      "tipo": "venta",
+      "cantidad": 1.0,
+      "doc_id": 22685
+    },
+    {
+      "fecha": "2026-11-14",
+      "sku": "T",
+      "oficina": "PAT",
+      "tipo": "venta",
+      "cantidad": 2.0,
+      "doc_id": 22685
+    },
+    {
+      "fecha": "2026-11-14",
+      "sku": "CAMA",
+      "oficina": "PAT",
+      "tipo": "venta",
+      "cantidad": 2.0,
+      "doc_id": 22686
+    },
+    {
+      "fecha": "2026-11-14",
+      "sku": "PCP",
+      "oficina": "PAT",
+      "tipo": "venta",
+      "cantidad": 1.0,
+      "doc_id": 22687
+    },
+    {
+      "fecha": "2026-11-14",
+      "sku": "ÑJ",
+      "oficina": "PAT",
+      "tipo": "venta",
+      "cantidad": 1.0,
+      "doc_id": 22687
+    },
+    {
+      "fecha": "2026-11-14",
+      "sku": "P",
+      "oficina": "PAT",
+      "tipo": "venta",
+      "cantidad": 1.0,
+      "doc_id": 22688
+    },
+    {
+      "fecha": "2026-11-14",
+      "sku": "CP",
+      "oficina": "PAT",
+      "tipo": "venta",
+      "cantidad": 1.0,
+      "doc_id": 22689
+    },
+    {
+      "fecha": "2026-11-14",
+      "sku": "RB",
+      "oficina": "PAT",
+      "tipo": "venta",
+      "cantidad": 1.0,
+      "doc_id": 22689
+    },
+    {
+      "fecha": "2026-11-14",
+      "sku": "PE",
+      "oficina": "PAT",
+      "tipo": "venta",
+      "cantidad": 1.0,
+      "doc_id": 22690
+    },
+    {
+      "fecha": "2026-11-14",
+      "sku": "PP",
+      "oficina": "PAT",
+      "tipo": "venta",
+      "cantidad": 1.0,
+      "doc_id": 22690
+    },
+    {
+      "fecha": "2026-11-14",
+      "sku": "LA",
+      "oficina": "PAT",
+      "tipo": "venta",
+      "cantidad": 1.0,
+      "doc_id": 22691
+    },
+    {
+      "fecha": "2026-11-14",
+      "sku": "SA",
+      "oficina": "PAT",
+      "tipo": "venta",
+      "cantidad": 3.0,
+      "doc_id": 22691
+    },
+    {
+      "fecha": "2026-11-14",
+      "sku": "PAC",
+      "oficina": "PAT",
+      "tipo": "venta",
+      "cantidad": 1.0,
+      "doc_id": 22692
+    },
+    {
+      "fecha": "2026-11-14",
+      "sku": "MIGNON",
+      "oficina": "PAT",
+      "tipo": "venta",
+      "cantidad": 1.0,
+      "doc_id": 22692
+    },
+    {
+      "fecha": "2026-11-14",
+      "sku": "MCJ",
+      "oficina": "PAT",
+      "tipo": "venta",
+      "cantidad": 1.0,
+      "doc_id": 22694
+    },
+    {
+      "fecha": "2026-11-14",
+      "sku": "TS",
+      "oficina": "PAT",
+      "tipo": "venta",
+      "cantidad": 1.0,
+      "doc_id": 22694
+    },
+    {
+      "fecha": "2026-11-14",
+      "sku": "TA",
+      "oficina": "PAT",
+      "tipo": "venta",
+      "cantidad": 1.0,
+      "doc_id": 22695
+    },
+    {
+      "fecha": "2026-11-14",
+      "sku": "TS",
+      "oficina": "PAT",
+      "tipo": "venta",
+      "cantidad": 1.0,
+      "doc_id": 22695
+    },
+    {
+      "fecha": "2026-11-14",
+      "sku": "PCP",
+      "oficina": "PAT",
+      "tipo": "venta",
+      "cantidad": 1.0,
+      "doc_id": 22698
+    },
+    {
+      "fecha": "2026-11-14",
+      "sku": "BURMA",
+      "oficina": "PAT",
+      "tipo": "venta",
+      "cantidad": 1.0,
+      "doc_id": 22698
+    },
+    {
+      "fecha": "2026-11-14",
+      "sku": "BURMA",
+      "oficina": "PAT",
+      "tipo": "venta",
+      "cantidad": 1.0,
+      "doc_id": 22699
+    },
+    {
+      "fecha": "2026-11-14",
+      "sku": "CLC",
+      "oficina": "PAT",
+      "tipo": "venta",
+      "cantidad": 1.0,
+      "doc_id": 22700
+    },
+    {
+      "fecha": "2026-11-14",
+      "sku": "SA",
+      "oficina": "PAT",
+      "tipo": "venta",
+      "cantidad": 2.0,
+      "doc_id": 22711
+    },
+    {
+      "fecha": "2026-11-14",
+      "sku": "RS",
+      "oficina": "PAT",
+      "tipo": "venta",
+      "cantidad": 1.0,
+      "doc_id": 22711
+    },
+    {
+      "fecha": "2026-11-14",
+      "sku": "LIBRO",
+      "oficina": "PAT",
+      "tipo": "venta",
+      "cantidad": 1.0,
+      "doc_id": 22711
+    },
+    {
+      "fecha": "2026-11-14",
+      "sku": "CJ",
+      "oficina": "PAT",
+      "tipo": "venta",
+      "cantidad": 1.0,
+      "doc_id": 22711
+    },
+    {
+      "fecha": "2026-11-14",
+      "sku": "TL",
+      "oficina": "PAT",
+      "tipo": "venta",
+      "cantidad": 1.0,
+      "doc_id": 22712
+    },
+    {
+      "fecha": "2026-11-14",
+      "sku": "TLS",
+      "oficina": "PAT",
+      "tipo": "venta",
+      "cantidad": 2.0,
+      "doc_id": 22713
+    },
+    {
+      "fecha": "2026-11-14",
+      "sku": "CBN",
+      "oficina": "PAT",
+      "tipo": "venta",
+      "cantidad": 1.0,
+      "doc_id": 22713
+    },
+    {
+      "fecha": "2026-11-14",
+      "sku": "CDM",
+      "oficina": "PAT",
+      "tipo": "venta",
+      "cantidad": 1.0,
+      "doc_id": 22714
+    },
+    {
+      "fecha": "2026-11-14",
+      "sku": "CDM",
+      "oficina": "PAT",
+      "tipo": "venta",
+      "cantidad": 1.0,
+      "doc_id": 22715
+    },
+    {
+      "fecha": "2026-11-14",
+      "sku": "T",
+      "oficina": "PAT",
+      "tipo": "produccion",
+      "cantidad": 2.0,
+      "doc_id": "R5478",
+      "costo": 916.67,
+      "nota": "Recepcion / CRISTIAN LAGOS"
+    },
+    {
+      "fecha": "2026-11-14",
+      "sku": "BURMA",
+      "oficina": "PAT",
+      "tipo": "produccion",
+      "cantidad": 20.0,
+      "doc_id": "R5479",
+      "costo": 9000.0,
+      "nota": "Recepcion / CRISTIAN LAGOS"
+    },
+    {
+      "fecha": "2026-11-14",
+      "sku": "BURMA",
+      "oficina": "PAT",
+      "tipo": "produccion",
+      "cantidad": 1.0,
+      "doc_id": "R5480",
+      "costo": 9000.0,
+      "nota": "Recepcion / CRISTIAN LAGOS"
+    },
+    {
+      "fecha": "2026-11-14",
+      "sku": "AS",
+      "oficina": "PAT",
+      "tipo": "consumo",
+      "cantidad": 1.0,
+      "doc_id": "C1776",
+      "nota": "para vitacura para pedido"
+    },
+    {
+      "fecha": "2026-11-14",
+      "sku": "HDV",
+      "oficina": "PAT",
+      "tipo": "produccion",
+      "cantidad": 1.0,
+      "doc_id": 0,
+      "inferido": true
     }
   ],
   "docs_ignorar": [
@@ -110749,6 +111197,6 @@
       "venta"
     ]
   ],
-  "ultima_recepcion_id": 5477,
-  "ultimo_consumo_id": 1775
+  "ultima_recepcion_id": 5480,
+  "ultimo_consumo_id": 1776
 }

@@ -1,177 +1,39 @@
 {
-  "fecha": "2026-11-13",
+  "fecha": "2026-11-14",
   "entradas": [
     {
       "sku": "HDV",
       "oficina": "PAT",
-      "cantidad": 2.0
+      "cantidad": 1.0
     }
   ],
   "salidas": [],
   "recepciones": [
     {
-      "sku": "FCT",
-      "oficina": "VIT",
-      "cantidad": 3.0,
-      "nota": "Recepcion / CRISTIAN LAGOS"
-    },
-    {
-      "sku": "ÑP",
-      "oficina": "VIT",
-      "cantidad": 5.0,
-      "nota": "Recepcion / CRISTIAN LAGOS"
-    },
-    {
-      "sku": "CM",
-      "oficina": "VIT",
-      "cantidad": 9.0,
-      "nota": "Recepcion / CRISTIAN LAGOS"
-    },
-    {
-      "sku": "TSA",
-      "oficina": "VIT",
-      "cantidad": 10.0,
-      "nota": "Recepcion / CRISTIAN LAGOS"
-    },
-    {
-      "sku": "CM",
-      "oficina": "VIT",
-      "cantidad": 1.0,
-      "nota": "Recepcion / CRISTIAN LAGOS"
-    },
-    {
-      "sku": "RB",
-      "oficina": "PAT",
-      "cantidad": 7.0,
-      "nota": "Recepcion / YALECI CHIQUINQUIRA"
-    },
-    {
-      "sku": "AS",
+      "sku": "T",
       "oficina": "PAT",
       "cantidad": 2.0,
-      "nota": "Recepcion / YALECI CHIQUINQUIRA"
-    },
-    {
-      "sku": "CM",
-      "oficina": "PAT",
-      "cantidad": 2.0,
-      "nota": "Recepcion / YALECI CHIQUINQUIRA"
-    },
-    {
-      "sku": "EC",
-      "oficina": "PAT",
-      "cantidad": 2.0,
-      "nota": "Recepcion / YALECI CHIQUINQUIRA"
-    },
-    {
-      "sku": "EJ",
-      "oficina": "PAT",
-      "cantidad": 1.0,
-      "nota": "Recepcion / YALECI CHIQUINQUIRA"
-    },
-    {
-      "sku": "EM",
-      "oficina": "PAT",
-      "cantidad": 1.0,
-      "nota": "Recepcion / YALECI CHIQUINQUIRA"
-    },
-    {
-      "sku": "FCT",
-      "oficina": "PAT",
-      "cantidad": 1.0,
-      "nota": "Recepcion / YALECI CHIQUINQUIRA"
-    },
-    {
-      "sku": "GHD",
-      "oficina": "PAT",
-      "cantidad": 1.0,
-      "nota": "Recepcion / YALECI CHIQUINQUIRA"
-    },
-    {
-      "sku": "LSA",
-      "oficina": "PAT",
-      "cantidad": 1.0,
-      "nota": "Recepcion / YALECI CHIQUINQUIRA"
-    },
-    {
-      "sku": "LA",
-      "oficina": "PAT",
-      "cantidad": 1.0,
-      "nota": "Recepcion / YALECI CHIQUINQUIRA"
-    },
-    {
-      "sku": "MCJ",
-      "oficina": "PAT",
-      "cantidad": 6.0,
-      "nota": "Recepcion / YALECI CHIQUINQUIRA"
-    },
-    {
-      "sku": "TSA",
-      "oficina": "PAT",
-      "cantidad": 1.0,
-      "nota": "Recepcion / YALECI CHIQUINQUIRA"
-    },
-    {
-      "sku": "TA",
-      "oficina": "PAT",
-      "cantidad": 4.0,
-      "nota": "Recepcion / YALECI CHIQUINQUIRA"
-    },
-    {
-      "sku": "TIRAS",
-      "oficina": "PAT",
-      "cantidad": 3.0,
-      "nota": "Recepcion / YALECI CHIQUINQUIRA"
-    },
-    {
-      "sku": "TFC",
-      "oficina": "PAT",
-      "cantidad": 1.0,
-      "nota": "Recepcion / YALECI CHIQUINQUIRA"
-    },
-    {
-      "sku": "TP",
-      "oficina": "PAT",
-      "cantidad": 3.0,
-      "nota": "Recepcion / YALECI CHIQUINQUIRA"
-    },
-    {
-      "sku": "BBR",
-      "oficina": "VIT",
-      "cantidad": 9.0,
       "nota": "Recepcion / CRISTIAN LAGOS"
     },
     {
-      "sku": "TBN",
-      "oficina": "VIT",
-      "cantidad": 6.0,
+      "sku": "BURMA",
+      "oficina": "PAT",
+      "cantidad": 20.0,
+      "nota": "Recepcion / CRISTIAN LAGOS"
+    },
+    {
+      "sku": "BURMA",
+      "oficina": "PAT",
+      "cantidad": 1.0,
       "nota": "Recepcion / CRISTIAN LAGOS"
     }
   ],
   "consumos": [
     {
-      "sku": "CC",
-      "oficina": "VIT",
-      "cantidad": 1.0,
-      "nota": "cocina jesus"
-    },
-    {
-      "sku": "PV",
-      "oficina": "VIT",
-      "cantidad": 1.0,
-      "nota": "evento berna mas 2 pv individuales"
-    },
-    {
-      "sku": "LCM",
+      "sku": "AS",
       "oficina": "PAT",
       "cantidad": 1.0,
-      "nota": "Ajuste de Stock: Bernardita  Alamos"
-    },
-    {
-      "sku": "LJC",
-      "oficina": "PAT",
-      "cantidad": 1.0,
-      "nota": "Ajuste de Stock: Bernardita  Alamos"
+      "nota": "para vitacura para pedido"
     }
   ]
 }
