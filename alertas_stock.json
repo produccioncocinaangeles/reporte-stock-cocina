@@ -1,39 +1,7 @@
 {
-  "fecha": "2026-11-14",
-  "entradas": [
-    {
-      "sku": "HDV",
-      "oficina": "PAT",
-      "cantidad": 1.0
-    }
-  ],
+  "fecha": "2026-11-15",
+  "entradas": [],
   "salidas": [],
-  "recepciones": [
-    {
-      "sku": "T",
-      "oficina": "PAT",
-      "cantidad": 2.0,
-      "nota": "Recepcion / CRISTIAN LAGOS"
-    },
-    {
-      "sku": "BURMA",
-      "oficina": "PAT",
-      "cantidad": 20.0,
-      "nota": "Recepcion / CRISTIAN LAGOS"
-    },
-    {
-      "sku": "BURMA",
-      "oficina": "PAT",
-      "cantidad": 1.0,
-      "nota": "Recepcion / CRISTIAN LAGOS"
-    }
-  ],
-  "consumos": [
-    {
-      "sku": "AS",
-      "oficina": "PAT",
-      "cantidad": 1.0,
-      "nota": "para vitacura para pedido"
-    }
-  ]
+  "recepciones": [],
+  "consumos": []
 }
