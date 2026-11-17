@@ -1,7 +1,20 @@
 {
-  "fecha": "2026-11-15",
+  "fecha": "2026-11-17",
   "entradas": [],
   "salidas": [],
-  "recepciones": [],
+  "recepciones": [
+    {
+      "sku": "PV",
+      "oficina": "VIT",
+      "cantidad": 5.0,
+      "nota": "Recepcion / CRISTIAN LAGOS"
+    },
+    {
+      "sku": "ÑC",
+      "oficina": "VIT",
+      "cantidad": 14.0,
+      "nota": "Recepcion / CRISTIAN LAGOS"
+    }
+  ],
   "consumos": []
 }
