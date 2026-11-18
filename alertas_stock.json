@@ -1,20 +1,261 @@
 {
-  "fecha": "2026-11-17",
+  "fecha": "2026-11-18",
   "entradas": [],
   "salidas": [],
   "recepciones": [
     {
+      "sku": "RM",
+      "oficina": "VIT",
+      "cantidad": 9.0,
+      "nota": "Recepcion / CRISTIAN LAGOS"
+    },
+    {
+      "sku": "LCM",
+      "oficina": "VIT",
+      "cantidad": 8.0,
+      "nota": "Recepcion / CRISTIAN LAGOS"
+    },
+    {
+      "sku": "HDV",
+      "oficina": "PAT",
+      "cantidad": 4.0,
+      "nota": "Recepcion / YALECI CHIQUINQUIRA"
+    },
+    {
+      "sku": "BBR",
+      "oficina": "PAT",
+      "cantidad": 2.0,
+      "nota": "Recepcion / YALECI CHIQUINQUIRA"
+    },
+    {
+      "sku": "CBN",
+      "oficina": "PAT",
+      "cantidad": 2.0,
+      "nota": "Recepcion / YALECI CHIQUINQUIRA"
+    },
+    {
       "sku": "PV",
+      "oficina": "PAT",
+      "cantidad": 3.0,
+      "nota": "Recepcion / YALECI CHIQUINQUIRA"
+    },
+    {
+      "sku": "CAMA",
+      "oficina": "PAT",
+      "cantidad": 5.0,
+      "nota": "Recepcion / YALECI CHIQUINQUIRA"
+    },
+    {
+      "sku": "CM",
+      "oficina": "PAT",
+      "cantidad": 2.0,
+      "nota": "Recepcion / YALECI CHIQUINQUIRA"
+    },
+    {
+      "sku": "CP",
+      "oficina": "PAT",
+      "cantidad": 1.0,
+      "nota": "Recepcion / YALECI CHIQUINQUIRA"
+    },
+    {
+      "sku": "CJ",
+      "oficina": "PAT",
+      "cantidad": 1.0,
+      "nota": "Recepcion / YALECI CHIQUINQUIRA"
+    },
+    {
+      "sku": "EM",
+      "oficina": "PAT",
+      "cantidad": 1.0,
+      "nota": "Recepcion / YALECI CHIQUINQUIRA"
+    },
+    {
+      "sku": "FC",
+      "oficina": "PAT",
+      "cantidad": 2.0,
+      "nota": "Recepcion / YALECI CHIQUINQUIRA"
+    },
+    {
+      "sku": "GHD",
+      "oficina": "PAT",
+      "cantidad": 1.0,
+      "nota": "Recepcion / YALECI CHIQUINQUIRA"
+    },
+    {
+      "sku": "LCM",
+      "oficina": "PAT",
+      "cantidad": 1.0,
+      "nota": "Recepcion / YALECI CHIQUINQUIRA"
+    },
+    {
+      "sku": "PAC",
+      "oficina": "PAT",
+      "cantidad": 3.0,
+      "nota": "Recepcion / YALECI CHIQUINQUIRA"
+    },
+    {
+      "sku": "MCL",
+      "oficina": "PAT",
+      "cantidad": 5.0,
+      "nota": "Recepcion / YALECI CHIQUINQUIRA"
+    },
+    {
+      "sku": "MCC",
+      "oficina": "PAT",
+      "cantidad": 2.0,
+      "nota": "Recepcion / YALECI CHIQUINQUIRA"
+    },
+    {
+      "sku": "ÑJ",
+      "oficina": "PAT",
+      "cantidad": 2.0,
+      "nota": "Recepcion / YALECI CHIQUINQUIRA"
+    },
+    {
+      "sku": "ÑC",
+      "oficina": "PAT",
+      "cantidad": 1.0,
+      "nota": "Recepcion / YALECI CHIQUINQUIRA"
+    },
+    {
+      "sku": "OP",
+      "oficina": "PAT",
+      "cantidad": 1.0,
+      "nota": "Recepcion / YALECI CHIQUINQUIRA"
+    },
+    {
+      "sku": "PCP",
+      "oficina": "PAT",
+      "cantidad": 10.0,
+      "nota": "Recepcion / YALECI CHIQUINQUIRA"
+    },
+    {
+      "sku": "PULLED",
+      "oficina": "PAT",
+      "cantidad": 1.0,
+      "nota": "Recepcion / YALECI CHIQUINQUIRA"
+    },
+    {
+      "sku": "RPP",
+      "oficina": "PAT",
+      "cantidad": 1.0,
+      "nota": "Recepcion / YALECI CHIQUINQUIRA"
+    },
+    {
+      "sku": "RS",
+      "oficina": "PAT",
+      "cantidad": 2.0,
+      "nota": "Recepcion / YALECI CHIQUINQUIRA"
+    },
+    {
+      "sku": "TSA",
+      "oficina": "PAT",
+      "cantidad": 1.0,
+      "nota": "Recepcion / YALECI CHIQUINQUIRA"
+    },
+    {
+      "sku": "TS",
+      "oficina": "PAT",
+      "cantidad": 2.0,
+      "nota": "Recepcion / YALECI CHIQUINQUIRA"
+    },
+    {
+      "sku": "TA",
+      "oficina": "PAT",
+      "cantidad": 1.0,
+      "nota": "Recepcion / YALECI CHIQUINQUIRA"
+    },
+    {
+      "sku": "TLS",
+      "oficina": "PAT",
+      "cantidad": 1.0,
+      "nota": "Recepcion / YALECI CHIQUINQUIRA"
+    },
+    {
+      "sku": "TBN",
+      "oficina": "PAT",
+      "cantidad": 3.0,
+      "nota": "Recepcion / YALECI CHIQUINQUIRA"
+    },
+    {
+      "sku": "TL",
+      "oficina": "PAT",
+      "cantidad": 2.0,
+      "nota": "Recepcion / YALECI CHIQUINQUIRA"
+    },
+    {
+      "sku": "CL",
+      "oficina": "VIT",
+      "cantidad": 23.0,
+      "nota": "Recepcion / CRISTIAN LAGOS"
+    },
+    {
+      "sku": "LF",
+      "oficina": "VIT",
+      "cantidad": 12.0,
+      "nota": "Recepcion / CRISTIAN LAGOS"
+    },
+    {
+      "sku": "ÑP",
+      "oficina": "VIT",
+      "cantidad": 2.0,
+      "nota": "Recepcion / CRISTIAN LAGOS"
+    },
+    {
+      "sku": "RA",
+      "oficina": "VIT",
+      "cantidad": 7.0,
+      "nota": "Recepcion / CRISTIAN LAGOS"
+    },
+    {
+      "sku": "TLS",
       "oficina": "VIT",
       "cantidad": 5.0,
       "nota": "Recepcion / CRISTIAN LAGOS"
     },
     {
-      "sku": "ÑC",
+      "sku": "TBN",
       "oficina": "VIT",
-      "cantidad": 14.0,
+      "cantidad": 2.0,
+      "nota": "Recepcion / CRISTIAN LAGOS"
+    },
+    {
+      "sku": "T",
+      "oficina": "VIT",
+      "cantidad": 1.0,
       "nota": "Recepcion / CRISTIAN LAGOS"
     }
   ],
-  "consumos": []
+  "consumos": [
+    {
+      "sku": "FC",
+      "oficina": "PAT",
+      "cantidad": 2.0,
+      "nota": "Ajuste de Stock: Bernardita  Alamos"
+    },
+    {
+      "sku": "HDV",
+      "oficina": "VIT",
+      "cantidad": 1.0,
+      "nota": "CRISTHIAN- PONDERA-"
+    },
+    {
+      "sku": "MIGNON",
+      "oficina": "VIT",
+      "cantidad": 1.0,
+      "nota": "CRISTHIAN- PONDERA-"
+    },
+    {
+      "sku": "CAMA",
+      "oficina": "VIT",
+      "cantidad": 2.0,
+      "nota": "CRISTHIAN- PONDERA-"
+    },
+    {
+      "sku": "PRALINE",
+      "oficina": "VIT",
+      "cantidad": 1.0,
+      "nota": "CRISTHIAN- PONDERA-"
+    }
+  ]
 }
