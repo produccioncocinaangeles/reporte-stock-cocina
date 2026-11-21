@@ -1,180 +1,107 @@
 {
-  "fecha": "2026-11-19",
-  "entradas": [],
+  "fecha": "2026-11-21",
+  "entradas": [
+    {
+      "sku": "P",
+      "oficina": "PAT",
+      "cantidad": 1.0
+    },
+    {
+      "sku": "HDV",
+      "oficina": "PAT",
+      "cantidad": 3.0
+    }
+  ],
   "salidas": [],
   "recepciones": [
     {
-      "sku": "PV",
-      "oficina": "VIT",
-      "cantidad": 9.0,
-      "nota": "Recepcion / CRISTIAN LAGOS"
-    },
-    {
-      "sku": "RB",
-      "oficina": "VIT",
-      "cantidad": 14.0,
-      "nota": "Recepcion / CRISTIAN LAGOS"
-    },
-    {
-      "sku": "PN",
+      "sku": "FC",
       "oficina": "VIT",
       "cantidad": 12.0,
       "nota": "Recepcion / CRISTIAN LAGOS"
     },
     {
-      "sku": "PE",
+      "sku": "CBN",
       "oficina": "VIT",
       "cantidad": 10.0,
       "nota": "Recepcion / CRISTIAN LAGOS"
     },
     {
-      "sku": "PP",
+      "sku": "CLC",
+      "oficina": "VIT",
+      "cantidad": 7.0,
+      "nota": "Recepcion / CRISTIAN LAGOS"
+    },
+    {
+      "sku": "P",
+      "oficina": "VIT",
+      "cantidad": 10.0,
+      "nota": "Recepcion / CRISTIAN LAGOS"
+    },
+    {
+      "sku": "TLS",
       "oficina": "VIT",
       "cantidad": 4.0,
       "nota": "Recepcion / CRISTIAN LAGOS"
     },
     {
-      "sku": "TF",
+      "sku": "BOCA",
+      "oficina": "PAT",
+      "cantidad": 24.0,
+      "nota": "Ajuste de Stock: Bernardita  Alamos"
+    },
+    {
+      "sku": "LS",
       "oficina": "VIT",
-      "cantidad": 11.0,
+      "cantidad": 10.0,
       "nota": "Recepcion / CRISTIAN LAGOS"
     },
     {
-      "sku": "TLS",
-      "oficina": "VIT",
-      "cantidad": 13.0,
-      "nota": "Recepcion / CRISTIAN LAGOS"
-    },
-    {
-      "sku": "PCM",
-      "oficina": "VIT",
-      "cantidad": 5.0,
-      "nota": "Recepcion / CRISTIAN LAGOS"
-    },
-    {
-      "sku": "CF",
-      "oficina": "VIT",
-      "cantidad": 16.0,
-      "nota": "Recepcion / CRISTIAN LAGOS"
-    },
-    {
-      "sku": "PE",
+      "sku": "P",
       "oficina": "PAT",
       "cantidad": 5.0,
       "nota": "Recepcion / YALECI CHIQUINQUIRA"
     },
     {
-      "sku": "PN",
-      "oficina": "PAT",
-      "cantidad": 6.0,
-      "nota": "Recepcion / YALECI CHIQUINQUIRA"
-    },
-    {
-      "sku": "PP",
-      "oficina": "PAT",
-      "cantidad": 3.0,
-      "nota": "Recepcion / YALECI CHIQUINQUIRA"
-    },
-    {
-      "sku": "PV",
-      "oficina": "PAT",
-      "cantidad": 1.0,
-      "nota": "Recepcion / YALECI CHIQUINQUIRA"
-    },
-    {
-      "sku": "RB",
+      "sku": "CBN",
       "oficina": "PAT",
       "cantidad": 2.0,
-      "nota": "Recepcion / YALECI CHIQUINQUIRA"
-    },
-    {
-      "sku": "CAMA",
-      "oficina": "PAT",
-      "cantidad": 5.0,
-      "nota": "Recepcion / YALECI CHIQUINQUIRA"
-    },
-    {
-      "sku": "CM",
-      "oficina": "PAT",
-      "cantidad": 1.0,
       "nota": "Recepcion / YALECI CHIQUINQUIRA"
     },
     {
       "sku": "CL",
       "oficina": "PAT",
-      "cantidad": 5.0,
+      "cantidad": 2.0,
       "nota": "Recepcion / YALECI CHIQUINQUIRA"
     },
     {
-      "sku": "CF",
-      "oficina": "PAT",
-      "cantidad": 1.0,
-      "nota": "Recepcion / YALECI CHIQUINQUIRA"
-    },
-    {
-      "sku": "GHD",
-      "oficina": "PAT",
-      "cantidad": 6.0,
-      "nota": "Recepcion / YALECI CHIQUINQUIRA"
-    },
-    {
-      "sku": "LF",
-      "oficina": "PAT",
-      "cantidad": 5.0,
-      "nota": "Recepcion / YALECI CHIQUINQUIRA"
-    },
-    {
-      "sku": "ÑJ",
-      "oficina": "PAT",
-      "cantidad": 3.0,
-      "nota": "Recepcion / YALECI CHIQUINQUIRA"
-    },
-    {
-      "sku": "ÑC",
-      "oficina": "PAT",
-      "cantidad": 3.0,
-      "nota": "Recepcion / YALECI CHIQUINQUIRA"
-    },
-    {
-      "sku": "ÑP",
+      "sku": "FC",
       "oficina": "PAT",
       "cantidad": 2.0,
       "nota": "Recepcion / YALECI CHIQUINQUIRA"
     },
     {
-      "sku": "ORZO",
-      "oficina": "PAT",
-      "cantidad": 6.0,
-      "nota": "Recepcion / YALECI CHIQUINQUIRA"
-    },
-    {
-      "sku": "PCM",
+      "sku": "LCM",
       "oficina": "PAT",
       "cantidad": 2.0,
       "nota": "Recepcion / YALECI CHIQUINQUIRA"
     },
     {
-      "sku": "RA",
+      "sku": "LSA",
       "oficina": "PAT",
       "cantidad": 2.0,
       "nota": "Recepcion / YALECI CHIQUINQUIRA"
     },
     {
-      "sku": "RJ",
+      "sku": "LS",
       "oficina": "PAT",
-      "cantidad": 1.0,
-      "nota": "Recepcion / YALECI CHIQUINQUIRA"
-    },
-    {
-      "sku": "TF",
-      "oficina": "PAT",
-      "cantidad": 5.0,
+      "cantidad": 2.0,
       "nota": "Recepcion / YALECI CHIQUINQUIRA"
     },
     {
       "sku": "TLS",
       "oficina": "PAT",
-      "cantidad": 3.0,
+      "cantidad": 2.0,
       "nota": "Recepcion / YALECI CHIQUINQUIRA"
     },
     {
@@ -184,11 +111,84 @@
       "nota": "Recepcion / YALECI CHIQUINQUIRA"
     },
     {
-      "sku": "SA",
+      "sku": "TCF",
+      "oficina": "PAT",
+      "cantidad": 1.0,
+      "nota": "Recepcion / YALECI CHIQUINQUIRA"
+    },
+    {
+      "sku": "POND",
+      "oficina": "PAT",
+      "cantidad": 1.0,
+      "nota": "Recepcion / CRISTIAN LAGOS"
+    },
+    {
+      "sku": "LF",
+      "oficina": "PAT",
+      "cantidad": 1.0,
+      "nota": "Recepcion / CRISTIAN LAGOS"
+    },
+    {
+      "sku": "RS",
+      "oficina": "PAT",
+      "cantidad": 1.0,
+      "nota": "Recepcion / CRISTIAN LAGOS"
+    },
+    {
+      "sku": "MCL",
       "oficina": "VIT",
-      "cantidad": 100.0,
+      "cantidad": 5.0,
       "nota": "Recepcion / CRISTIAN LAGOS"
     }
   ],
-  "consumos": []
+  "consumos": [
+    {
+      "sku": "RB",
+      "oficina": "VIT",
+      "cantidad": 5.0,
+      "nota": "EVENTO"
+    },
+    {
+      "sku": "LA",
+      "oficina": "VIT",
+      "cantidad": 3.0,
+      "nota": "EVENTO"
+    },
+    {
+      "sku": "EPC",
+      "oficina": "VIT",
+      "cantidad": 4.0,
+      "nota": "EVENTO"
+    },
+    {
+      "sku": "PC",
+      "oficina": "VIT",
+      "cantidad": 3.0,
+      "nota": "EVENTO"
+    },
+    {
+      "sku": "THM",
+      "oficina": "VIT",
+      "cantidad": 1.0,
+      "nota": "EVENTO"
+    },
+    {
+      "sku": "PV",
+      "oficina": "VIT",
+      "cantidad": 1.0,
+      "nota": "EVENTO"
+    },
+    {
+      "sku": "P",
+      "oficina": "VIT",
+      "cantidad": 1.0,
+      "nota": "SOLA"
+    },
+    {
+      "sku": "P",
+      "oficina": "PAT",
+      "cantidad": 1.0,
+      "nota": "SOLA"
+    }
+  ]
 }
