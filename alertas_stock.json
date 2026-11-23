@@ -1,14 +1,13 @@
 {
-  "fecha": "2026-11-21",
-  "entradas": [],
-  "salidas": [],
-  "recepciones": [
+  "fecha": "2026-11-22",
+  "entradas": [
     {
-      "sku": "CDM",
+      "sku": "HDV",
       "oficina": "VIT",
-      "cantidad": 12.0,
-      "nota": "Recepcion / CRISTIAN LAGOS"
+      "cantidad": 1.0
     }
   ],
+  "salidas": [],
+  "recepciones": [],
   "consumos": []
 }
