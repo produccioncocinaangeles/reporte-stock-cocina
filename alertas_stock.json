@@ -1,12 +1,6 @@
 {
-  "fecha": "2026-11-22",
-  "entradas": [
-    {
-      "sku": "HDV",
-      "oficina": "VIT",
-      "cantidad": 1.0
-    }
-  ],
+  "fecha": "2026-11-24",
+  "entradas": [],
   "salidas": [],
   "recepciones": [],
   "consumos": []

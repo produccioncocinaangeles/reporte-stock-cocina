@@ -1,5 +1,5 @@
 {
-  "ultimo_update": "2026-11-22T23:22:33",
+  "ultimo_update": "2026-11-24T02:46:31",
   "movimientos": [
     {
       "fecha": "2026-01-02",
@@ -114367,6 +114367,150 @@
       "cantidad": 1.0,
       "doc_id": 0,
       "inferido": true
+    },
+    {
+      "fecha": "2026-11-23",
+      "sku": "GHD",
+      "oficina": "VIT",
+      "tipo": "venta",
+      "cantidad": 1.0,
+      "doc_id": 22846
+    },
+    {
+      "fecha": "2026-11-23",
+      "sku": "RM",
+      "oficina": "VIT",
+      "tipo": "venta",
+      "cantidad": 1.0,
+      "doc_id": 22850
+    },
+    {
+      "fecha": "2026-11-23",
+      "sku": "PCP",
+      "oficina": "VIT",
+      "tipo": "venta",
+      "cantidad": 1.0,
+      "doc_id": 22850
+    },
+    {
+      "fecha": "2026-11-23",
+      "sku": "TL",
+      "oficina": "PAT",
+      "tipo": "venta",
+      "cantidad": 1.0,
+      "doc_id": 22842
+    },
+    {
+      "fecha": "2026-11-23",
+      "sku": "CJ",
+      "oficina": "PAT",
+      "tipo": "venta",
+      "cantidad": 1.0,
+      "doc_id": 22842
+    },
+    {
+      "fecha": "2026-11-23",
+      "sku": "PAC",
+      "oficina": "PAT",
+      "tipo": "venta",
+      "cantidad": 1.0,
+      "doc_id": 22843
+    },
+    {
+      "fecha": "2026-11-23",
+      "sku": "GHD",
+      "oficina": "PAT",
+      "tipo": "venta",
+      "cantidad": 1.0,
+      "doc_id": 22844
+    },
+    {
+      "fecha": "2026-11-23",
+      "sku": "PCP",
+      "oficina": "PAT",
+      "tipo": "venta",
+      "cantidad": 1.0,
+      "doc_id": 22845
+    },
+    {
+      "fecha": "2026-11-23",
+      "sku": "PV",
+      "oficina": "PAT",
+      "tipo": "venta",
+      "cantidad": 2.0,
+      "doc_id": 22845
+    },
+    {
+      "fecha": "2026-11-23",
+      "sku": "CBN",
+      "oficina": "PAT",
+      "tipo": "venta",
+      "cantidad": 2.0,
+      "doc_id": 22845
+    },
+    {
+      "fecha": "2026-11-23",
+      "sku": "TLS",
+      "oficina": "PAT",
+      "tipo": "venta",
+      "cantidad": 2.0,
+      "doc_id": 22847
+    },
+    {
+      "fecha": "2026-11-23",
+      "sku": "BOCA",
+      "oficina": "PAT",
+      "tipo": "venta",
+      "cantidad": 1.0,
+      "doc_id": 22847
+    },
+    {
+      "fecha": "2026-11-23",
+      "sku": "PCP",
+      "oficina": "PAT",
+      "tipo": "venta",
+      "cantidad": 1.0,
+      "doc_id": 22848
+    },
+    {
+      "fecha": "2026-11-23",
+      "sku": "BOCA",
+      "oficina": "PAT",
+      "tipo": "venta",
+      "cantidad": 1.0,
+      "doc_id": 22848
+    },
+    {
+      "fecha": "2026-11-23",
+      "sku": "CLC",
+      "oficina": "PAT",
+      "tipo": "venta",
+      "cantidad": 1.0,
+      "doc_id": 22849
+    },
+    {
+      "fecha": "2026-11-23",
+      "sku": "CJ",
+      "oficina": "PAT",
+      "tipo": "venta",
+      "cantidad": 1.0,
+      "doc_id": 22849
+    },
+    {
+      "fecha": "2026-11-23",
+      "sku": "PCP",
+      "oficina": "PAT",
+      "tipo": "venta",
+      "cantidad": 1.0,
+      "doc_id": 22851
+    },
+    {
+      "fecha": "2026-11-23",
+      "sku": "BOCA",
+      "oficina": "PAT",
+      "tipo": "venta",
+      "cantidad": 1.0,
+      "doc_id": 22851
     }
   ],
   "docs_ignorar": [
