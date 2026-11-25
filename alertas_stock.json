@@ -1,7 +1,81 @@
 {
-  "fecha": "2026-11-24",
+  "fecha": "2026-11-25",
   "entradas": [],
   "salidas": [],
-  "recepciones": [],
-  "consumos": []
+  "recepciones": [
+    {
+      "sku": "AS",
+      "oficina": "VIT",
+      "cantidad": 15.0,
+      "nota": "Recepcion / CRISTIAN LAGOS"
+    },
+    {
+      "sku": "TLS",
+      "oficina": "VIT",
+      "cantidad": 2.0,
+      "nota": "Recepcion / CRISTIAN LAGOS"
+    },
+    {
+      "sku": "AS",
+      "oficina": "PAT",
+      "cantidad": 3.0,
+      "nota": "Recepcion / CRISTIAN LAGOS"
+    },
+    {
+      "sku": "CLC",
+      "oficina": "PAT",
+      "cantidad": 4.0,
+      "nota": "Recepcion / YALECI CHIQUINQUIRA"
+    },
+    {
+      "sku": "TA",
+      "oficina": "PAT",
+      "cantidad": 2.0,
+      "nota": "Recepcion / YALECI CHIQUINQUIRA"
+    },
+    {
+      "sku": "PV",
+      "oficina": "PAT",
+      "cantidad": 2.0,
+      "nota": "Recepcion / YALECI CHIQUINQUIRA"
+    },
+    {
+      "sku": "CDM",
+      "oficina": "PAT",
+      "cantidad": 3.0,
+      "nota": "Recepcion / YALECI CHIQUINQUIRA"
+    },
+    {
+      "sku": "CDL",
+      "oficina": "PAT",
+      "cantidad": 2.0,
+      "nota": "Recepcion / YALECI CHIQUINQUIRA"
+    },
+    {
+      "sku": "CAMA",
+      "oficina": "PAT",
+      "cantidad": 4.0,
+      "nota": "Recepcion / YALECI CHIQUINQUIRA"
+    },
+    {
+      "sku": "PAC",
+      "oficina": "PAT",
+      "cantidad": 2.0,
+      "nota": "Recepcion / YALECI CHIQUINQUIRA"
+    },
+    {
+      "sku": "TCM",
+      "oficina": "PAT",
+      "cantidad": 1.0,
+      "nota": "Recepcion / YALECI CHIQUINQUIRA"
+    }
+  ],
+  "consumos": [
+    {
+      "sku": "AS",
+      "oficina": "VIT",
+      "cantidad": 3.0,
+      "nota": "Consumo / CRISTIAN LAGOS"
+    }
+  ]
 }
