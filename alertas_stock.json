@@ -1,5 +1,5 @@
 {
-  "fecha": "2026-11-27",
+  "fecha": "2026-11-28",
   "entradas": [
     {
       "sku": "HDV",
@@ -16,96 +16,156 @@
       "nota": "Recepcion / CRISTIAN LAGOS"
     },
     {
-      "sku": "TS",
+      "sku": "MCL",
       "oficina": "VIT",
-      "cantidad": 10.0,
+      "cantidad": 2.0,
       "nota": "Recepcion / CRISTIAN LAGOS"
     },
     {
-      "sku": "PCP",
+      "sku": "EM",
+      "oficina": "VIT",
+      "cantidad": 1.0,
+      "nota": "Recepcion / CRISTIAN LAGOS"
+    },
+    {
+      "sku": "CJ",
+      "oficina": "VIT",
+      "cantidad": 17.0,
+      "nota": "Recepcion / CRISTIAN LAGOS"
+    },
+    {
+      "sku": "PN",
+      "oficina": "VIT",
+      "cantidad": 3.0,
+      "nota": "Recepcion / CRISTIAN LAGOS"
+    },
+    {
+      "sku": "PN",
       "oficina": "PAT",
+      "cantidad": 7.0,
+      "nota": "Recepcion / CRISTIAN LAGOS"
+    },
+    {
+      "sku": "T",
+      "oficina": "PAT",
+      "cantidad": 6.0,
+      "nota": "Recepcion / CRISTIAN LAGOS"
+    },
+    {
+      "sku": "CC",
+      "oficina": "VIT",
+      "cantidad": 1.0,
+      "nota": "Recepcion / CRISTIAN LAGOS"
+    },
+    {
+      "sku": "EM",
+      "oficina": "VIT",
       "cantidad": 1.0,
       "nota": "Recepcion / CRISTIAN LAGOS"
     },
     {
       "sku": "CAMA",
       "oficina": "VIT",
-      "cantidad": 7.0,
+      "cantidad": 1.0,
       "nota": "Recepcion / CRISTIAN LAGOS"
     },
     {
-      "sku": "PCP",
+      "sku": "BOCA",
       "oficina": "VIT",
-      "cantidad": 4.0,
+      "cantidad": 1.0,
       "nota": "Recepcion / CRISTIAN LAGOS"
     },
     {
-      "sku": "MCL",
-      "oficina": "VIT",
-      "cantidad": 4.0,
-      "nota": "Recepcion / CRISTIAN LAGOS"
-    },
-    {
-      "sku": "EM",
+      "sku": "T",
       "oficina": "VIT",
       "cantidad": 2.0,
       "nota": "Recepcion / CRISTIAN LAGOS"
     },
     {
-      "sku": "EC",
+      "sku": "CJ",
       "oficina": "VIT",
-      "cantidad": 2.0,
+      "cantidad": 1.0,
       "nota": "Recepcion / CRISTIAN LAGOS"
     },
     {
-      "sku": "RM",
+      "sku": "CLC",
       "oficina": "VIT",
       "cantidad": 3.0,
       "nota": "Recepcion / CRISTIAN LAGOS"
     },
     {
-      "sku": "RJ",
+      "sku": "MCJ",
       "oficina": "VIT",
-      "cantidad": 2.0,
+      "cantidad": 1.0,
       "nota": "Recepcion / CRISTIAN LAGOS"
     },
     {
-      "sku": "RS",
-      "oficina": "VIT",
-      "cantidad": 2.0,
-      "nota": "Recepcion / CRISTIAN LAGOS"
-    },
-    {
-      "sku": "BURMA",
+      "sku": "CJ",
       "oficina": "PAT",
-      "cantidad": 4.0,
+      "cantidad": 1.0,
       "nota": "Ajuste de Stock: Bernardita  Alamos"
     },
     {
-      "sku": "FLOR",
+      "sku": "CJ",
       "oficina": "PAT",
       "cantidad": 5.0,
-      "nota": "Ajuste de Stock: Bernardita  Alamos"
+      "nota": "Recepcion / CRISTIAN LAGOS"
     },
     {
-      "sku": "SAL",
-      "oficina": "PAT",
-      "cantidad": 6.0,
-      "nota": "Ajuste de Stock: Bernardita  Alamos"
+      "sku": "OTROS",
+      "oficina": "VIT",
+      "cantidad": 1.0,
+      "nota": "Recepcion / CRISTIAN LAGOS"
     },
     {
-      "sku": "HDV",
-      "oficina": "PAT",
-      "cantidad": 3.0,
-      "nota": "Recepcion / YALECI CHIQUINQUIRA"
+      "sku": "P",
+      "oficina": "VIT",
+      "cantidad": 1.0,
+      "nota": "Recepcion / CRISTIAN LAGOS"
     }
   ],
   "consumos": [
     {
-      "sku": "PCP",
-      "oficina": "VIT",
+      "sku": "MCL",
+      "oficina": "PAT",
+      "cantidad": 2.0,
+      "nota": "pedido vitacura"
+    },
+    {
+      "sku": "EM",
+      "oficina": "PAT",
       "cantidad": 1.0,
-      "nota": "se hizo boleta por tienda de pataguas"
+      "nota": "pedido vitacura"
+    },
+    {
+      "sku": "CC",
+      "oficina": "PAT",
+      "cantidad": 1.0,
+      "nota": "pedido vitacura"
+    },
+    {
+      "sku": "EM",
+      "oficina": "PAT",
+      "cantidad": 1.0,
+      "nota": "pedido vitacura"
+    },
+    {
+      "sku": "CAMA",
+      "oficina": "PAT",
+      "cantidad": 5.0,
+      "nota": "pedido vitacura"
+    },
+    {
+      "sku": "MCJ",
+      "oficina": "PAT",
+      "cantidad": 1.0,
+      "nota": "para pedido vitacura"
+    },
+    {
+      "sku": "CJ",
+      "oficina": "VIT",
+      "cantidad": 5.0,
+      "nota": "se envio a las pataguas"
     }
   ]
 }
